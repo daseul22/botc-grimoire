@@ -1,0 +1,131 @@
+[
+  {
+    "id": "trouble-brewing",
+    "name": {
+      "ko": "트러블 브루잉",
+      "en": "Trouble Brewing"
+    },
+    "difficulty": "beginner",
+    "description": {
+      "ko": "입문용 공식 에디션. 정보가 명확해 처음 배우기 좋다.",
+      "en": "The introductory official edition."
+    },
+    "characterIds": [
+      "soldier",
+      "ravenkeeper",
+      "librarian",
+      "virgin",
+      "washerwoman",
+      "monk",
+      "investigator",
+      "mayor",
+      "chef",
+      "undertaker",
+      "fortuneteller",
+      "slayer",
+      "empath",
+      "saint",
+      "recluse",
+      "drunk",
+      "butler",
+      "baron",
+      "poisoner",
+      "spy",
+      "scarletwoman",
+      "imp",
+      "beggar",
+      "bureaucrat",
+      "thief",
+      "gunslinger",
+      "scapegoat"
+    ]
+  },
+  {
+    "id": "bad-moon-rising",
+    "name": {
+      "ko": "배드 문 라이징",
+      "en": "Bad Moon Rising"
+    },
+    "difficulty": "intermediate",
+    "description": {
+      "ko": "죽음과 정보 보호가 핵심인 중급 에디션.",
+      "en": "An intermediate edition centred on death."
+    },
+    "characterIds": [
+      "chambermaid",
+      "professor",
+      "exorcist",
+      "courtier",
+      "gambler",
+      "sailor",
+      "fool",
+      "innkeeper",
+      "minstrel",
+      "tealady",
+      "pacifist",
+      "grandmother",
+      "gossip",
+      "goon",
+      "moonchild",
+      "tinker",
+      "lunatic",
+      "godfather",
+      "devilsadvocate",
+      "assassin",
+      "mastermind",
+      "shabaloth",
+      "zombuul",
+      "po",
+      "pukka",
+      "matron",
+      "voudon",
+      "apprentice",
+      "bishop",
+      "judge"
+    ]
+  },
+  {
+    "id": "sects-and-violets",
+    "name": {
+      "ko": "종파의 제비꽃",
+      "en": "Sects & Violets"
+    },
+    "difficulty": "intermediate",
+    "description": {
+      "ko": "거짓 정보와 광기가 핵심인 중급 에디션.",
+      "en": "An intermediate edition centred on misinformation."
+    },
+    "characterIds": [
+      "juggler",
+      "flowergirl",
+      "dreamer",
+      "savant",
+      "snakecharmer",
+      "mathematician",
+      "clockmaker",
+      "oracle",
+      "seamstress",
+      "philosopher",
+      "towncrier",
+      "sage",
+      "artist",
+      "mutant",
+      "sweetheart",
+      "klutz",
+      "barber",
+      "pithag",
+      "witch",
+      "eviltwin",
+      "cerenovus",
+      "nodashii",
+      "vortox",
+      "vigormortis",
+      "fanggu",
+      "harlot",
+      "barista",
+      "bonecollector",
+      "deviant",
+      "butcher"
+    ]
+  }
+]
