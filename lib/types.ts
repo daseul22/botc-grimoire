@@ -78,8 +78,10 @@ export interface GamePlayer {
   locked: boolean;
   /** 'alive' | 'dead' 등 (향후 확장) */
   status: string;
-  /** 효과 마커 (향후 확장) */
+  /** 효과 마커 ("base" 또는 "base:param") */
   markers: string[];
+  /** 게임 내내 누적되는 이야기꾼 메모 (스냅샷 무관, 전역) */
+  memo: string;
 }
 
 export interface Game {

@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { keepMarkerOnAdvance } from "./markers";
+import { keepMarkerOnAdvance, parseMarker } from "./markers";
 import type { Game, GamePlayer } from "./types";
 
 // 서버 전용. 게임 상태는 가변 데이터 → seed가 건드리지 않는 별도 테이블.
@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS game_phases (
 for (const sql of [
   "ALTER TABLE games ADD COLUMN config TEXT",
   "ALTER TABLE games ADD COLUMN current_idx INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE game_players ADD COLUMN memo TEXT NOT NULL DEFAULT ''",
 ]) {
   try {
     db.exec(sql);
@@ -132,10 +133,11 @@ type PlayerRow = {
   x: number;
   y: number;
   locked: number;
+  memo: string;
 };
 
 export type GameConfig = { excludedIds: string[]; counts: Record<string, number> };
-export type NewPlayer = Omit<GamePlayer, "locked" | "status" | "markers">;
+export type NewPlayer = Omit<GamePlayer, "locked" | "status" | "markers" | "memo">;
 export type RoleAssignment = { seat: number; characterId: string; alignment: string };
 
 function phaseCount(gameId: string): number {
@@ -171,7 +173,7 @@ function readPlayers(gameId: string, idx: number): GamePlayer[] {
   return (
     db
       .prepare(
-        "SELECT seat,nickname,character_id,alignment,x,y,locked FROM game_players WHERE game_id = ? ORDER BY seat",
+        "SELECT seat,nickname,character_id,alignment,x,y,locked,memo FROM game_players WHERE game_id = ? ORDER BY seat",
       )
       .all(gameId) as PlayerRow[]
   ).map((r) => ({
@@ -184,6 +186,7 @@ function readPlayers(gameId: string, idx: number): GamePlayer[] {
     locked: !!r.locked,
     status: state[r.seat]?.status ?? "alive",
     markers: state[r.seat]?.markers ?? [],
+    memo: r.memo ?? "",
   }));
 }
 
@@ -293,6 +296,28 @@ export function setLock(gameId: string, seat: number, locked: boolean): void {
   );
 }
 
+/** 직업/진영 부분 변경 (1일차 밤 수동 조정 · 교체). 좌석/위치/상태는 유지. */
+export function setRoles(
+  gameId: string,
+  updates: { seat: number; characterId: string; alignment: string }[],
+): void {
+  const upd = db.prepare(
+    "UPDATE game_players SET character_id = ?, alignment = ? WHERE game_id = ? AND seat = ?",
+  );
+  db.transaction(() => {
+    for (const u of updates) upd.run(u.characterId, u.alignment, gameId, u.seat);
+  })();
+}
+
+/** 플레이어 메모 (전역, 스냅샷 무관) */
+export function setMemo(gameId: string, seat: number, memo: string): void {
+  db.prepare("UPDATE game_players SET memo = ? WHERE game_id = ? AND seat = ?").run(
+    memo,
+    gameId,
+    seat,
+  );
+}
+
 /** 현재 페이즈 스냅샷의 한 좌석 상태 변경 */
 export function setStatus(gameId: string, seat: number, status: string): void {
   const idx = currentIdx(gameId);
@@ -305,10 +330,13 @@ export function setStatus(gameId: string, seat: number, status: string): void {
 export function toggleMarker(gameId: string, seat: number, markerId: string): void {
   const idx = currentIdx(gameId);
   const s = readState(gameId, idx);
-  const set = new Set(s[seat]?.markers ?? []);
-  if (set.has(markerId)) set.delete(markerId);
-  else set.add(markerId);
-  s[seat] = { status: s[seat]?.status ?? "alive", markers: [...set] };
+  const cur = s[seat]?.markers ?? [];
+  const base = parseMarker(markerId).base;
+  // 같은 마커면 해제, 아니면 동일 base 제거 후 추가(집착 대상 교체 등)
+  const markers = cur.includes(markerId)
+    ? cur.filter((m) => m !== markerId)
+    : [...cur.filter((m) => parseMarker(m).base !== base), markerId];
+  s[seat] = { status: s[seat]?.status ?? "alive", markers };
   writeState(gameId, idx, s);
 }
 

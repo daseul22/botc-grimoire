@@ -15,6 +15,8 @@ import {
   redrawRoles,
   savePositions,
   setLock,
+  setMemo,
+  setRoles,
   setStatus,
   toggleMarker,
   type RoleAssignment,
@@ -161,6 +163,47 @@ export async function toggleLockAction(
   locked: boolean,
 ): Promise<Game> {
   setLock(gameId, seat, locked);
+  return getGame(gameId)!;
+}
+
+export async function setMemoAction(
+  gameId: string,
+  seat: number,
+  memo: string,
+): Promise<Game> {
+  setMemo(gameId, seat, memo);
+  return getGame(gameId)!;
+}
+
+/**
+ * 직업 수동 변경 (1일차 밤). 다른 좌석이 그 직업을 이미 가졌으면 서로 교체.
+ */
+export async function setRoleAction(
+  gameId: string,
+  seat: number,
+  characterId: string,
+): Promise<Game | { error: string }> {
+  const game = getGame(gameId);
+  if (!game) return { error: "게임을 찾을 수 없습니다." };
+  const ch = getCharacter(characterId);
+  if (!ch) return { error: "직업을 찾을 수 없습니다." };
+  const me = game.players.find((p) => p.seat === seat);
+  if (!me) return { error: "플레이어를 찾을 수 없습니다." };
+  if (me.characterId === characterId) return game;
+
+  const newAlign = alignmentOf(ch.team);
+  const other = game.players.find(
+    (p) => p.seat !== seat && p.characterId === characterId,
+  );
+  if (other) {
+    // 교체: 상대는 내 직업/진영을 가져간다
+    setRoles(gameId, [
+      { seat, characterId, alignment: newAlign },
+      { seat: other.seat, characterId: me.characterId, alignment: me.alignment },
+    ]);
+  } else {
+    setRoles(gameId, [{ seat, characterId, alignment: newAlign }]);
+  }
   return getGame(gameId)!;
 }
 

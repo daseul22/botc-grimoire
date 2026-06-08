@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { TEAM_MAP } from "@/lib/constants";
-import { MARKER_MAP } from "@/lib/markers";
+import { markerInfo, parseMarker } from "@/lib/markers";
 import type { HistoryEntry } from "@/lib/games";
-import type { Game } from "@/lib/types";
-import type { CharInfo } from "./PlayCanvas";
+import type { Character, Game } from "@/lib/types";
 
 const phaseLabel = (day: number, phase: string | null) =>
   `${day}일차 ${phase === "night" ? "밤" : phase === "day" ? "낮" : ""}`;
@@ -11,12 +10,16 @@ const phaseLabel = (day: number, phase: string | null) =>
 export function GameReplay({
   game,
   history,
-  chars,
+  sheetChars,
 }: {
   game: Game;
   history: HistoryEntry[];
-  chars: Record<string, CharInfo>;
+  sheetChars: Character[];
 }) {
+  const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<
+    string,
+    Character
+  >;
   const resultText =
     game.result === "good"
       ? "선 진영 승리"
@@ -32,8 +35,8 @@ export function GameReplay({
           <p className="text-xs text-muted">복기</p>
           <h1 className="text-xl font-bold">{game.sheetName}</h1>
         </div>
-        <Link href="/sheets" className="text-sm text-muted hover:text-text">
-          시트로
+        <Link href="/games" className="text-sm text-muted hover:text-text">
+          게임 목록
         </Link>
       </div>
 
@@ -49,16 +52,11 @@ export function GameReplay({
         <h2 className="mb-2 text-sm font-semibold text-muted">최종 직업</h2>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {game.players.map((p) => {
-            const ch = chars[p.characterId];
+            const ch = charMap[p.characterId];
             const color = ch ? TEAM_MAP[ch.team]?.color : "#a39bb5";
             return (
-              <div
-                key={p.seat}
-                className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-              >
-                <span className={p.status === "dead" ? "text-muted line-through" : ""}>
-                  {p.nickname}
-                </span>
+              <div key={p.seat} className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+                <span className={p.status === "dead" ? "text-muted line-through" : ""}>{p.nickname}</span>
                 <span style={{ color }}>{ch?.name.ko ?? p.characterId}</span>
               </div>
             );
@@ -74,46 +72,34 @@ export function GameReplay({
         ) : (
           <ol className="space-y-4">
             {history.map((h) => (
-              <li
-                key={h.idx}
-                className="rounded-lg border border-border bg-surface p-3"
-              >
-                <p className="mb-2 text-sm font-semibold text-gold">
-                  {phaseLabel(h.day, h.phase)}
-                </p>
+              <li key={h.idx} className="rounded-lg border border-border bg-surface p-3">
+                <p className="mb-2 text-sm font-semibold text-gold">{phaseLabel(h.day, h.phase)}</p>
                 <div className="space-y-1 text-sm">
                   {h.players.map((p) => {
-                    const ch = chars[p.characterId];
+                    const ch = charMap[p.characterId];
                     const dead = p.status === "dead";
                     return (
-                      <div key={p.seat} className="flex items-center gap-2">
-                        <span className={dead ? "text-muted line-through" : ""}>
-                          {p.nickname}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {ch?.name.ko ?? p.characterId}
-                        </span>
+                      <div key={p.seat} className="flex flex-wrap items-center gap-2">
+                        <span className={dead ? "text-muted line-through" : ""}>{p.nickname}</span>
+                        <span className="text-xs text-muted">{ch?.name.ko ?? p.characterId}</span>
                         {dead && <span className="text-xs text-red-400">사망</span>}
-                        {p.markers.map((m) => (
-                          <span
-                            key={m}
-                            className="inline-flex items-center gap-1 rounded px-1 text-[10px]"
-                            style={{
-                              background: `${MARKER_MAP[m]?.color ?? "#888"}22`,
-                              color: MARKER_MAP[m]?.color ?? "#888",
-                            }}
-                          >
-                            {MARKER_MAP[m]?.icon && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={MARKER_MAP[m].icon}
-                                alt=""
-                                className="h-3.5 w-3.5 rounded-full object-cover"
-                              />
-                            )}
-                            {MARKER_MAP[m]?.label ?? m}
-                          </span>
-                        ))}
+                        {p.markers.map((m) => {
+                          const mk = markerInfo(m);
+                          const { param } = parseMarker(m);
+                          const label =
+                            mk?.id === "mad" && param
+                              ? `집착·${charMap[param]?.name.ko ?? param}`
+                              : mk?.label ?? m;
+                          return (
+                            <span key={m} className="inline-flex items-center gap-1 rounded px-1 text-[10px]" style={{ background: `${mk?.color ?? "#888"}22`, color: mk?.color ?? "#888" }}>
+                              {mk?.icon && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={mk.icon} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+                              )}
+                              {label}
+                            </span>
+                          );
+                        })}
                       </div>
                     );
                   })}
