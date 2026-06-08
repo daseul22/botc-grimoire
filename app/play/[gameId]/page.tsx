@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { getGame } from "@/lib/games";
+import { getGame, getHistory } from "@/lib/games";
 import { getCharacter } from "@/lib/data";
-import { PlayCanvas, type PlayToken } from "@/components/PlayCanvas";
+import { PlayCanvas, type CharInfo } from "@/components/PlayCanvas";
+import { GameReplay } from "@/components/GameReplay";
 
 export const dynamic = "force-dynamic";
 
@@ -16,22 +17,14 @@ export default async function PlayPage({
   const game = getGame(gameId);
   if (!game) notFound();
 
-  const players: PlayToken[] = game.players.map((p) => {
+  const chars: Record<string, CharInfo> = {};
+  for (const p of game.players) {
     const ch = getCharacter(p.characterId);
-    return {
-      seat: p.seat,
-      nickname: p.nickname,
-      characterId: p.characterId,
-      alignment: p.alignment,
-      x: p.x,
-      y: p.y,
-      name: ch?.name ?? { ko: p.characterId, en: p.characterId },
-      image: ch?.image,
-      team: ch?.team ?? "townsfolk",
-    };
-  });
+    if (ch) chars[p.characterId] = { name: ch.name, image: ch.image, team: ch.team };
+  }
 
-  return (
-    <PlayCanvas gameId={game.id} sheetName={game.sheetName} players={players} />
-  );
+  if (game.status === "finished") {
+    return <GameReplay game={game} history={getHistory(gameId)} chars={chars} />;
+  }
+  return <PlayCanvas game={game} chars={chars} />;
 }

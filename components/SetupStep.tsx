@@ -71,8 +71,7 @@ export function SetupStep({
   const sum = ratioTotal(counts);
   const sumOk = sum === count;
   const enoughChars = CORE_TEAMS.every((t) => counts[t] <= available[t]);
-  const nicksOk = nicknames.every((n) => n.trim().length > 0);
-  const canStart = sumOk && enoughChars && nicksOk && !pending;
+  const canStart = sumOk && enoughChars && !pending;
 
   function start() {
     setError(undefined);
@@ -252,9 +251,7 @@ export function SetupStep({
               ? `비율 합(${sum})과 인원(${count})을 맞추세요`
               : !enoughChars
                 ? "직업 수가 부족한 직업군이 있습니다"
-                : !nicksOk
-                  ? "모든 닉네임을 입력하세요"
-                  : "준비 완료"}
+                : "준비 완료"}
             {error && <span className="ml-3 text-red-400">{error}</span>}
           </span>
           <button
