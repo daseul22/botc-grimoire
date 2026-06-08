@@ -62,3 +62,38 @@ export interface RulesSection {
   body: Localized;
   order: number;
 }
+
+// ── 그리모어 게임 운영 (Phase 2) ──
+export type Alignment = "good" | "evil";
+
+export interface GamePlayer {
+  seat: number;
+  nickname: string;
+  characterId: string;
+  alignment: Alignment;
+  /** 캔버스 위치 (0~1 비율) */
+  x: number;
+  y: number;
+  /** 위치 고정 (향후) */
+  locked: boolean;
+  /** 'alive' | 'dead' 등 (향후 확장) */
+  status: string;
+  /** 효과 마커 (향후 확장) */
+  markers: string[];
+}
+
+export interface Game {
+  id: string;
+  sheetId: string;
+  /** 생성 시점 시트 이름 스냅샷 (시트가 바뀌거나 삭제돼도 유지) */
+  sheetName: string;
+  /** 'playing' | 'finished' */
+  status: string;
+  /** 현재 페이즈 'night' | 'dusk' | 'day' (향후) */
+  phase: string | null;
+  /** N일차 (향후) */
+  day: number;
+  /** 'good' | 'evil' | null (향후) */
+  result: string | null;
+  players: GamePlayer[];
+}

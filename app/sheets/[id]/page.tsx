@@ -59,17 +59,25 @@ export default async function SheetPage({
             )}
             <p className="mt-2 text-xs text-muted">{list.length}개 직업</p>
           </div>
-          {sheet.custom && (
-            <div className="flex shrink-0 gap-2">
-              <Link
-                href={`/sheets/${sheet.id}/edit`}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-text"
-              >
-                수정
-              </Link>
-              <DeleteSheetButton id={sheet.id} />
-            </div>
-          )}
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <Link
+              href={`/play/setup/${sheet.id}`}
+              className="rounded-lg bg-gold px-5 py-2 text-sm font-semibold text-bg"
+            >
+              ▶ 시작하기
+            </Link>
+            {sheet.custom && (
+              <div className="flex gap-2">
+                <Link
+                  href={`/sheets/${sheet.id}/edit`}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-text"
+                >
+                  수정
+                </Link>
+                <DeleteSheetButton id={sheet.id} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
