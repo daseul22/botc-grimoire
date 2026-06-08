@@ -51,6 +51,8 @@ export interface Sheet {
   description?: Localized;
   difficulty?: "beginner" | "intermediate" | "advanced";
   characterIds: string[];
+  /** 사용자가 만든 커스텀 시트 여부 (공식 시트가 아님) */
+  custom?: boolean;
 }
 
 export interface RulesSection {
