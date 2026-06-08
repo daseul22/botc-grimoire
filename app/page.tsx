@@ -1,4 +1,5 @@
 import { CharacterBrowser } from "@/components/CharacterBrowser";
+import { characters } from "@/lib/data";
 
 export default function Home() {
   return (
@@ -9,7 +10,7 @@ export default function Home() {
       <p className="mb-6 text-sm text-muted">
         시계탑에 흐른 피의 모든 직업을 분류 · 에디션별로 찾아보세요.
       </p>
-      <CharacterBrowser />
+      <CharacterBrowser characters={characters} />
     </div>
   );
 }

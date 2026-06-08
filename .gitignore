@@ -20,6 +20,9 @@
 # production
 /build
 
+# sqlite (generated from data/*.json via `npm run db:seed`)
+/db/
+
 # misc
 .DS_Store
 *.pem

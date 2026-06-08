@@ -3,19 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/seed-db.mjs",
     "dev": "next dev -H 0.0.0.0",
+    "prebuild": "node scripts/seed-db.mjs",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
     "lint": "eslint",
-    "data:scrape": "node scripts/scrape-vnamu.mjs"
+    "db:seed": "node scripts/seed-db.mjs",
+    "data:scrape": "node scripts/scrape-vnamu.mjs && node scripts/seed-db.mjs"
   },
   "dependencies": {
+    "better-sqlite3": "^12.10.0",
     "next": "16.2.7",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

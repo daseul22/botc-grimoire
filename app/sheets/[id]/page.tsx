@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { charactersForSheet, getSheet, groupByTeam, sheets } from "@/lib/data";
+import { charactersForSheet, getSheet, sheets } from "@/lib/data";
+import { groupByTeam } from "@/lib/grouping";
 import { TEAM_MAP } from "@/lib/constants";
 import { CharacterCard } from "@/components/CharacterCard";
 import { NightOrderTable } from "@/components/NightOrderTable";

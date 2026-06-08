@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { characters, groupByTeam } from "@/lib/data";
+import { groupByTeam } from "@/lib/grouping";
 import { EDITIONS, TEAM_MAP, TEAMS } from "@/lib/constants";
-import type { EditionId, Team } from "@/lib/types";
+import type { Character, EditionId, Team } from "@/lib/types";
 import { CharacterCard } from "./CharacterCard";
 
 type EditionFilter = EditionId | "all";
@@ -36,7 +36,7 @@ function Pill({
   );
 }
 
-export function CharacterBrowser() {
+export function CharacterBrowser({ characters }: { characters: Character[] }) {
   const [edition, setEdition] = useState<EditionFilter>("all");
   const [team, setTeam] = useState<TeamFilter>("all");
   const [q, setQ] = useState("");
