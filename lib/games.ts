@@ -1,8 +1,13 @@
 import { getDb } from "./db";
-import { isTransient } from "./markers";
+import { keepMarkerOnAdvance } from "./markers";
 import type { Game, GamePlayer } from "./types";
 
 // 서버 전용. 게임 상태는 가변 데이터 → seed가 건드리지 않는 별도 테이블.
+//
+// 스냅샷 모델: 플레이어 정체성/배치(game_players)는 전역(페이즈 무관),
+// 상태(생존/마커)는 페이즈별 독립 스냅샷(game_phases)으로 저장한다.
+// games.current_idx 가 현재 보고 있는 스냅샷을 가리킨다. 과거 페이즈로 돌아가
+// 수정해도 다른 페이즈에 영향을 주지 않는다(cascade 없음).
 const db = getDb();
 db.exec(`
 CREATE TABLE IF NOT EXISTS games (
@@ -14,6 +19,7 @@ CREATE TABLE IF NOT EXISTS games (
   day INTEGER NOT NULL DEFAULT 1,
   result TEXT,
   config TEXT,
+  current_idx INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -39,25 +45,84 @@ CREATE TABLE IF NOT EXISTS game_log (
   data TEXT,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS game_phases (
+  game_id TEXT NOT NULL,
+  idx INTEGER NOT NULL,
+  day INTEGER NOT NULL,
+  phase TEXT NOT NULL,
+  state TEXT NOT NULL,
+  PRIMARY KEY (game_id, idx)
+);
 `);
-// 기존 db에 config 컬럼이 없으면 추가 (idempotent)
-try {
-  db.exec("ALTER TABLE games ADD COLUMN config TEXT");
-} catch {
-  /* 이미 존재 */
+// 구버전 db 컬럼 보강 (idempotent)
+for (const sql of [
+  "ALTER TABLE games ADD COLUMN config TEXT",
+  "ALTER TABLE games ADD COLUMN current_idx INTEGER NOT NULL DEFAULT 0",
+]) {
+  try {
+    db.exec(sql);
+  } catch {
+    /* 이미 존재 */
+  }
 }
 
 const now = () => new Date().toISOString();
+
+type SeatState = { status: string; markers: string[] };
+type StateMap = Record<number, SeatState>;
+
+function stateFromList(
+  players: { seat: number; status?: string; markers?: string[] }[],
+): StateMap {
+  const s: StateMap = {};
+  for (const p of players)
+    s[p.seat] = { status: p.status ?? "alive", markers: p.markers ?? [] };
+  return s;
+}
+
+// 구버전 게임(game_log 기반)을 스냅샷 모델로 1회 이관
+(function migrate() {
+  const games = db.prepare("SELECT id, phase, day FROM games").all() as {
+    id: string;
+    phase: string | null;
+    day: number;
+  }[];
+  const hasPhase = db.prepare("SELECT 1 FROM game_phases WHERE game_id = ? LIMIT 1");
+  const insPhase = db.prepare(
+    "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,?,?,?,?)",
+  );
+  for (const g of games) {
+    if (hasPhase.get(g.id)) continue;
+    const logs = db
+      .prepare("SELECT phase,day,data FROM game_log WHERE game_id = ? ORDER BY seq")
+      .all(g.id) as { phase: string | null; day: number; data: string }[];
+    const cur = db
+      .prepare("SELECT seat,status,markers FROM game_players WHERE game_id = ?")
+      .all(g.id) as { seat: number; status: string; markers: string }[];
+    db.transaction(() => {
+      let idx = 0;
+      for (const lg of logs) {
+        const players = (JSON.parse(lg.data).players ?? []) as SeatState[] &
+          { seat: number }[];
+        insPhase.run(g.id, idx++, lg.day ?? 1, lg.phase ?? "night", JSON.stringify(stateFromList(players)));
+      }
+      const curState: StateMap = {};
+      for (const p of cur)
+        curState[p.seat] = { status: p.status, markers: JSON.parse(p.markers) };
+      insPhase.run(g.id, idx, g.day ?? 1, g.phase ?? "night", JSON.stringify(curState));
+      db.prepare("UPDATE games SET current_idx = ? WHERE id = ?").run(idx, g.id);
+    })();
+  }
+})();
 
 type GameRow = {
   id: string;
   sheet_id: string;
   sheet_name: string;
   status: string;
-  phase: string | null;
-  day: number;
   result: string | null;
   config: string | null;
+  current_idx: number;
 };
 type PlayerRow = {
   seat: number;
@@ -67,18 +132,47 @@ type PlayerRow = {
   x: number;
   y: number;
   locked: number;
-  status: string;
-  markers: string;
 };
 
 export type GameConfig = { excludedIds: string[]; counts: Record<string, number> };
 export type NewPlayer = Omit<GamePlayer, "locked" | "status" | "markers">;
 export type RoleAssignment = { seat: number; characterId: string; alignment: string };
 
-function readPlayers(gameId: string): GamePlayer[] {
+function phaseCount(gameId: string): number {
+  return (
+    db.prepare("SELECT COUNT(*) AS c FROM game_phases WHERE game_id = ?").get(gameId) as {
+      c: number;
+    }
+  ).c;
+}
+function currentIdx(gameId: string): number {
+  return (
+    (db.prepare("SELECT current_idx FROM games WHERE id = ?").get(gameId) as
+      | { current_idx: number }
+      | undefined)?.current_idx ?? 0
+  );
+}
+function readState(gameId: string, idx: number): StateMap {
+  const row = db
+    .prepare("SELECT state FROM game_phases WHERE game_id = ? AND idx = ?")
+    .get(gameId, idx) as { state: string } | undefined;
+  return row ? (JSON.parse(row.state) as StateMap) : {};
+}
+function writeState(gameId: string, idx: number, state: StateMap): void {
+  db.prepare("UPDATE game_phases SET state = ? WHERE game_id = ? AND idx = ?").run(
+    JSON.stringify(state),
+    gameId,
+    idx,
+  );
+}
+
+function readPlayers(gameId: string, idx: number): GamePlayer[] {
+  const state = readState(gameId, idx);
   return (
     db
-      .prepare("SELECT * FROM game_players WHERE game_id = ? ORDER BY seat")
+      .prepare(
+        "SELECT seat,nickname,character_id,alignment,x,y,locked FROM game_players WHERE game_id = ? ORDER BY seat",
+      )
       .all(gameId) as PlayerRow[]
   ).map((r) => ({
     seat: r.seat,
@@ -88,8 +182,8 @@ function readPlayers(gameId: string): GamePlayer[] {
     x: r.x,
     y: r.y,
     locked: !!r.locked,
-    status: r.status,
-    markers: JSON.parse(r.markers) as string[],
+    status: state[r.seat]?.status ?? "alive",
+    markers: state[r.seat]?.markers ?? [],
   }));
 }
 
@@ -98,19 +192,27 @@ export function getGame(id: string): Game | undefined {
     | GameRow
     | undefined;
   if (!g) return undefined;
+  const idx = g.current_idx ?? 0;
+  const ph = db
+    .prepare("SELECT day,phase FROM game_phases WHERE game_id = ? AND idx = ?")
+    .get(id, idx) as { day: number; phase: string } | undefined;
   return {
     id: g.id,
     sheetId: g.sheet_id,
     sheetName: g.sheet_name,
     status: g.status,
-    phase: g.phase,
-    day: g.day,
+    phase: ph?.phase ?? "night",
+    day: ph?.day ?? 1,
     result: g.result,
-    players: readPlayers(id),
+    phaseIndex: idx,
+    phaseCount: phaseCount(id),
+    players: readPlayers(id, idx),
   };
 }
 
-export function getGameConfig(id: string): (GameConfig & { sheetId: string }) | undefined {
+export function getGameConfig(
+  id: string,
+): (GameConfig & { sheetId: string }) | undefined {
   const g = db.prepare("SELECT sheet_id, config FROM games WHERE id = ?").get(id) as
     | { sheet_id: string; config: string | null }
     | undefined;
@@ -127,34 +229,46 @@ export function createGame(input: {
 }): string {
   const id = "g-" + crypto.randomUUID().slice(0, 8);
   const t = now();
-  const insGame = db.prepare(
-    `INSERT INTO games (id,sheet_id,sheet_name,status,phase,day,result,config,created_at,updated_at)
-     VALUES (?,?,?,'playing','night',1,NULL,?,?,?)`,
-  );
-  const insPlayer = db.prepare(
-    `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y)
-     VALUES (?,?,?,?,?,?,?)`,
-  );
   db.transaction(() => {
-    insGame.run(id, input.sheetId, input.sheetName, JSON.stringify(input.config), t, t);
-    for (const p of input.players)
+    db.prepare(
+      `INSERT INTO games (id,sheet_id,sheet_name,status,phase,day,result,config,current_idx,created_at,updated_at)
+       VALUES (?,?,?,'playing','night',1,NULL,?,0,?,?)`,
+    ).run(id, input.sheetId, input.sheetName, JSON.stringify(input.config), t, t);
+    const insPlayer = db.prepare(
+      `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y)
+       VALUES (?,?,?,?,?,?,?)`,
+    );
+    const state: StateMap = {};
+    for (const p of input.players) {
       insPlayer.run(id, p.seat, p.nickname, p.characterId, p.alignment, p.x, p.y);
+      state[p.seat] = { status: "alive", markers: [] };
+    }
+    db.prepare(
+      "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,0,1,'night',?)",
+    ).run(id, JSON.stringify(state));
   })();
   return id;
 }
 
-/** 재추첨: 좌석/닉네임/위치는 유지하고 직업·진영만 교체 + 진행상태 초기화 */
+/** 재추첨: 좌석/닉네임/위치는 유지하고 직업·진영만 교체 + 진행상태 전체 초기화 */
 export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
-  const upd = db.prepare(
-    `UPDATE game_players SET character_id = ?, alignment = ?, status = 'alive', markers = '[]'
-     WHERE game_id = ? AND seat = ?`,
-  );
   db.transaction(() => {
+    const upd = db.prepare(
+      "UPDATE game_players SET character_id = ?, alignment = ? WHERE game_id = ? AND seat = ?",
+    );
     for (const r of roles) upd.run(r.characterId, r.alignment, gameId, r.seat);
+    db.prepare("DELETE FROM game_phases WHERE game_id = ?").run(gameId);
+    const seats = db
+      .prepare("SELECT seat FROM game_players WHERE game_id = ?")
+      .all(gameId) as { seat: number }[];
+    const state: StateMap = {};
+    for (const s of seats) state[s.seat] = { status: "alive", markers: [] };
     db.prepare(
-      "UPDATE games SET phase = 'night', day = 1, status = 'playing', result = NULL, updated_at = ? WHERE id = ?",
+      "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,0,1,'night',?)",
+    ).run(gameId, JSON.stringify(state));
+    db.prepare(
+      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, updated_at = ? WHERE id = ?",
     ).run(now(), gameId);
-    db.prepare("DELETE FROM game_log WHERE game_id = ?").run(gameId);
   })();
 }
 
@@ -172,112 +286,136 @@ export function savePositions(
 }
 
 export function setLock(gameId: string, seat: number, locked: boolean): void {
-  db.prepare(
-    "UPDATE game_players SET locked = ? WHERE game_id = ? AND seat = ?",
-  ).run(locked ? 1 : 0, gameId, seat);
+  db.prepare("UPDATE game_players SET locked = ? WHERE game_id = ? AND seat = ?").run(
+    locked ? 1 : 0,
+    gameId,
+    seat,
+  );
 }
 
+/** 현재 페이즈 스냅샷의 한 좌석 상태 변경 */
 export function setStatus(gameId: string, seat: number, status: string): void {
-  db.prepare(
-    "UPDATE game_players SET status = ? WHERE game_id = ? AND seat = ?",
-  ).run(status, gameId, seat);
+  const idx = currentIdx(gameId);
+  const s = readState(gameId, idx);
+  s[seat] = { status, markers: s[seat]?.markers ?? [] };
+  writeState(gameId, idx, s);
 }
 
+/** 현재 페이즈 스냅샷의 한 좌석 마커 토글 */
 export function toggleMarker(gameId: string, seat: number, markerId: string): void {
-  const row = db
-    .prepare("SELECT markers FROM game_players WHERE game_id = ? AND seat = ?")
-    .get(gameId, seat) as { markers: string } | undefined;
-  if (!row) return;
-  const set = new Set(JSON.parse(row.markers) as string[]);
+  const idx = currentIdx(gameId);
+  const s = readState(gameId, idx);
+  const set = new Set(s[seat]?.markers ?? []);
   if (set.has(markerId)) set.delete(markerId);
   else set.add(markerId);
-  db.prepare(
-    "UPDATE game_players SET markers = ? WHERE game_id = ? AND seat = ?",
-  ).run(JSON.stringify([...set]), gameId, seat);
+  s[seat] = { status: s[seat]?.status ?? "alive", markers: [...set] };
+  writeState(gameId, idx, s);
 }
 
-function snapshot(gameId: string, phase: string | null, day: number): void {
-  const players = readPlayers(gameId).map((p) => ({
-    seat: p.seat,
-    nickname: p.nickname,
-    characterId: p.characterId,
-    alignment: p.alignment,
-    status: p.status,
-    markers: p.markers,
-  }));
-  const seq =
-    (
-      db
-        .prepare("SELECT COALESCE(MAX(seq),-1) AS m FROM game_log WHERE game_id = ?")
-        .get(gameId) as { m: number }
-    ).m + 1;
-  db.prepare(
-    "INSERT INTO game_log (game_id,seq,phase,day,data,created_at) VALUES (?,?,?,?,?,?)",
-  ).run(gameId, seq, phase, day, JSON.stringify({ players }), now());
-}
-
-/** 다음 페이즈로: 현재 상태를 기록(복기) → 밤↔낮 전환 → 일시적 마커 자동 제거 */
+/**
+ * 다음 페이즈로. 이미 뒤에 스냅샷이 있으면(과거로 갔다가 진행) 포인터만 이동,
+ * 최신이면 현재를 복사해 새 스냅샷 생성(일시 마커 제거 + 밤↔낮/일차 계산).
+ */
 export function advancePhase(gameId: string): void {
-  const g = db.prepare("SELECT phase, day FROM games WHERE id = ?").get(gameId) as
-    | { phase: string | null; day: number }
-    | undefined;
-  if (!g) return;
+  const idx = currentIdx(gameId);
+  const total = phaseCount(gameId);
+  if (idx < total - 1) {
+    db.prepare("UPDATE games SET current_idx = ?, updated_at = ? WHERE id = ?").run(
+      idx + 1,
+      now(),
+      gameId,
+    );
+    return;
+  }
+  const cur = db
+    .prepare("SELECT day,phase,state FROM game_phases WHERE game_id = ? AND idx = ?")
+    .get(gameId, idx) as { day: number; phase: string; state: string };
+  const leavingDay = cur.phase === "day"; // 낮 종료 = 황혼 통과
+  const nextPhase = cur.phase === "night" ? "day" : "night";
+  const nextDay = leavingDay ? cur.day + 1 : cur.day;
+  const state = JSON.parse(cur.state) as StateMap;
+  const next: StateMap = {};
+  for (const seat of Object.keys(state)) {
+    const k = Number(seat);
+    next[k] = {
+      status: state[k].status,
+      markers: state[k].markers.filter((m) => keepMarkerOnAdvance(m, leavingDay)),
+    };
+  }
   db.transaction(() => {
-    snapshot(gameId, g.phase, g.day);
-    const nextPhase = g.phase === "night" ? "day" : "night";
-    const nextDay = g.phase === "day" ? g.day + 1 : g.day;
     db.prepare(
-      "UPDATE games SET phase = ?, day = ?, updated_at = ? WHERE id = ?",
-    ).run(nextPhase, nextDay, now(), gameId);
-    // 일시적 마커 제거
-    for (const p of readPlayers(gameId)) {
-      const kept = p.markers.filter((id) => !isTransient(id));
-      if (kept.length !== p.markers.length)
-        db.prepare(
-          "UPDATE game_players SET markers = ? WHERE game_id = ? AND seat = ?",
-        ).run(JSON.stringify(kept), gameId, p.seat);
-    }
+      "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,?,?,?,?)",
+    ).run(gameId, idx + 1, nextDay, nextPhase, JSON.stringify(next));
+    db.prepare("UPDATE games SET current_idx = ?, updated_at = ? WHERE id = ?").run(
+      idx + 1,
+      now(),
+      gameId,
+    );
   })();
+}
+
+/** 이전 페이즈로 (포인터만 이동, 각 스냅샷은 독립 유지) */
+export function prevPhase(gameId: string): void {
+  const idx = currentIdx(gameId);
+  if (idx > 0)
+    db.prepare("UPDATE games SET current_idx = ?, updated_at = ? WHERE id = ?").run(
+      idx - 1,
+      now(),
+      gameId,
+    );
 }
 
 export function finishGame(gameId: string, result: string): void {
-  const g = db.prepare("SELECT phase, day FROM games WHERE id = ?").get(gameId) as
-    | { phase: string | null; day: number }
-    | undefined;
-  if (!g) return;
-  db.transaction(() => {
-    snapshot(gameId, g.phase, g.day);
-    db.prepare(
-      "UPDATE games SET status = 'finished', result = ?, updated_at = ? WHERE id = ?",
-    ).run(result, now(), gameId);
-  })();
+  db.prepare(
+    "UPDATE games SET status = 'finished', result = ?, updated_at = ? WHERE id = ?",
+  ).run(result, now(), gameId);
 }
 
+export type HistoryPlayer = {
+  seat: number;
+  nickname: string;
+  characterId: string;
+  alignment: string;
+  status: string;
+  markers: string[];
+};
 export type HistoryEntry = {
-  seq: number;
-  phase: string | null;
+  idx: number;
+  phase: string;
   day: number;
-  players: {
-    seat: number;
-    nickname: string;
-    characterId: string;
-    alignment: string;
-    status: string;
-    markers: string[];
-  }[];
+  players: HistoryPlayer[];
 };
 
 export function getHistory(gameId: string): HistoryEntry[] {
-  return (
-    db
-      .prepare("SELECT seq, phase, day, data FROM game_log WHERE game_id = ? ORDER BY seq")
-      .all(gameId) as { seq: number; phase: string | null; day: number; data: string }[]
-  ).map((r) => ({
-    seq: r.seq,
-    phase: r.phase,
-    day: r.day,
-    players: JSON.parse(r.data).players,
-  }));
+  const ids = db
+    .prepare(
+      "SELECT seat,nickname,character_id,alignment FROM game_players WHERE game_id = ? ORDER BY seat",
+    )
+    .all(gameId) as {
+    seat: number;
+    nickname: string;
+    character_id: string;
+    alignment: string;
+  }[];
+  const phases = db
+    .prepare("SELECT idx,day,phase,state FROM game_phases WHERE game_id = ? ORDER BY idx")
+    .all(gameId) as { idx: number; day: number; phase: string; state: string }[];
+  return phases.map((ph) => {
+    const state = JSON.parse(ph.state) as StateMap;
+    return {
+      idx: ph.idx,
+      day: ph.day,
+      phase: ph.phase,
+      players: ids.map((p) => ({
+        seat: p.seat,
+        nickname: p.nickname,
+        characterId: p.character_id,
+        alignment: p.alignment,
+        status: state[p.seat]?.status ?? "alive",
+        markers: state[p.seat]?.markers ?? [],
+      })),
+    };
+  });
 }
 
 export type GameSummary = {
@@ -292,20 +430,37 @@ export type GameSummary = {
 };
 
 export function listGames(): GameSummary[] {
-  return db
+  const rows = db
     .prepare(
-      `SELECT g.id, g.sheet_name AS sheetName, g.status, g.day, g.phase, g.result,
+      `SELECT g.id, g.sheet_name AS sheetName, g.status, g.result, g.current_idx AS currentIdx,
               g.created_at AS createdAt,
               (SELECT COUNT(*) FROM game_players p WHERE p.game_id = g.id) AS playerCount
        FROM games g ORDER BY g.created_at DESC`,
     )
-    .all() as GameSummary[];
+    .all() as (Omit<GameSummary, "day" | "phase"> & { currentIdx: number })[];
+  const ph = db.prepare(
+    "SELECT day,phase FROM game_phases WHERE game_id = ? AND idx = ?",
+  );
+  return rows.map((r) => {
+    const p = ph.get(r.id, r.currentIdx) as { day: number; phase: string } | undefined;
+    return {
+      id: r.id,
+      sheetName: r.sheetName,
+      status: r.status,
+      day: p?.day ?? 1,
+      phase: p?.phase ?? null,
+      result: r.result,
+      playerCount: r.playerCount,
+      createdAt: r.createdAt,
+    };
+  });
 }
 
 export function deleteGame(id: string): void {
   db.transaction(() => {
     db.prepare("DELETE FROM game_players WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM game_log WHERE game_id = ?").run(id);
+    db.prepare("DELETE FROM game_phases WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM games WHERE id = ?").run(id);
   })();
 }

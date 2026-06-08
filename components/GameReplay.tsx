@@ -75,7 +75,7 @@ export function GameReplay({
           <ol className="space-y-4">
             {history.map((h) => (
               <li
-                key={h.seq}
+                key={h.idx}
                 className="rounded-lg border border-border bg-surface p-3"
               >
                 <p className="mb-2 text-sm font-semibold text-gold">
@@ -97,12 +97,20 @@ export function GameReplay({
                         {p.markers.map((m) => (
                           <span
                             key={m}
-                            className="rounded px-1 text-[10px]"
+                            className="inline-flex items-center gap-1 rounded px-1 text-[10px]"
                             style={{
                               background: `${MARKER_MAP[m]?.color ?? "#888"}22`,
                               color: MARKER_MAP[m]?.color ?? "#888",
                             }}
                           >
+                            {MARKER_MAP[m]?.icon && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={MARKER_MAP[m].icon}
+                                alt=""
+                                className="h-3.5 w-3.5 rounded-full object-cover"
+                              />
+                            )}
                             {MARKER_MAP[m]?.label ?? m}
                           </span>
                         ))}

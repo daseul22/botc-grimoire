@@ -20,7 +20,14 @@ export default async function PlayPage({
   const chars: Record<string, CharInfo> = {};
   for (const p of game.players) {
     const ch = getCharacter(p.characterId);
-    if (ch) chars[p.characterId] = { name: ch.name, image: ch.image, team: ch.team };
+    if (ch)
+      chars[p.characterId] = {
+        name: ch.name,
+        image: ch.image,
+        team: ch.team,
+        firstNight: ch.firstNight,
+        otherNight: ch.otherNight,
+      };
   }
 
   if (game.status === "finished") {

@@ -1,23 +1,46 @@
-// 효과 마커 정의 — 순수 모듈(클라이언트/서버 공용).
-// transient=true 마커는 페이즈를 넘길 때 자동 제거된다.
+// 상태이상(효과 마커) 정의 — 순수 모듈(클라이언트/서버 공용).
+//
+// duration: 페이즈를 넘길 때 자동 소멸 규칙
+//   - "phase"     : 다음 페이즈로 넘어가면 소멸 (밤→낮, 낮→밤 모두). 그 밤/낮 한정 효과.
+//   - "dusk"      : 황혼(낮 종료)까지 유지 → 낮이 끝날 때(낮→밤) 소멸. 밤→낮은 유지.
+//   - "permanent" : 영구 유지 (수동으로만 해제).
 // 사망(dead)은 마커가 아니라 player.status로 관리(영구).
+//
+// icon: BotC에서 상태이상은 원인 캐릭터 토큰으로 표시한다
+// (중독=독살자, 취함=주정뱅이, 집착=세레노버스, 보호=수도사, 사망예정=임프).
+
+export type MarkerDuration = "phase" | "dusk" | "permanent";
 
 export type Marker = {
   id: string;
   label: string;
+  icon: string;
   color: string;
-  transient: boolean;
+  duration: MarkerDuration;
 };
 
 export const MARKERS: Marker[] = [
-  { id: "poisoned", label: "중독", color: "#37b0a6", transient: true },
-  { id: "protected", label: "보호", color: "#4a90d9", transient: true },
-  { id: "dying", label: "사망예정", color: "#e08a3c", transient: true },
-  { id: "drunk", label: "술취함", color: "#9b6dd0", transient: false },
+  { id: "poisoned", label: "중독", icon: "/icons/poisoner.webp", color: "#37b0a6", duration: "dusk" },
+  { id: "drunk", label: "취함", icon: "/icons/drunk.webp", color: "#9b6dd0", duration: "permanent" },
+  { id: "mad", label: "집착", icon: "/icons/cerenovus.webp", color: "#ec6cae", duration: "dusk" },
+  { id: "protected", label: "보호", icon: "/icons/monk.webp", color: "#4a90d9", duration: "phase" },
+  { id: "dying", label: "사망예정", icon: "/icons/imp.webp", color: "#e08a3c", duration: "phase" },
 ];
 
 export const MARKER_MAP: Record<string, Marker> = Object.fromEntries(
   MARKERS.map((m) => [m.id, m]),
 );
 
-export const isTransient = (id: string) => MARKER_MAP[id]?.transient ?? false;
+export const DURATION_LABEL: Record<MarkerDuration, string> = {
+  phase: "페이즈",
+  dusk: "황혼까지",
+  permanent: "영구",
+};
+
+/** 페이즈 전환 시 이 마커를 유지할지. leavingDay=낮→밤(황혼 통과) 여부. */
+export function keepMarkerOnAdvance(id: string, leavingDay: boolean): boolean {
+  const d = MARKER_MAP[id]?.duration ?? "permanent";
+  if (d === "permanent") return true;
+  if (d === "phase") return false;
+  return !leavingDay; // dusk: 낮이 끝날 때만 소멸
+}

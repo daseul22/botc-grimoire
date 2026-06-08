@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { charactersForSheet, getSheet } from "@/lib/data";
+import { charactersForSheet, getCharacter, getSheet } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
 import {
   advancePhase,
@@ -11,6 +11,7 @@ import {
   finishGame,
   getGame,
   getGameConfig,
+  prevPhase,
   redrawRoles,
   savePositions,
   setLock,
@@ -107,10 +108,20 @@ export async function startGameAction(input: {
 
 export async function redrawAction(gameId: string): Promise<Game | { error: string }> {
   const cfg = getGameConfig(gameId);
-  if (!cfg) return { error: "게임을 찾을 수 없습니다." };
+  const game = getGame(gameId);
+  if (!cfg || !game) return { error: "게임을 찾을 수 없습니다." };
   const sheet = resolveSheet(cfg.sheetId);
   if (!sheet) return { error: "시트를 찾을 수 없습니다." };
-  const res = assignRoles(sheet, cfg.excludedIds, cfg.counts as Ratio);
+
+  // 저장된 config가 비어 있어도(구버전 게임) 안전하도록, 현재 배정된
+  // 플레이어들의 팀 구성에서 비율을 그대로 도출해 재추첨한다.
+  const counts: Ratio = { townsfolk: 0, outsider: 0, minion: 0, demon: 0 };
+  for (const p of game.players) {
+    const team = getCharacter(p.characterId)?.team;
+    if (team && team in counts) counts[team as keyof Ratio]++;
+  }
+
+  const res = assignRoles(sheet, cfg.excludedIds, counts);
   if ("error" in res) return res;
   redrawRoles(gameId, res.roles);
   return getGame(gameId)!;
@@ -118,6 +129,11 @@ export async function redrawAction(gameId: string): Promise<Game | { error: stri
 
 export async function advancePhaseAction(gameId: string): Promise<Game> {
   advancePhase(gameId);
+  return getGame(gameId)!;
+}
+
+export async function prevPhaseAction(gameId: string): Promise<Game> {
+  prevPhase(gameId);
   return getGame(gameId)!;
 }
 

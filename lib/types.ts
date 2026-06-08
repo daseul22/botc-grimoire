@@ -95,5 +95,9 @@ export interface Game {
   day: number;
   /** 'good' | 'evil' | null (향후) */
   result: string | null;
+  /** 현재 보고 있는 페이즈 스냅샷 인덱스 (0부터) */
+  phaseIndex: number;
+  /** 전체 페이즈 스냅샷 수 */
+  phaseCount: number;
   players: GamePlayer[];
 }
