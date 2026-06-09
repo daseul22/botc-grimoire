@@ -8,6 +8,7 @@ import { actionSpec, dayActionSpec } from "@/lib/night-actions";
 import type { Alignment, Character, Game, NightAction } from "@/lib/types";
 import { AbilityModal } from "./AbilityModal";
 import { MarkerToken } from "./MarkerToken";
+import { RolePickerModal } from "./RolePickerModal";
 import { NightActionRow } from "./NightActionRow";
 import { ClaimsSidebar } from "./ClaimsSidebar";
 import { FirstNightSetup } from "./FirstNightSetup";
@@ -175,6 +176,8 @@ export function PlayCanvas({
 
   // 폰용 공유 주소(LAN)를 만들어 클립보드에 복사.
   const [share, setShare] = useState<{ url: string; copied: boolean; label: string } | null>(null);
+  // 마커 대상 직업 선택 모달: 어느 마커(mad/became/gained)가 열려있는지
+  const [markerPicker, setMarkerPicker] = useState<string | null>(null);
   const shareLink = async (path: string, label: string) => {
     const r = await lanUrlAction(path);
     if ("error" in r) {
@@ -644,12 +647,20 @@ export function PlayCanvas({
                 );
               })}
 
-              {/* 대상 직업 선택 마커: 집착 / 직업 변경 / 능력 획득 */}
+              {/* 대상 직업 선택 마커: 집착 / 직업 변경 / 능력 획득 — 토큰 모달로 선택 */}
               {MARKERS.filter((m) => m.needsTarget).map((mk) => {
                 const cur = sel.markers.find((x) => parseMarker(x).base === mk.id);
                 const curParam = cur ? parseMarker(cur).param ?? "" : "";
+                const picked = curParam ? charMap[curParam] : undefined;
                 return (
-                  <span key={mk.id} className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm" style={curParam ? { background: `${mk.color}22`, color: mk.color, borderColor: `${mk.color}88` } : { borderColor: "var(--color-border)" }}>
+                  <button
+                    key={mk.id}
+                    type="button"
+                    onClick={() => setMarkerPicker(mk.id)}
+                    className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm hover:border-gold/60"
+                    style={curParam ? { background: `${mk.color}22`, color: mk.color, borderColor: `${mk.color}88` } : { borderColor: "var(--color-border)" }}
+                    title={`${mk.label} 대상 선택`}
+                  >
                     {mk.icon ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={mk.icon} alt="" className="h-5 w-5 rounded-full object-cover" />
@@ -657,14 +668,51 @@ export function PlayCanvas({
                       <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: mk.color }} />
                     )}
                     {mk.label}
-                    <select value={curParam} onChange={(e) => { const v = e.target.value; if (!v) { if (cur) run(() => toggleMarkerAction(game.id, sel.seat, cur)); } else { run(() => toggleMarkerAction(game.id, sel.seat, `${mk.id}:${v}`)); } }} className="max-w-32 rounded border border-border bg-surface px-1 py-0.5 text-xs text-text outline-none">
-                      <option value="">대상 없음</option>
-                      {sheetChars.map((c) => (<option key={c.id} value={c.id}>{c.name.ko}</option>))}
-                    </select>
-                  </span>
+                    {picked ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 text-xs">
+                        {picked.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={picked.image} alt="" className="h-4 w-4 rounded-full object-cover" />
+                        )}
+                        {picked.name.ko}
+                      </span>
+                    ) : (
+                      <span className="text-xs opacity-60">＋ 대상</span>
+                    )}
+                  </button>
                 );
               })}
             </div>
+            {/* needsTarget 마커 모달 */}
+            {MARKERS.filter((m) => m.needsTarget).map((mk) => {
+              const cur = sel.markers.find((x) => parseMarker(x).base === mk.id);
+              const curParam = cur ? parseMarker(cur).param ?? "" : "";
+              return (
+                <RolePickerModal
+                  key={`pk-${mk.id}`}
+                  open={markerPicker === mk.id}
+                  title={`${mk.label} 대상 직업`}
+                  candidates={sheetChars}
+                  selected={curParam}
+                  clearLabel="대상 없음"
+                  onPick={(v) => {
+                    // v 비어있음: 기존 마커가 있으면 제거, 없으면 대상 없이 단독 토글(노어빌리티 등).
+                    // v 있음: 기존 마커가 있으면 먼저 제거하고 새 param으로 재적용(교체).
+                    if (!v) {
+                      run(() => toggleMarkerAction(game.id, sel.seat, cur ?? mk.id));
+                    } else if (cur) {
+                      run(async () => {
+                        await toggleMarkerAction(game.id, sel.seat, cur);
+                        return await toggleMarkerAction(game.id, sel.seat, `${mk.id}:${v}`);
+                      });
+                    } else {
+                      run(() => toggleMarkerAction(game.id, sel.seat, `${mk.id}:${v}`));
+                    }
+                  }}
+                  onClose={() => setMarkerPicker(null)}
+                />
+              );
+            })}
 
             {/* 누적 메모 (전역) */}
             <textarea key={sel.seat} defaultValue={sel.memo} onBlur={(e) => { if (e.target.value !== sel.memo) run(() => setMemoAction(game.id, sel.seat, e.target.value)); }} placeholder="이 플레이어 메모 (게임 내내 유지)…" rows={2} className="mt-2 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-gold/60" />

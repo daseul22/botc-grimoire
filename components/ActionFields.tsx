@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { TEAM_MAP } from "@/lib/constants";
 import { RESULT_KIND_LABEL, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer } from "@/lib/types";
+import { RolePickerModal } from "./RolePickerModal";
 
 const short = (s: string) => (s.length > 7 ? s.slice(0, 6) + "…" : s);
 
@@ -98,14 +100,11 @@ export function ActionFields({
             </div>
           )}
           {spec.result === "role" && (
-            <select value={result} onChange={(e) => setResult(e.target.value)} className="max-w-full rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60">
-              <option value="">선택 안 함</option>
-              {Object.values(charMap)
-                .sort((a, b) => a.name.ko.localeCompare(b.name.ko, "ko"))
-                .map((c) => (
-                  <option key={c.id} value={c.id} style={{ color: TEAM_MAP[c.team]?.color }}>{c.name.ko}</option>
-                ))}
-            </select>
+            <RoleResultPicker
+              charMap={charMap}
+              value={result}
+              onChange={setResult}
+            />
           )}
           {spec.result === "text" && (
             <input
@@ -118,6 +117,50 @@ export function ActionFields({
           )}
         </div>
       )}
+    </>
+  );
+}
+
+/** 직업 결과 선택 — 토큰 모달. 드랍다운보다 시인성 ↑. */
+function RoleResultPicker({
+  charMap,
+  value,
+  onChange,
+}: {
+  charMap: Record<string, Character>;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const picked = value ? charMap[value] : undefined;
+  const candidates = Object.values(charMap);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-2 py-1 hover:border-gold/60"
+      >
+        {picked ? (
+          <>
+            {picked.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={picked.image} alt="" className="h-5 w-5 rounded-full object-cover" />
+            )}
+            <span style={{ color: TEAM_MAP[picked.team]?.color }}>{picked.name.ko}</span>
+          </>
+        ) : (
+          <span className="text-muted">＋ 직업 선택</span>
+        )}
+      </button>
+      <RolePickerModal
+        open={open}
+        title="결과 직업 선택"
+        candidates={candidates}
+        selected={value}
+        onPick={onChange}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 }
