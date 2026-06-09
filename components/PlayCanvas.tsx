@@ -8,6 +8,8 @@ import { actionSpec, dayActionSpec } from "@/lib/night-actions";
 import type { Alignment, Character, Game, NightAction } from "@/lib/types";
 import { AbilityModal } from "./AbilityModal";
 import { NightActionRow } from "./NightActionRow";
+import { ClaimsSidebar } from "./ClaimsSidebar";
+import { FirstNightSetup } from "./FirstNightSetup";
 import {
   advancePhaseAction,
   clearActionAction,
@@ -16,6 +18,7 @@ import {
   recordActionAction,
   redrawAction,
   savePositionsAction,
+  setBluffsAction,
   setMemoAction,
   setRoleAction,
   setStatusAction,
@@ -47,7 +50,7 @@ export function PlayCanvas({
   const [showEnd, setShowEnd] = useState(false);
   const [showRoles, setShowRoles] = useState(false);
   const [modalChar, setModalChar] = useState<Character | null>(null);
-  const [sidebar, setSidebar] = useState<"night" | "day" | "abilities" | null>(
+  const [sidebar, setSidebar] = useState<"night" | "day" | "abilities" | "claims" | null>(
     initial.phase === "night" ? "night" : "day",
   );
   const [pending, startTransition] = useTransition();
@@ -224,6 +227,29 @@ export function PlayCanvas({
         )}
       </div>
 
+      {canEditRoles && (
+        <FirstNightSetup
+          game={game}
+          sheetChars={sheetChars}
+          busy={pending}
+          onSetBluffs={(ids) => run(() => setBluffsAction(game.id, ids))}
+        />
+      )}
+      {!canEditRoles && game.bluffs.length > 0 && (
+        <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-muted">🎭 악마 블러핑:</span>
+          {game.bluffs.map((id) => (
+            <span key={id} className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5" style={{ color: TEAM_MAP[charMap[id]?.team]?.color }}>
+              {charMap[id]?.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={charMap[id].image} alt="" className="h-4 w-4 rounded-full object-cover" />
+              )}
+              {charMap[id]?.name.ko ?? id}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex gap-3">
         <div ref={boardRef} className="relative h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}>
           {/* 사이드바 토글 툴바 */}
@@ -241,6 +267,9 @@ export function PlayCanvas({
             )}
             <button type="button" onClick={() => setSidebar((s) => (s === "abilities" ? null : "abilities"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "abilities" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
               📖 상세 능력
+            </button>
+            <button type="button" onClick={() => setSidebar((s) => (s === "claims" ? null : "claims"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "claims" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
+              🗣️ 주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}
             </button>
           </div>
 
@@ -315,7 +344,7 @@ export function PlayCanvas({
                         spec={actionSpec(p.characterId)}
                         players={game.players}
                         charMap={charMap}
-                        record={game.actions.find((a) => a.actorSeat === p.seat)}
+                        record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
                         busy={pending}
                         onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
                         onClear={() => run(() => clearActionAction(game.id, p.seat))}
@@ -359,7 +388,7 @@ export function PlayCanvas({
                         spec={spec}
                         players={game.players}
                         charMap={charMap}
-                        record={game.actions.find((a) => a.actorSeat === p.seat)}
+                        record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
                         busy={pending}
                         onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
                         onClear={() => run(() => clearActionAction(game.id, p.seat))}
@@ -390,6 +419,19 @@ export function PlayCanvas({
               {otherRoles.map((c) => roleItem(c, true))}
             </ul>
           </aside>
+        )}
+
+        {/* 주장(블러핑) 기록 사이드바 */}
+        {sidebar === "claims" && (
+          <ClaimsSidebar
+            game={game}
+            charMap={charMap}
+            phase={game.phase ?? "night"}
+            busy={pending}
+            onRecordClaim={(seat, role, targets, result) => run(() => recordActionAction(game.id, seat, role, targets, result, true))}
+            onClearClaim={(seat, role) => run(() => clearActionAction(game.id, seat, role, true))}
+            onClose={() => setSidebar(null)}
+          />
         )}
       </div>
 

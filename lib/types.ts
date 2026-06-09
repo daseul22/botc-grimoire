@@ -76,6 +76,8 @@ export interface NightActionRecord {
   targets: number[];
   /** 결과 — 종류와 무관하게 문자열 저장(lib/night-actions.ts ResultKind 참고) */
   result: string;
+  /** 공개 주장(블러핑)인가 — true면 actorSeat가 characterId를 실제로 갖지 않을 수 있음 */
+  bluff?: boolean;
 }
 
 export interface GamePlayer {
@@ -116,4 +118,6 @@ export interface Game {
   players: GamePlayer[];
   /** 현재 페이즈 스냅샷의 야간 행동 기록 */
   actions: NightActionRecord[];
+  /** 악마에게 알려준 블러핑 직업 id (전역, 최대 3) */
+  bluffs: string[];
 }

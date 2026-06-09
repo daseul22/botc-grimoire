@@ -16,6 +16,7 @@ import {
   recordAction,
   redrawRoles,
   savePositions,
+  setBluffs,
   setLock,
   setMemo,
   setRoles,
@@ -165,16 +166,27 @@ export async function recordActionAction(
   characterId: string,
   targets: number[],
   result: string,
+  bluff = false,
 ): Promise<Game> {
-  recordAction(gameId, { actorSeat, characterId, targets, result });
+  recordAction(gameId, { actorSeat, characterId, targets, result, bluff });
   return getGame(gameId)!;
 }
 
 export async function clearActionAction(
   gameId: string,
   actorSeat: number,
+  characterId = "",
+  bluff = false,
 ): Promise<Game> {
-  clearAction(gameId, actorSeat);
+  clearAction(gameId, actorSeat, characterId, bluff);
+  return getGame(gameId)!;
+}
+
+export async function setBluffsAction(
+  gameId: string,
+  ids: string[],
+): Promise<Game> {
+  setBluffs(gameId, ids);
   return getGame(gameId)!;
 }
 

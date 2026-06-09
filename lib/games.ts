@@ -65,6 +65,7 @@ for (const sql of [
   "ALTER TABLE games ADD COLUMN config TEXT",
   "ALTER TABLE games ADD COLUMN current_idx INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE game_players ADD COLUMN memo TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE games ADD COLUMN bluffs TEXT NOT NULL DEFAULT '[]'",
 ]) {
   try {
     db.exec(sql);
@@ -130,6 +131,7 @@ type GameRow = {
   result: string | null;
   config: string | null;
   current_idx: number;
+  bluffs: string | null;
 };
 type PlayerRow = {
   seat: number;
@@ -186,21 +188,41 @@ function writeActions(gameId: string, idx: number, list: NightActionRecord[]): v
   ).run(gameId, idx, JSON.stringify(list));
 }
 
-/** 현재 페이즈 스냅샷에 행동 기록 (actor 좌석 기준 upsert) */
+// 기록 식별 키: 실제 행동은 좌석당 1개, 주장(블러핑)은 (좌석+주장직업)당 1개.
+const recKey = (a: { actorSeat: number; characterId: string; bluff?: boolean }) =>
+  a.bluff ? `b:${a.actorSeat}:${a.characterId}` : `a:${a.actorSeat}`;
+
+/** 현재 페이즈 스냅샷에 행동/주장 기록 (키 기준 upsert) */
 export function recordAction(gameId: string, rec: NightActionRecord): void {
   const idx = currentIdx(gameId);
-  const list = readActions(gameId, idx).filter((a) => a.actorSeat !== rec.actorSeat);
+  const key = recKey(rec);
+  const list = readActions(gameId, idx).filter((a) => recKey(a) !== key);
   list.push(rec);
   writeActions(gameId, idx, list);
 }
 
-/** 현재 페이즈 스냅샷에서 한 actor의 행동 기록 삭제 */
-export function clearAction(gameId: string, actorSeat: number): void {
+/** 현재 페이즈 스냅샷에서 한 기록 삭제 (실제 행동 또는 주장) */
+export function clearAction(
+  gameId: string,
+  actorSeat: number,
+  characterId = "",
+  bluff = false,
+): void {
   const idx = currentIdx(gameId);
+  const key = recKey({ actorSeat, characterId, bluff });
   writeActions(
     gameId,
     idx,
-    readActions(gameId, idx).filter((a) => a.actorSeat !== actorSeat),
+    readActions(gameId, idx).filter((a) => recKey(a) !== key),
+  );
+}
+
+/** 악마 블러핑 직업 (전역) */
+export function setBluffs(gameId: string, ids: string[]): void {
+  db.prepare("UPDATE games SET bluffs = ?, updated_at = ? WHERE id = ?").run(
+    JSON.stringify(ids.slice(0, 3)),
+    now(),
+    gameId,
   );
 }
 
@@ -247,6 +269,7 @@ export function getGame(id: string): Game | undefined {
     phaseCount: phaseCount(id),
     players: readPlayers(id, idx),
     actions: readActions(id, idx),
+    bluffs: g.bluffs ? (JSON.parse(g.bluffs) as string[]) : [],
   };
 }
 
@@ -308,7 +331,7 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
       "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,0,1,'night',?)",
     ).run(gameId, JSON.stringify(state));
     db.prepare(
-      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, updated_at = ? WHERE id = ?",
+      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', updated_at = ? WHERE id = ?",
     ).run(now(), gameId);
   })();
 }

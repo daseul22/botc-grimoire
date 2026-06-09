@@ -65,6 +65,27 @@ export function GameReplay({
         </div>
       </section>
 
+      {/* 악마 블러핑 */}
+      {game.bluffs.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-2 text-sm font-semibold text-muted">악마 블러핑</h2>
+          <div className="flex flex-wrap gap-2">
+            {game.bluffs.map((id) => {
+              const ch = charMap[id];
+              return (
+                <span key={id} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>
+                  {ch?.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={ch.image} alt="" className="h-5 w-5 rounded-full object-cover" />
+                  )}
+                  {ch?.name.ko ?? id}
+                </span>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* 진행 기록 */}
       <section>
         <h2 className="mb-3 text-sm font-semibold text-muted">진행 기록</h2>
@@ -107,7 +128,7 @@ export function GameReplay({
                 </div>
                 {h.actions.length > 0 && (
                   <div className="mt-2 space-y-1 border-t border-border pt-2">
-                    <p className="text-[11px] font-medium text-muted">야간 행동</p>
+                    <p className="text-[11px] font-medium text-muted">행동 기록</p>
                     {h.actions.map((a) => {
                       const actor = h.players.find((p) => p.seat === a.actorSeat);
                       const ch = charMap[a.characterId];
@@ -116,8 +137,9 @@ export function GameReplay({
                         .map((s) => h.players.find((p) => p.seat === s)?.nickname ?? `${s}`)
                         .join(", ");
                       return (
-                        <div key={a.actorSeat} className="flex flex-wrap items-center gap-1.5 text-xs">
+                        <div key={(a.bluff ? "b" : "a") + a.actorSeat + a.characterId} className="flex flex-wrap items-center gap-1.5 text-xs">
                           <span className="font-medium">{actor?.nickname ?? a.actorSeat}</span>
+                          {a.bluff && <span className="rounded bg-surface-2 px-1 text-[10px] text-muted">주장</span>}
                           <span className="text-muted">{ch?.name.ko ?? a.characterId}</span>
                           {a.targets.length > 0 && <span className="text-muted">→ {tnames}</span>}
                           {res && <span className="font-semibold text-gold">＝ {res}</span>}

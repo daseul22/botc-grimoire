@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { TEAM_MAP } from "@/lib/constants";
 import { MARKER_MAP } from "@/lib/markers";
-import { formatResult, markerForAction, RESULT_KIND_LABEL, type ActionSpec } from "@/lib/night-actions";
+import { formatResult, markerForAction, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer, NightActionRecord } from "@/lib/types";
+import { ActionFields } from "./ActionFields";
 
 const short = (s: string) => (s.length > 7 ? s.slice(0, 6) + "…" : s);
 
@@ -41,21 +41,10 @@ export function NightActionRow({
   const nothingToRecord = spec.targets === 0 && spec.result === "none" && !marker;
   if (nothingToRecord && !record) return null;
 
-  // 편집 시작: 기존 기록 값으로 초기화
   const startEdit = () => {
     setTargets(record?.targets ?? []);
     setResult(record?.result ?? "");
     setEditing(true);
-  };
-
-  const toggleTarget = (seat: number) => {
-    setTargets((cur) =>
-      cur.includes(seat)
-        ? cur.filter((s) => s !== seat)
-        : cur.length >= spec.targets
-          ? cur
-          : [...cur, seat],
-    );
   };
 
   const save = () => {
@@ -63,7 +52,6 @@ export function NightActionRow({
     setEditing(false);
   };
 
-  const pickable = players.filter((p) => p.seat !== actor.seat);
   const nameOf = (seat: number) => players.find((p) => p.seat === seat)?.nickname ?? `${seat}`;
 
   // ── 기록 요약 (편집 중 아님) ──
@@ -84,9 +72,7 @@ export function NightActionRow({
           ) : (
             <span className="text-muted">지목 없음</span>
           )}
-          {resText && (
-            <span className="ml-1 font-semibold text-gold">＝ {resText}</span>
-          )}
+          {resText && <span className="ml-1 font-semibold text-gold">＝ {resText}</span>}
         </div>
         <div className="mt-1 flex gap-2">
           <button type="button" onClick={startEdit} className="text-muted hover:text-text">수정</button>
@@ -126,86 +112,16 @@ export function NightActionRow({
   // ── 편집기 ──
   return (
     <div className="mt-1.5 ml-6 space-y-2 rounded-md border border-border bg-surface-2 p-2 text-xs">
-      {spec.targets > 0 && (
-        <div>
-          <p className="mb-1 text-muted">지목 <span className="opacity-60">(최대 {spec.targets})</span></p>
-          <div className="flex flex-wrap gap-1">
-            {pickable.map((p) => {
-              const on = targets.includes(p.seat);
-              const full = targets.length >= spec.targets && !on;
-              return (
-                <button
-                  key={p.seat}
-                  type="button"
-                  disabled={full}
-                  onClick={() => toggleTarget(p.seat)}
-                  title={p.nickname}
-                  className={`rounded px-1.5 py-0.5 ${
-                    on
-                      ? "bg-gold/20 text-gold ring-1 ring-gold/50"
-                      : full
-                        ? "opacity-30"
-                        : "bg-surface hover:bg-surface-2"
-                  } ${p.status === "dead" ? "line-through" : ""}`}
-                >
-                  {short(p.nickname)}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {spec.result !== "none" && (
-        <div>
-          <p className="mb-1 text-muted">
-            결과 <span className="opacity-60">· {RESULT_KIND_LABEL[spec.result]}</span>
-            {spec.hint && <span className="ml-1 opacity-60">({spec.hint})</span>}
-          </p>
-          {spec.result === "number" && (
-            <input
-              type="number"
-              min={0}
-              value={result}
-              onChange={(e) => setResult(e.target.value)}
-              className="w-20 rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60"
-            />
-          )}
-          {spec.result === "yesno" && (
-            <div className="flex gap-1">
-              {[["yes", "예"], ["no", "아니오"]].map(([v, label]) => (
-                <button key={v} type="button" onClick={() => setResult(v)} className={`rounded px-2.5 py-1 ${result === v ? "bg-gold/20 text-gold ring-1 ring-gold/50" : "bg-surface hover:bg-surface-2"}`}>{label}</button>
-              ))}
-            </div>
-          )}
-          {spec.result === "team" && (
-            <div className="flex gap-1">
-              {[["good", "선", "#4a90d9"], ["evil", "악", "#d23b3b"]].map(([v, label, c]) => (
-                <button key={v} type="button" onClick={() => setResult(v)} className="rounded px-2.5 py-1 ring-1" style={result === v ? { background: `${c}22`, color: c, borderColor: c } : { borderColor: "transparent" }}>{label}</button>
-              ))}
-            </div>
-          )}
-          {spec.result === "role" && (
-            <select value={result} onChange={(e) => setResult(e.target.value)} className="max-w-full rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60">
-              <option value="">선택 안 함</option>
-              {Object.values(charMap)
-                .sort((a, b) => a.name.ko.localeCompare(b.name.ko, "ko"))
-                .map((c) => (
-                  <option key={c.id} value={c.id} style={{ color: TEAM_MAP[c.team]?.color }}>{c.name.ko}</option>
-                ))}
-            </select>
-          )}
-          {spec.result === "text" && (
-            <input
-              type="text"
-              value={result}
-              onChange={(e) => setResult(e.target.value)}
-              placeholder={spec.hint ?? "결과 메모"}
-              className="w-full rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60"
-            />
-          )}
-        </div>
-      )}
+      <ActionFields
+        spec={spec}
+        players={players}
+        charMap={charMap}
+        actorSeat={actor.seat}
+        targets={targets}
+        setTargets={setTargets}
+        result={result}
+        setResult={setResult}
+      />
 
       {canApplyMarker && (
         <button
