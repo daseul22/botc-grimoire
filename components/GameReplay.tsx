@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { TEAM_MAP } from "@/lib/constants";
-import { markerInfo, parseMarker } from "@/lib/markers";
+import { markerInfo, markerLabel } from "@/lib/markers";
 import { formatResult, specForPhase } from "@/lib/night-actions";
+import { MarkerToken } from "./MarkerToken";
 import type { HistoryEntry } from "@/lib/games";
 import type { Character, Game } from "@/lib/types";
 
@@ -107,18 +108,10 @@ export function GameReplay({
                         {dead && <span className="text-xs text-red-400">사망</span>}
                         {p.markers.map((m) => {
                           const mk = markerInfo(m);
-                          const { param } = parseMarker(m);
-                          const label =
-                            mk?.id === "mad" && param
-                              ? `집착·${charMap[param]?.name.ko ?? param}`
-                              : mk?.label ?? m;
                           return (
                             <span key={m} className="inline-flex items-center gap-1 rounded px-1 text-[10px]" style={{ background: `${mk?.color ?? "#888"}22`, color: mk?.color ?? "#888" }}>
-                              {mk?.icon && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={mk.icon} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
-                              )}
-                              {label}
+                              <MarkerToken m={m} charMap={charMap} px={16} />
+                              {markerLabel(m, charMap)}
                             </span>
                           );
                         })}

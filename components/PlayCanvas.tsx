@@ -3,10 +3,11 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { TEAM_MAP, TEAMS } from "@/lib/constants";
-import { DURATION_LABEL, MARKERS, markerInfo, parseMarker } from "@/lib/markers";
+import { DURATION_LABEL, MARKERS, parseMarker } from "@/lib/markers";
 import { actionSpec, dayActionSpec } from "@/lib/night-actions";
 import type { Alignment, Character, Game, NightAction } from "@/lib/types";
 import { AbilityModal } from "./AbilityModal";
+import { MarkerToken } from "./MarkerToken";
 import { NightActionRow } from "./NightActionRow";
 import { ClaimsSidebar } from "./ClaimsSidebar";
 import { FirstNightSetup } from "./FirstNightSetup";
@@ -170,9 +171,6 @@ export function PlayCanvas({
     }
   }
 
-  const madMarker = sel?.markers.find((m) => parseMarker(m).base === "mad");
-  const madTarget = madMarker ? parseMarker(madMarker).param ?? "" : "";
-
   return (
     <div className="pb-28">
       {/* 페이즈 헤더 */}
@@ -293,18 +291,10 @@ export function PlayCanvas({
                 <span className="max-w-24 truncate text-sm font-medium">{p.nickname}</span>
                 <span className="max-w-24 truncate text-xs" style={{ color: teamColor }}>{ch?.name.ko ?? p.characterId}</span>
                 {p.markers.length > 0 && (
-                  <span className="flex max-w-28 flex-wrap justify-center gap-1">
-                    {p.markers.map((m) => {
-                      const mk = markerInfo(m);
-                      const { param } = parseMarker(m);
-                      const title = mk?.id === "mad" && param ? `집착: ${charMap[param]?.name.ko ?? param}` : mk?.label ?? m;
-                      return mk?.icon ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={m} src={mk.icon} alt={mk.label} title={title} draggable={false} className="h-9 w-9 rounded-full border bg-bg object-cover shadow" style={{ borderColor: mk.color }} />
-                      ) : (
-                        <span key={m} title={title} className="h-2.5 w-2.5 rounded-full" style={{ background: mk?.color ?? "#888" }} />
-                      );
-                    })}
+                  <span className="flex max-w-32 flex-wrap justify-center gap-1">
+                    {p.markers.map((m) => (
+                      <MarkerToken key={m} m={m} charMap={charMap} px={36} />
+                    ))}
                   </span>
                 )}
               </div>
@@ -503,16 +493,26 @@ export function PlayCanvas({
                 );
               })}
 
-              {/* 집착 대상 */}
-              <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm" style={madTarget ? { background: "#ec6cae22", color: "#ec6cae", borderColor: "#ec6cae88" } : { borderColor: "var(--color-border)" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icons/cerenovus.webp" alt="" className="h-5 w-5 rounded-full object-cover" />
-                집착
-                <select value={madTarget} onChange={(e) => { const v = e.target.value; if (!v) { if (madMarker) run(() => toggleMarkerAction(game.id, sel.seat, madMarker)); } else { run(() => toggleMarkerAction(game.id, sel.seat, `mad:${v}`)); } }} className="max-w-32 rounded border border-border bg-surface px-1 py-0.5 text-xs text-text outline-none">
-                  <option value="">대상 없음</option>
-                  {sheetChars.map((c) => (<option key={c.id} value={c.id}>{c.name.ko}</option>))}
-                </select>
-              </span>
+              {/* 대상 직업 선택 마커: 집착 / 직업 변경 / 능력 획득 */}
+              {MARKERS.filter((m) => m.needsTarget).map((mk) => {
+                const cur = sel.markers.find((x) => parseMarker(x).base === mk.id);
+                const curParam = cur ? parseMarker(cur).param ?? "" : "";
+                return (
+                  <span key={mk.id} className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm" style={curParam ? { background: `${mk.color}22`, color: mk.color, borderColor: `${mk.color}88` } : { borderColor: "var(--color-border)" }}>
+                    {mk.icon ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={mk.icon} alt="" className="h-5 w-5 rounded-full object-cover" />
+                    ) : (
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: mk.color }} />
+                    )}
+                    {mk.label}
+                    <select value={curParam} onChange={(e) => { const v = e.target.value; if (!v) { if (cur) run(() => toggleMarkerAction(game.id, sel.seat, cur)); } else { run(() => toggleMarkerAction(game.id, sel.seat, `${mk.id}:${v}`)); } }} className="max-w-32 rounded border border-border bg-surface px-1 py-0.5 text-xs text-text outline-none">
+                      <option value="">대상 없음</option>
+                      {sheetChars.map((c) => (<option key={c.id} value={c.id}>{c.name.ko}</option>))}
+                    </select>
+                  </span>
+                );
+              })}
             </div>
 
             {/* 누적 메모 (전역) */}
