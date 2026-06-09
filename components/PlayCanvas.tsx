@@ -4,12 +4,16 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { TEAM_MAP, TEAMS } from "@/lib/constants";
 import { DURATION_LABEL, MARKERS, markerInfo, parseMarker } from "@/lib/markers";
+import { actionSpec, dayActionSpec } from "@/lib/night-actions";
 import type { Alignment, Character, Game, NightAction } from "@/lib/types";
 import { AbilityModal } from "./AbilityModal";
+import { NightActionRow } from "./NightActionRow";
 import {
   advancePhaseAction,
+  clearActionAction,
   finishGameAction,
   prevPhaseAction,
+  recordActionAction,
   redrawAction,
   savePositionsAction,
   setMemoAction,
@@ -43,8 +47,8 @@ export function PlayCanvas({
   const [showEnd, setShowEnd] = useState(false);
   const [showRoles, setShowRoles] = useState(false);
   const [modalChar, setModalChar] = useState<Character | null>(null);
-  const [sidebar, setSidebar] = useState<"night" | "abilities" | null>(
-    initial.phase === "night" ? "night" : null,
+  const [sidebar, setSidebar] = useState<"night" | "day" | "abilities" | null>(
+    initial.phase === "night" ? "night" : "day",
   );
   const [pending, startTransition] = useTransition();
   const boardRef = useRef<HTMLDivElement>(null);
@@ -69,6 +73,13 @@ export function PlayCanvas({
         }))
         .filter((x): x is { p: (typeof game.players)[number]; na: NonNullable<NightAction> } => !!x.na)
         .sort((a, b) => a.na.order - b.na.order)
+    : [];
+
+  const dayRoles = !night
+    ? game.players
+        .map((p) => ({ p, ch: charMap[p.characterId], spec: dayActionSpec(p.characterId) }))
+        .filter((x): x is { p: (typeof game.players)[number]; ch: Character; spec: NonNullable<ReturnType<typeof dayActionSpec>> } => !!x.spec && !!x.ch)
+        .sort((a, b) => TEAM_ORDER.indexOf(a.ch.team) - TEAM_ORDER.indexOf(b.ch.team) || a.ch.name.ko.localeCompare(b.ch.name.ko, "ko"))
     : [];
 
   const { inPlayRoles, otherRoles } = useMemo(() => {
@@ -115,6 +126,19 @@ export function PlayCanvas({
       const r = await fn();
       if ("error" in r) alert(r.error);
       else setGame(r);
+    });
+
+  // 마커를 여러 좌석에 순차 적용(add-only). state가 페이즈당 단일 JSON이라
+  // 동시 호출 시 lost-update가 나므로 await로 직렬 처리한다.
+  const applyMarkers = (seats: number[], markerStr: string) =>
+    startTransition(async () => {
+      let latest: Game | null = null;
+      for (const seat of seats) {
+        const cur = (latest?.players ?? game.players).find((p) => p.seat === seat);
+        if (cur?.markers.includes(markerStr)) continue; // 이미 있으면 토글 끄지 않도록 skip
+        latest = await toggleMarkerAction(game.id, seat, markerStr);
+      }
+      if (latest) setGame(latest);
     });
 
   function onDown(e: React.PointerEvent, seat: number) {
@@ -204,10 +228,16 @@ export function PlayCanvas({
         <div ref={boardRef} className="relative h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}>
           {/* 사이드바 토글 툴바 */}
           <div className="absolute right-2 top-2 z-10 flex gap-1">
-            {night && (
+            {night ? (
               <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
                 🌙 행동 순서
               </button>
+            ) : (
+              dayRoles.length > 0 && (
+                <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
+                  ☀️ 낮 능력
+                </button>
+              )
             )}
             <button type="button" onClick={() => setSidebar((s) => (s === "abilities" ? null : "abilities"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "abilities" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
               📖 상세 능력
@@ -280,6 +310,61 @@ export function PlayCanvas({
                         {dead && <span className="ml-auto shrink-0 text-xs text-red-400">사망</span>}
                       </div>
                       {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
+                      <NightActionRow
+                        actor={p}
+                        spec={actionSpec(p.characterId)}
+                        players={game.players}
+                        charMap={charMap}
+                        record={game.actions.find((a) => a.actorSeat === p.seat)}
+                        busy={pending}
+                        onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
+                        onClear={() => run(() => clearActionAction(game.id, p.seat))}
+                        onApplyMarker={applyMarkers}
+                      />
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </aside>
+        )}
+
+        {/* 낮 능력 사이드바 */}
+        {sidebar === "day" && !night && (
+          <aside className="flex h-[70vh] w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
+              <span className="text-sm font-semibold">☀️ 낮 능력<span className="ml-1 font-normal text-muted">· {dayRoles.length}</span></span>
+              <button type="button" onClick={() => setSidebar(null)} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron dir="right" /></button>
+            </div>
+            {dayRoles.length === 0 ? (
+              <p className="px-3 py-3 text-sm text-muted">낮에 쓰는 능력을 가진 직업이 없습니다.</p>
+            ) : (
+              <ol className="flex-1 divide-y divide-border overflow-y-auto">
+                {dayRoles.map(({ p, ch, spec }) => {
+                  const dead = p.status === "dead";
+                  return (
+                    <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""}`}>
+                      <div className="flex items-center gap-2 text-sm">
+                        {ch.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={ch.image} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+                        )}
+                        <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
+                        <span className="text-xs" style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
+                        {dead && <span className="ml-auto shrink-0 text-xs text-red-400">사망</span>}
+                      </div>
+                      <p className="mt-1 break-words pl-0.5 text-xs text-muted">{ch.ability.ko}</p>
+                      <NightActionRow
+                        actor={p}
+                        spec={spec}
+                        players={game.players}
+                        charMap={charMap}
+                        record={game.actions.find((a) => a.actorSeat === p.seat)}
+                        busy={pending}
+                        onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
+                        onClear={() => run(() => clearActionAction(game.id, p.seat))}
+                        onApplyMarker={applyMarkers}
+                      />
                     </li>
                   );
                 })}

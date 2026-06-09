@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TEAM_MAP } from "@/lib/constants";
 import { markerInfo, parseMarker } from "@/lib/markers";
+import { formatResult, specForPhase } from "@/lib/night-actions";
 import type { HistoryEntry } from "@/lib/games";
 import type { Character, Game } from "@/lib/types";
 
@@ -104,6 +105,27 @@ export function GameReplay({
                     );
                   })}
                 </div>
+                {h.actions.length > 0 && (
+                  <div className="mt-2 space-y-1 border-t border-border pt-2">
+                    <p className="text-[11px] font-medium text-muted">야간 행동</p>
+                    {h.actions.map((a) => {
+                      const actor = h.players.find((p) => p.seat === a.actorSeat);
+                      const ch = charMap[a.characterId];
+                      const res = formatResult(specForPhase(a.characterId, h.phase).result, a.result, charMap);
+                      const tnames = a.targets
+                        .map((s) => h.players.find((p) => p.seat === s)?.nickname ?? `${s}`)
+                        .join(", ");
+                      return (
+                        <div key={a.actorSeat} className="flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="font-medium">{actor?.nickname ?? a.actorSeat}</span>
+                          <span className="text-muted">{ch?.name.ko ?? a.characterId}</span>
+                          {a.targets.length > 0 && <span className="text-muted">→ {tnames}</span>}
+                          {res && <span className="font-semibold text-gold">＝ {res}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </li>
             ))}
           </ol>

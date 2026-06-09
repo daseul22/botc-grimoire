@@ -6,12 +6,14 @@ import { charactersForSheet, getCharacter, getSheet } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
 import {
   advancePhase,
+  clearAction,
   createGame,
   deleteGame,
   finishGame,
   getGame,
   getGameConfig,
   prevPhase,
+  recordAction,
   redrawRoles,
   savePositions,
   setLock,
@@ -154,6 +156,25 @@ export async function toggleMarkerAction(
   markerId: string,
 ): Promise<Game> {
   toggleMarker(gameId, seat, markerId);
+  return getGame(gameId)!;
+}
+
+export async function recordActionAction(
+  gameId: string,
+  actorSeat: number,
+  characterId: string,
+  targets: number[],
+  result: string,
+): Promise<Game> {
+  recordAction(gameId, { actorSeat, characterId, targets, result });
+  return getGame(gameId)!;
+}
+
+export async function clearActionAction(
+  gameId: string,
+  actorSeat: number,
+): Promise<Game> {
+  clearAction(gameId, actorSeat);
   return getGame(gameId)!;
 }
 

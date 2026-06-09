@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { keepMarkerOnAdvance, parseMarker } from "./markers";
-import type { Game, GamePlayer } from "./types";
+import type { Game, GamePlayer, NightActionRecord } from "./types";
 
 // 서버 전용. 게임 상태는 가변 데이터 → seed가 건드리지 않는 별도 테이블.
 //
@@ -51,6 +51,12 @@ CREATE TABLE IF NOT EXISTS game_phases (
   day INTEGER NOT NULL,
   phase TEXT NOT NULL,
   state TEXT NOT NULL,
+  PRIMARY KEY (game_id, idx)
+);
+CREATE TABLE IF NOT EXISTS game_phase_actions (
+  game_id TEXT NOT NULL,
+  idx INTEGER NOT NULL,
+  actions TEXT NOT NULL DEFAULT '[]',
   PRIMARY KEY (game_id, idx)
 );
 `);
@@ -168,6 +174,36 @@ function writeState(gameId: string, idx: number, state: StateMap): void {
   );
 }
 
+function readActions(gameId: string, idx: number): NightActionRecord[] {
+  const row = db
+    .prepare("SELECT actions FROM game_phase_actions WHERE game_id = ? AND idx = ?")
+    .get(gameId, idx) as { actions: string } | undefined;
+  return row ? (JSON.parse(row.actions) as NightActionRecord[]) : [];
+}
+function writeActions(gameId: string, idx: number, list: NightActionRecord[]): void {
+  db.prepare(
+    "INSERT INTO game_phase_actions (game_id,idx,actions) VALUES (?,?,?) ON CONFLICT(game_id,idx) DO UPDATE SET actions = excluded.actions",
+  ).run(gameId, idx, JSON.stringify(list));
+}
+
+/** 현재 페이즈 스냅샷에 행동 기록 (actor 좌석 기준 upsert) */
+export function recordAction(gameId: string, rec: NightActionRecord): void {
+  const idx = currentIdx(gameId);
+  const list = readActions(gameId, idx).filter((a) => a.actorSeat !== rec.actorSeat);
+  list.push(rec);
+  writeActions(gameId, idx, list);
+}
+
+/** 현재 페이즈 스냅샷에서 한 actor의 행동 기록 삭제 */
+export function clearAction(gameId: string, actorSeat: number): void {
+  const idx = currentIdx(gameId);
+  writeActions(
+    gameId,
+    idx,
+    readActions(gameId, idx).filter((a) => a.actorSeat !== actorSeat),
+  );
+}
+
 function readPlayers(gameId: string, idx: number): GamePlayer[] {
   const state = readState(gameId, idx);
   return (
@@ -210,6 +246,7 @@ export function getGame(id: string): Game | undefined {
     phaseIndex: idx,
     phaseCount: phaseCount(id),
     players: readPlayers(id, idx),
+    actions: readActions(id, idx),
   };
 }
 
@@ -261,6 +298,7 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
     );
     for (const r of roles) upd.run(r.characterId, r.alignment, gameId, r.seat);
     db.prepare("DELETE FROM game_phases WHERE game_id = ?").run(gameId);
+    db.prepare("DELETE FROM game_phase_actions WHERE game_id = ?").run(gameId);
     const seats = db
       .prepare("SELECT seat FROM game_players WHERE game_id = ?")
       .all(gameId) as { seat: number }[];
@@ -412,6 +450,7 @@ export type HistoryEntry = {
   phase: string;
   day: number;
   players: HistoryPlayer[];
+  actions: NightActionRecord[];
 };
 
 export function getHistory(gameId: string): HistoryEntry[] {
@@ -434,6 +473,7 @@ export function getHistory(gameId: string): HistoryEntry[] {
       idx: ph.idx,
       day: ph.day,
       phase: ph.phase,
+      actions: readActions(gameId, ph.idx),
       players: ids.map((p) => ({
         seat: p.seat,
         nickname: p.nickname,
@@ -489,6 +529,7 @@ export function deleteGame(id: string): void {
     db.prepare("DELETE FROM game_players WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM game_log WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM game_phases WHERE game_id = ?").run(id);
+    db.prepare("DELETE FROM game_phase_actions WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM games WHERE id = ?").run(id);
   })();
 }

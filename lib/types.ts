@@ -66,6 +66,18 @@ export interface RulesSection {
 // ── 그리모어 게임 운영 (Phase 2) ──
 export type Alignment = "good" | "evil";
 
+/** 한 페이즈(스냅샷)에 기록되는 직업의 야간 행동. 행동 직업(actor) 좌석 기준. */
+export interface NightActionRecord {
+  /** 행동한 좌석 */
+  actorSeat: number;
+  /** 행동 시점의 직업(복기 self-contained용 스냅샷) */
+  characterId: string;
+  /** 지목한 좌석들 */
+  targets: number[];
+  /** 결과 — 종류와 무관하게 문자열 저장(lib/night-actions.ts ResultKind 참고) */
+  result: string;
+}
+
 export interface GamePlayer {
   seat: number;
   nickname: string;
@@ -102,4 +114,6 @@ export interface Game {
   /** 전체 페이즈 스냅샷 수 */
   phaseCount: number;
   players: GamePlayer[];
+  /** 현재 페이즈 스냅샷의 야간 행동 기록 */
+  actions: NightActionRecord[];
 }
