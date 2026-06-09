@@ -38,6 +38,12 @@ const ALIGN_COLOR: Record<Alignment, string> = { good: "#4a90d9", evil: "#d23b3b
 const TEAM_ORDER = TEAMS.map((t) => t.id);
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
+// 거짓 정보 경고: 정보 결과 직업이 취함/중독이면 거짓 정보를 줘야 함
+const INFO_KINDS = new Set(["number", "yesno", "role", "team"]);
+const TAINT_BASES = new Set(["poisoned", "drunk", "drunk-dusk"]);
+const isTainted = (markers: string[]) =>
+  markers.some((m) => TAINT_BASES.has(parseMarker(m).base));
+
 function Chevron({ dir }: { dir: "left" | "right" }) {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -152,6 +158,23 @@ export function PlayCanvas({
       if (latest) setGame(latest);
     });
 
+  // 토큰을 원형으로 자동 배치
+  const arrangeCircle = () => {
+    const n = game.players.length;
+    const positions = game.players.map((p, i) => {
+      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      return { seat: p.seat, x: 0.5 + 0.4 * Math.cos(angle), y: 0.5 + 0.42 * Math.sin(angle) };
+    });
+    setGame((g) => ({
+      ...g,
+      players: g.players.map((p) => {
+        const pos = positions.find((x) => x.seat === p.seat)!;
+        return { ...p, x: pos.x, y: pos.y };
+      }),
+    }));
+    savePositionsAction(game.id, positions);
+  };
+
   function onDown(e: React.PointerEvent, seat: number) {
     press.current = { seat, sx: e.clientX, sy: e.clientY, moved: false };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -205,12 +228,16 @@ export function PlayCanvas({
               다음 {night ? "낮" : "밤"} <Chevron dir="right" />
             </button>
           </div>
+          <button type="button" onClick={arrangeCircle} title="토큰을 원형으로 정렬" className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">
+            ◯ 정렬
+          </button>
           <button type="button" disabled={pending} onClick={() => { if (confirm("직업을 다시 추첨할까요? 현재 진행상황이 모두 초기화됩니다.")) run(() => redrawAction(game.id)); }} className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text disabled:opacity-50">
             재추첨
           </button>
           <button type="button" onClick={() => setShowEnd((v) => !v)} className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">
             게임 종료
           </button>
+          <Link href={`/play/${game.id}/seat`} target="_blank" title="플레이어용 자리 보기(폰)" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">📱 자리</Link>
           <Link href="/games" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">나가기</Link>
         </div>
       </div>
@@ -351,6 +378,7 @@ export function PlayCanvas({
                         )}
                         <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
                         <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? p.characterId}</span>
+                        {isTainted(p.markers) && INFO_KINDS.has(actionSpec(p.characterId).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
                         {dead && <span className="text-xs text-red-400">사망</span>}
                         <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                       </div>
@@ -397,6 +425,7 @@ export function PlayCanvas({
                         )}
                         <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
                         <span className="text-xs" style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
+                        {isTainted(p.markers) && INFO_KINDS.has(spec.result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
                         {dead && <span className="text-xs text-red-400">사망</span>}
                         <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                       </div>

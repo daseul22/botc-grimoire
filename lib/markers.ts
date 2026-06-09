@@ -33,6 +33,7 @@ export const MARKERS: Marker[] = [
   { id: "mad", label: "집착", icon: "/icons/cerenovus.webp", color: "#ec6cae", duration: "dusk", needsTarget: true, roleParam: true },
   { id: "protected", label: "보호", icon: "/icons/monk.webp", color: "#4a90d9", duration: "phase" },
   { id: "dying", label: "사망예정", icon: "/icons/imp.webp", color: "#e08a3c", duration: "phase" },
+  { id: "herring", label: "레드헤링", icon: "/icons/fortuneteller.webp", color: "#b07cd9", duration: "permanent" },
   { id: "became", label: "직업 변경", icon: "", color: "#c0653a", duration: "permanent", needsTarget: true, roleParam: true },
   { id: "gained", label: "능력 획득", icon: "", color: "#5aa86a", duration: "permanent", needsTarget: true, roleParam: true },
 ];
