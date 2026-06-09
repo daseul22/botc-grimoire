@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3"],
   // 사설 대역 와일드카드도 함께(글롭 미지원 시엔 위의 명시 IP가 커버)
   allowedDevOrigins: [...lanHosts, "192.168.*.*", "10.*.*.*", "172.*.*.*"],
+  // dev에서 useTransition pending 표시 칩이 startTransition(async)+revalidatePath 조합에서
+  // 가끔 해소되지 않아 화면에 stuck됨. 운영용 dev 모드라 인디케이터 비활성(에러 오버레이는 유지).
+  devIndicators: false,
 };
 
 export default nextConfig;
