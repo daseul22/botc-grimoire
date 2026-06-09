@@ -24,7 +24,9 @@ import {
   setBluffs,
   setGhostVote,
   setLock,
+  setAlignment,
   setMemo,
+  toggleGlobalMarker,
   setNote,
   setRoles,
   setStatus,
@@ -249,6 +251,23 @@ export async function setMemoAction(
   memo: string,
 ): Promise<Game> {
   setMemo(gameId, seat, memo);
+  return getGame(gameId)!;
+}
+
+export async function setAlignmentAction(
+  gameId: string,
+  seat: number,
+  alignment: "good" | "evil",
+): Promise<Game> {
+  setAlignment(gameId, seat, alignment);
+  return getGame(gameId)!;
+}
+
+export async function toggleGlobalMarkerAction(
+  gameId: string,
+  marker: string,
+): Promise<Game> {
+  toggleGlobalMarker(gameId, marker);
   return getGame(gameId)!;
 }
 

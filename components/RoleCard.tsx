@@ -1,5 +1,6 @@
 import { TEAM_MAP } from "@/lib/constants";
 import type { Character, GamePlayer } from "@/lib/types";
+import { AbilityFocus } from "./AbilityFocus";
 
 const ALIGN = {
   good: { label: "선 진영", color: "#4a90d9" },
@@ -31,12 +32,7 @@ export function RoleCard({ me, ch }: { me: GamePlayer; ch?: Character }) {
         {dead && <p className="mt-3 font-bold text-red-400">☠ 당신은 사망했습니다</p>}
       </div>
 
-      {ch?.ability.ko && (
-        <div className="mt-4 rounded-xl border border-border bg-surface p-4">
-          <p className="mb-1 text-xs font-semibold text-muted">능력</p>
-          <p className="text-sm leading-relaxed">{ch.ability.ko}</p>
-        </div>
-      )}
+      {ch?.ability.ko && <AbilityFocus ability={ch.ability.ko} />}
     </>
   );
 }

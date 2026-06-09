@@ -142,4 +142,6 @@ export interface Game {
   doneSeats: number[];
   /** 현재 페이즈 스냅샷의 이야기꾼 메모(스크래치패드) */
   note: string;
+  /** 게임 전역 마커(Vortox 영향·일식 등) — 좌석 단위가 아닌 게임 전체에 걸치는 효과 */
+  globalMarkers: string[];
 }

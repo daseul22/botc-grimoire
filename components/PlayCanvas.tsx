@@ -24,6 +24,8 @@ import {
   recordVoteAction,
   redrawAction,
   savePositionsAction,
+  setAlignmentAction,
+  toggleGlobalMarkerAction,
   lanUrlAction,
   setBluffsAction,
   setMemoAction,
@@ -42,9 +44,12 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
 // 거짓 정보 경고: 정보 결과 직업이 취함/중독이면 거짓 정보를 줘야 함
 const INFO_KINDS = new Set(["number", "yesno", "role", "team"]);
-const TAINT_BASES = new Set(["poisoned", "drunk", "drunk-dusk"]);
-const isTainted = (markers: string[]) =>
+// taints: 정보 직업이 거짓 정보를 받아야 하는 상태. markers.ts에서 taints:true인 마커 목록.
+const TAINT_BASES = new Set(MARKERS.filter((m) => m.taints).map((m) => m.id));
+const hasTaintInList = (markers: string[]) =>
   markers.some((m) => TAINT_BASES.has(parseMarker(m).base));
+const isTainted = (seatMarkers: string[], globalMarkers: string[]) =>
+  hasTaintInList(seatMarkers) || hasTaintInList(globalMarkers);
 
 // LAN IP는 비보안 컨텍스트(http)라 navigator.clipboard가 없을 수 있다.
 // 보안 컨텍스트면 Clipboard API, 아니면 execCommand 폴백. 둘 다 실패하면 수동 복사 유도.
@@ -340,6 +345,32 @@ export function PlayCanvas({
 
       <StatusBar game={game} charMap={charMap} />
 
+      {/* 글로벌 마커: Vortox(전체 정보 직업 거짓) 등 게임 전체에 걸치는 효과. 항상 노출(룰 참고용). */}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="text-muted">🌐 전역:</span>
+        {MARKERS.filter((m) => m.scope === "global").map((m) => {
+          const on = game.globalMarkers.includes(m.id);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => run(() => toggleGlobalMarkerAction(game.id, m.id))}
+              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5"
+              style={on ? { background: `${m.color}22`, color: m.color, borderColor: `${m.color}88` } : { borderColor: "var(--color-border)", color: "var(--color-muted)" }}
+              title={on ? `${m.label} 해제` : `${m.label} 적용`}
+            >
+              {m.icon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.icon} alt="" className="h-4 w-4 rounded-full object-cover" />
+              ) : (
+                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: m.color }}>{m.letter ?? m.label.charAt(0)}</span>
+              )}
+              {m.label}
+            </button>
+          );
+        })}
+      </div>
+
       <textarea
         key={`note-${game.phaseIndex}`}
         defaultValue={game.note}
@@ -451,7 +482,7 @@ export function PlayCanvas({
                         )}
                         <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
                         <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? p.characterId}</span>
-                        {isTainted(p.markers) && INFO_KINDS.has(actionSpec(p.characterId).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
+                        {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(actionSpec(p.characterId).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
                         {dead && <span className="text-xs text-red-400">사망</span>}
                         <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                       </div>
@@ -499,7 +530,7 @@ export function PlayCanvas({
                         )}
                         <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
                         <span className="text-xs" style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
-                        {isTainted(p.markers) && INFO_KINDS.has(spec.result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
+                        {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(spec.result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
                         {dead && <span className="text-xs text-red-400">사망</span>}
                         <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                       </div>
@@ -634,6 +665,15 @@ export function PlayCanvas({
                 </>
               )}
               <button type="button" onClick={() => run(() => toggleLockAction(game.id, sel.seat, !sel.locked))} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:text-text">{sel.locked ? "고정 해제" : "위치 고정"}</button>
+              <button
+                type="button"
+                onClick={() => run(() => setAlignmentAction(game.id, sel.seat, sel.alignment === "good" ? "evil" : "good"))}
+                title="진영 토글 (politician/mezepheles/cult leader 등)"
+                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium"
+                style={{ borderColor: ALIGN_COLOR[sel.alignment], color: ALIGN_COLOR[sel.alignment], background: `${ALIGN_COLOR[sel.alignment]}1a` }}
+              >
+                ⇄ {sel.alignment === "good" ? "선" : "악"} 진영
+              </button>
               <span className="mx-1 text-muted">|</span>
               {MARKERS.filter((m) => !m.needsTarget).map((m) => {
                 const on = sel.markers.includes(m.id);

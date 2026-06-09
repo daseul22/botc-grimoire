@@ -51,7 +51,10 @@ export function FirstNightSetup({
       {/* 셋업 영향 직업 */}
       {setupRoles.length > 0 && (
         <div>
-          <p className="mb-1 text-xs text-muted">셋업 변경 직업이 있습니다 — 인원 분포를 수동으로 보정하세요(직업 추가/제거/변경).</p>
+          <p className="mb-1 text-xs text-muted">
+            셋업 변경 직업이 있습니다 — 아래 모디파이어대로 인플레이 직업을 수동으로 추가/제거하세요.
+            위 <strong>팀 분포 카운트(마을/외부/하수/데몬)</strong>가 보정 후 시트와 일치하는지 확인하세요.
+          </p>
           <div className="flex flex-wrap gap-2">
             {setupRoles.map((c) => (
               <span key={c.id} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-xs">

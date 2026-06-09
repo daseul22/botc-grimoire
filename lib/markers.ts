@@ -26,12 +26,16 @@ export type Marker = {
   roleParam?: boolean;
   /** icon이 없을 때 토큰 자리에 표시할 글자/기호(1~2자). 색깔 원만 보이는 가독성 문제 회피용. */
   letter?: string;
+  /** "seat"(기본) = 좌석 단위 마커, "global" = 게임 전체 효과(Vortox·일식 등) */
+  scope?: "seat" | "global";
+  /** 정보 직업이 거짓 정보를 받아야 하는 상태인가 (취함·중독·Vortox). 좌석/글로벌 공용. */
+  taints?: boolean;
 };
 
 export const MARKERS: Marker[] = [
-  { id: "poisoned", label: "중독", icon: "/icons/poisoner.webp", color: "#37b0a6", duration: "dusk" },
-  { id: "drunk-dusk", label: "취함", icon: "/icons/drunk.webp", color: "#9b6dd0", duration: "dusk" },
-  { id: "drunk", label: "취함", icon: "/icons/drunk.webp", color: "#9b6dd0", duration: "permanent" },
+  { id: "poisoned", label: "중독", icon: "/icons/poisoner.webp", color: "#37b0a6", duration: "dusk", taints: true },
+  { id: "drunk-dusk", label: "취함", icon: "/icons/drunk.webp", color: "#9b6dd0", duration: "dusk", taints: true },
+  { id: "drunk", label: "취함", icon: "/icons/drunk.webp", color: "#9b6dd0", duration: "permanent", taints: true },
   { id: "mad", label: "집착", icon: "/icons/cerenovus.webp", color: "#ec6cae", duration: "dusk", needsTarget: true, roleParam: true },
   { id: "protected", label: "보호", icon: "/icons/monk.webp", color: "#4a90d9", duration: "phase" },
   { id: "dying", label: "사망예정", icon: "/icons/imp.webp", color: "#e08a3c", duration: "phase" },
@@ -42,6 +46,12 @@ export const MARKERS: Marker[] = [
   // needsTarget/roleParam — 대상 있는 케이스(처형자가 가졌던 좋은 직업) 토큰도 함께 보일 수 있게.
   // 대상 없이도 마커 단독 적용 가능(아래 PlayCanvas의 onPick 로직 참고).
   { id: "noability", label: "능력 없음", icon: "", color: "#7a7a7a", duration: "permanent", needsTarget: true, roleParam: true, letter: "✕" },
+
+  // ── 글로벌(게임 전체) 마커 ──
+  // Vortox(SnV 데몬): 살아있는 동안 모든 정보 직업이 거짓 정보를 받는다.
+  { id: "vortox", label: "Vortox 영향", icon: "/icons/vortox.webp", color: "#d23bbd", duration: "permanent", scope: "global", taints: true, letter: "V" },
+  // 일식/날씨/기타 ST가 표시할 글로벌 상태. 기능 효과는 운영자 판단.
+  { id: "eclipse", label: "특수 상태", icon: "", color: "#d4a23a", duration: "permanent", scope: "global", letter: "☄" },
 ];
 
 export const MARKER_MAP: Record<string, Marker> = Object.fromEntries(

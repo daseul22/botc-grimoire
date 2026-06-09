@@ -71,6 +71,7 @@ for (const sql of [
   "ALTER TABLE game_phases ADD COLUMN note TEXT NOT NULL DEFAULT ''",
   "ALTER TABLE game_phases ADD COLUMN done TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN claimed TEXT NOT NULL DEFAULT '[]'",
+  "ALTER TABLE games ADD COLUMN global_markers TEXT NOT NULL DEFAULT '[]'",
 ]) {
   try {
     db.exec(sql);
@@ -273,6 +274,22 @@ export function resetClaims(gameId: string): void {
   db.prepare("UPDATE games SET claimed = '{}' WHERE id = ?").run(gameId);
 }
 
+// 게임 전역 마커(Vortox 영향·일식 등). 좌석 단위가 아닌 게임 전체에 걸치는 효과.
+export function getGlobalMarkers(gameId: string): string[] {
+  const row = db.prepare("SELECT global_markers FROM games WHERE id = ?").get(gameId) as
+    | { global_markers: string }
+    | undefined;
+  return row?.global_markers ? (JSON.parse(row.global_markers) as string[]) : [];
+}
+
+export function toggleGlobalMarker(gameId: string, marker: string): void {
+  db.transaction(() => {
+    const cur = getGlobalMarkers(gameId);
+    const next = cur.includes(marker) ? cur.filter((m) => m !== marker) : [...cur, marker];
+    db.prepare("UPDATE games SET global_markers = ? WHERE id = ?").run(JSON.stringify(next), gameId);
+  })();
+}
+
 function readVotes(gameId: string, idx: number): VoteRecord[] {
   const row = db
     .prepare("SELECT votes FROM game_phases WHERE game_id = ? AND idx = ?")
@@ -393,6 +410,7 @@ export function getGame(id: string): Game | undefined {
     bluffs: g.bluffs ? (JSON.parse(g.bluffs) as string[]) : [],
     doneSeats: readDone(id, idx),
     note: readNote(id, idx),
+    globalMarkers: getGlobalMarkers(id),
   };
 }
 
@@ -455,7 +473,7 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
     ).run(gameId, JSON.stringify(state));
     db.prepare("UPDATE game_players SET ghost_vote_used = 0 WHERE game_id = ?").run(gameId);
     db.prepare(
-      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', claimed = '[]', updated_at = ? WHERE id = ?",
+      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', claimed = '[]', global_markers = '[]', updated_at = ? WHERE id = ?",
     ).run(now(), gameId);
   })();
 }
@@ -498,6 +516,15 @@ export function setRoles(
 export function setMemo(gameId: string, seat: number, memo: string): void {
   db.prepare("UPDATE game_players SET memo = ? WHERE game_id = ? AND seat = ?").run(
     memo,
+    gameId,
+    seat,
+  );
+}
+
+// politician/mezepheles/cult leader 등 진영이 게임 중에 바뀌는 직업 대응.
+export function setAlignment(gameId: string, seat: number, alignment: "good" | "evil"): void {
+  db.prepare("UPDATE game_players SET alignment = ? WHERE game_id = ? AND seat = ?").run(
+    alignment,
     gameId,
     seat,
   );
