@@ -343,8 +343,9 @@ export async function claimSeatAction(
     if (jar.get(key)?.value !== String(seat)) {
       const r = claimSeat(gameId, seat);
       if (r.ok) {
+        // path는 '/' — proxy.ts가 모든 경로 요청에서 이 쿠키를 봐야 가두기가 동작.
         jar.set(key, String(seat), {
-          path,
+          path: "/",
           maxAge: 60 * 60 * 12,
           httpOnly: true,
           sameSite: "lax",

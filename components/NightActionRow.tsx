@@ -15,6 +15,7 @@ export function NightActionRow({
   charMap,
   record,
   busy,
+  gameId,
   onRecord,
   onClear,
   onApplyMarker,
@@ -25,6 +26,7 @@ export function NightActionRow({
   charMap: Record<string, Character>;
   record?: NightActionRecord;
   busy: boolean;
+  gameId: string;
   onRecord: (targets: number[], result: string) => void;
   onClear: () => void;
   onApplyMarker: (seats: number[], markerStr: string) => void;
@@ -74,23 +76,36 @@ export function NightActionRow({
           )}
           {resText && <span className="ml-1 font-semibold text-gold">＝ {resText}</span>}
         </div>
-        <div className="mt-1 flex gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           <button type="button" onClick={startEdit} className="text-muted hover:text-text">수정</button>
           <button type="button" disabled={busy} onClick={onClear} className="text-muted hover:text-red-400 disabled:opacity-50">지우기</button>
-          {canApplyMarker && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onApplyMarker(markerSeats, markerForAction(spec.marker!, record.result))}
-              className="ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 disabled:opacity-50"
-              style={{ background: `${marker!.color}22`, color: marker!.color }}
-              title={`${marker!.label} 마커 적용`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={marker!.icon} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
-              {marker!.label} 적용
-            </button>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {spec.result !== "none" && (
+              <a
+                href={`/play/${gameId}/show/${actor.seat}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="결과를 새 창에 풀스크린으로 — 플레이어에게 보여주기"
+                className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25"
+              >
+                🎴 보여주기
+              </a>
+            )}
+            {canApplyMarker && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onApplyMarker(markerSeats, markerForAction(spec.marker!, record.result))}
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 disabled:opacity-50"
+                style={{ background: `${marker!.color}22`, color: marker!.color }}
+                title={`${marker!.label} 마커 적용`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={marker!.icon} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+                {marker!.label} 적용
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );

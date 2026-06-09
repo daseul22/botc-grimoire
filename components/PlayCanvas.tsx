@@ -258,7 +258,7 @@ export function PlayCanvas({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center overflow-hidden rounded-lg border border-border">
             <button type="button" disabled={pending || game.phaseIndex === 0} onClick={() => run(() => prevPhaseAction(game.id))} className="flex items-center gap-1 px-3 py-2 text-sm text-muted enabled:hover:bg-surface-2 enabled:hover:text-text disabled:opacity-30">
               <Chevron dir="left" /> 이전
@@ -277,9 +277,9 @@ export function PlayCanvas({
           <button type="button" onClick={() => setShowEnd((v) => !v)} className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">
             게임 종료
           </button>
-          <button type="button" onClick={() => shareLink(`/play/${game.id}/claim`, "직업배포(잠금)")} title="자리 점유형 배포 링크 복사 — 헤더 없음, 한 명이 고르면 그 자리는 잠겨 엿보기 방지" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">🔒 직업배포</button>
-          <button type="button" onClick={() => shareLink(`/play/${game.id}/seat`, "직업공유")} title="자유 선택형 자리 보기 링크 복사 (헤더 있음, 재선택 가능)" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">📱 직업공유</button>
-          <Link href="/games" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">나가기</Link>
+          <button type="button" onClick={() => shareLink(`/play/${game.id}/claim`, "직업배포(잠금)")} title="자리 점유형 배포 링크 복사 — 헤더 없음, 한 명이 고르면 그 자리는 잠겨 엿보기 방지" className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">🔒 직업배포</button>
+          <button type="button" onClick={() => shareLink(`/play/${game.id}/seat`, "직업공유")} title="자유 선택형 자리 보기 링크 복사 (헤더 있음, 재선택 가능)" className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">📱 직업공유</button>
+          <Link href="/games" className="rounded-lg px-3 py-2 text-sm text-muted hover:text-text" title="진행 화면 나가기">나가기</Link>
         </div>
       </div>
 
@@ -346,9 +346,26 @@ export function PlayCanvas({
         className="mb-2 w-full resize-y rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none placeholder:text-muted focus:border-gold/60"
       />
 
-      <div className="flex gap-3">
-        <div ref={boardRef} className="relative h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}>
-          {/* 사이드바 토글 툴바 */}
+      {/* 사이드바 토글 — 모바일 전용. 데스크탑은 보드 내부 absolute에 동일하게 다시 렌더된다. */}
+      <div className="mb-2 flex flex-wrap gap-1 md:hidden">
+        {night ? (
+          <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>🌙 행동 순서</button>
+        ) : (
+          dayRoles.length > 0 && (
+            <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>☀️ 낮 능력</button>
+          )
+        )}
+        <button type="button" onClick={() => setSidebar((s) => (s === "abilities" ? null : "abilities"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "abilities" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>📖 상세 능력</button>
+        <button type="button" onClick={() => setSidebar((s) => (s === "claims" ? null : "claims"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "claims" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>🗣️ 주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}</button>
+        {!night && (
+          <button type="button" onClick={() => setSidebar((s) => (s === "votes" ? null : "votes"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "votes" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>🗳️ 투표{game.votes.length > 0 ? ` · ${game.votes.length}` : ""}</button>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3 md:flex-row">
+        {/* 좌석 캔버스: 모바일 뷰포트에선 숨김(사용자가 폰에서 운영할 때 행동 순서/주장/투표 UI에 집중) */}
+        <div ref={boardRef} className="relative hidden h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface md:block" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}>
+          {/* 사이드바 토글 툴바 (데스크탑) */}
           <div className="absolute right-2 top-2 z-10 flex gap-1">
             {night ? (
               <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
@@ -408,7 +425,7 @@ export function PlayCanvas({
 
         {/* 밤 행동 순서 사이드바 */}
         {sidebar === "night" && night && (
-          <aside className="flex h-[70vh] w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface">
+          <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
               <span className="text-sm font-semibold">🌙 {isFirstNight ? "첫째 밤" : "그 외 밤"} 행동 순서<span className="ml-1 font-normal text-muted">· {nightOrder.length}</span></span>
               <button type="button" onClick={() => setSidebar(null)} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron dir="right" /></button>
@@ -443,6 +460,7 @@ export function PlayCanvas({
                         charMap={charMap}
                         record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
                         busy={pending}
+                        gameId={game.id}
                         onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
                         onClear={() => run(() => clearActionAction(game.id, p.seat))}
                         onApplyMarker={applyMarkers}
@@ -457,7 +475,7 @@ export function PlayCanvas({
 
         {/* 낮 능력 사이드바 */}
         {sidebar === "day" && !night && (
-          <aside className="flex h-[70vh] w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface">
+          <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
               <span className="text-sm font-semibold">☀️ 낮 능력<span className="ml-1 font-normal text-muted">· {dayRoles.length}</span></span>
               <button type="button" onClick={() => setSidebar(null)} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron dir="right" /></button>
@@ -490,6 +508,7 @@ export function PlayCanvas({
                         charMap={charMap}
                         record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
                         busy={pending}
+                        gameId={game.id}
                         onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
                         onClear={() => run(() => clearActionAction(game.id, p.seat))}
                         onApplyMarker={applyMarkers}
@@ -504,7 +523,7 @@ export function PlayCanvas({
 
         {/* 상세 능력 사이드바 */}
         {sidebar === "abilities" && (
-          <aside className="flex h-[70vh] w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface">
+          <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
               <span className="text-sm font-semibold">📖 직업 능력<span className="ml-1 font-normal text-muted">· {inPlayRoles.length}</span></span>
               <button type="button" onClick={() => setSidebar(null)} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron dir="right" /></button>
