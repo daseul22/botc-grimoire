@@ -361,7 +361,9 @@ export function PlayCanvas({
         )}
       </div>
 
-      {canEditRoles && (
+      {/* 첫째 밤 셋업 박스 — 1일차 밤 phase 0이면 편집, 그 외엔 같은 정보를 읽기 전용으로 표시.
+          접어둘 수 있게 details/summary로 감싼다. */}
+      {canEditRoles ? (
         <FirstNightSetup
           game={game}
           sheetChars={sheetChars}
@@ -369,20 +371,23 @@ export function PlayCanvas({
           onSetBluffs={(ids) => run(() => setBluffsAction(game.id, ids))}
           onSetDisguise={(seat, id) => run(() => setDisguiseAction(game.id, seat, id))}
         />
-      )}
-      {!canEditRoles && game.bluffs.length > 0 && (
-        <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted">🎭 악마 블러핑:</span>
-          {game.bluffs.map((id) => (
-            <span key={id} className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5" style={{ color: TEAM_MAP[charMap[id]?.team]?.color }}>
-              {charMap[id]?.image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={charMap[id].image} alt="" className="h-4 w-4 rounded-full object-cover" />
-              )}
-              {charMap[id]?.name.ko ?? id}
-            </span>
-          ))}
-        </div>
+      ) : (
+        <details className="mb-3 rounded-lg border border-border bg-surface/40">
+          <summary className="cursor-pointer select-none px-3 py-2 text-xs text-muted hover:text-text">
+            🌙 1일차 밤 셋업 (읽기 전용)
+            {game.bluffs.length > 0 && <span className="ml-2 opacity-70">· 블러핑 {game.bluffs.length}/3</span>}
+          </summary>
+          <div className="border-t border-border px-1 pt-1">
+            <FirstNightSetup
+              game={game}
+              sheetChars={sheetChars}
+              busy={pending}
+              onSetBluffs={() => {}}
+              onSetDisguise={() => {}}
+              readonly
+            />
+          </div>
+        </details>
       )}
 
       <StatusBar game={game} charMap={charMap} />
@@ -511,7 +516,8 @@ export function PlayCanvas({
                       <li key={`info-${item.infoKind}`} className="bg-surface-2/40 px-3 py-2">
                         <div className="flex items-center gap-2 text-sm">
                           <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
-                          <span className="text-base" aria-hidden>{isMinion ? "👥" : "😈"}</span>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={isMinion ? "/icons/minion-info.png" : "/icons/demon-info.png"} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
                           <span className="font-semibold" style={{ color: isMinion ? "#d23b3b" : "#d23b3b" }}>
                             {isMinion ? "하수인 정보" : "악마 정보"}
                           </span>

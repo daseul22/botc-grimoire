@@ -18,25 +18,26 @@ export function ClaimCard({
   ch?: Character;
   remainingMs: number;
 }) {
-  const [left, setLeft] = useState(() => Math.max(0, Math.ceil(remainingMs / 1000)));
-  const [hidden, setHidden] = useState(remainingMs <= 0);
+  // 실제 시계 기반 카운트. setInterval로 누적하지 않아 폰 잠금/탭 백그라운드 후에도 정확.
+  // mount 시점에 만료 timestamp를 고정하고, 250ms마다 now만 갱신해 left = endTime - now 로 계산.
+  const [endTime] = useState(() => Date.now() + Math.max(0, remainingMs));
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (hidden) return;
-    const t = setInterval(() => {
-      setLeft((s) => {
-        if (s <= 1) {
-          clearInterval(t);
-          setHidden(true);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [hidden]);
+    if (endTime <= Date.now()) return;
+    const tick = () => setNow(Date.now());
+    const t = setInterval(tick, 250);
+    document.addEventListener("visibilitychange", tick);
+    window.addEventListener("focus", tick);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", tick);
+      window.removeEventListener("focus", tick);
+    };
+  }, [endTime]);
 
-  if (hidden) return <Expired />;
+  const left = Math.max(0, Math.ceil((endTime - now) / 1000));
+  if (left <= 0) return <Expired />;
 
   return (
     <>

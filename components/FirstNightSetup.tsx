@@ -5,19 +5,24 @@ import { TEAM_MAP } from "@/lib/constants";
 import type { Character, Game } from "@/lib/types";
 import { RolePickerModal } from "./RolePickerModal";
 
-/** 1일차 밤 전용: 셋업 영향 직업 안내 + 악마 블러핑(3) + 미치광이/주정뱅이 가짜 직업 */
+/**
+ * 첫밤 셋업 박스 — 셋업 영향 직업 안내, 악마 블러핑(3), 미치광이/주정뱅이/꼭두각시 가짜 직업.
+ * readonly=true면 게임 진행 중에도 같은 정보를 *읽기 전용*으로 보여주기 위해 모든 인터랙션을 막는다.
+ */
 export function FirstNightSetup({
   game,
   sheetChars,
   busy,
   onSetBluffs,
   onSetDisguise,
+  readonly = false,
 }: {
   game: Game;
   sheetChars: Character[];
   busy: boolean;
   onSetBluffs: (ids: string[]) => void;
   onSetDisguise: (seat: number, characterId: string) => void;
+  readonly?: boolean;
 }) {
   const [pickerSeat, setPickerSeat] = useState<number | null>(null);
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;
@@ -52,17 +57,24 @@ export function FirstNightSetup({
     if (next !== cur) onSetBluffs(next);
   };
 
+  // readonly면 인터랙티브 요소는 disabled 처리. 디자인 톤도 진해서 강조 약화.
+  const interactiveDisabled = busy || readonly;
+
   return (
-    <div className="mb-3 space-y-3 rounded-lg border border-gold/30 bg-gold/5 px-4 py-3">
-      <p className="text-xs font-semibold text-gold">🌙 1일차 밤 셋업</p>
+    <div className={`mb-3 space-y-3 rounded-lg border px-4 py-3 ${readonly ? "border-border bg-surface/60" : "border-gold/30 bg-gold/5"}`}>
+      <p className={`text-xs font-semibold ${readonly ? "text-muted" : "text-gold"}`}>
+        🌙 1일차 밤 셋업{readonly && <span className="ml-1 opacity-70">· 읽기 전용</span>}
+      </p>
 
       {/* 셋업 영향 직업 */}
       {setupRoles.length > 0 && (
         <div>
-          <p className="mb-1 text-xs text-muted">
-            셋업 변경 직업이 있습니다 — 아래 모디파이어대로 인플레이 직업을 수동으로 추가/제거하세요.
-            위 <strong>팀 분포 카운트(마을/외부/하수/데몬)</strong>가 보정 후 시트와 일치하는지 확인하세요.
-          </p>
+          {!readonly && (
+            <p className="mb-1 text-xs text-muted">
+              셋업 변경 직업이 있습니다 — 아래 모디파이어대로 인플레이 직업을 수동으로 추가/제거하세요.
+              위 <strong>팀 분포 카운트(마을/외부/하수/데몬)</strong>가 보정 후 시트와 일치하는지 확인하세요.
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             {setupRoles.map((c) => (
               <span key={c.id} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-xs">
@@ -92,8 +104,8 @@ export function FirstNightSetup({
               <button
                 key={c.id}
                 type="button"
-                disabled={busy || full}
-                onClick={() => toggleBluff(c.id)}
+                disabled={interactiveDisabled || full}
+                onClick={readonly ? undefined : () => toggleBluff(c.id)}
                 title={c.name.ko}
                 className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs ${
                   on
@@ -141,10 +153,10 @@ export function FirstNightSetup({
                   <button
                     key={p.seat}
                     type="button"
-                    disabled={busy}
-                    onClick={() => setPickerSeat(p.seat)}
+                    disabled={interactiveDisabled}
+                    onClick={readonly ? undefined : () => setPickerSeat(p.seat)}
                     className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs ${
-                      cur ? "border-border bg-surface" : "border-amber-500/50 bg-amber-500/10"
+                      cur ? "border-border bg-surface" : readonly ? "border-border bg-surface opacity-70" : "border-amber-500/50 bg-amber-500/10"
                     }`}
                   >
                     <span className="font-medium">{p.nickname}</span>
