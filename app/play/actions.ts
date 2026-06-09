@@ -1,11 +1,14 @@
 "use server";
 
+import os from "node:os";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { charactersForSheet, getCharacter, getSheet } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
 import {
   advancePhase,
+  claimSeat,
   clearAction,
   createGame,
   deleteGame,
@@ -300,4 +303,55 @@ export async function savePositionsAction(
 export async function deleteGameAction(gameId: string): Promise<void> {
   deleteGame(gameId);
   revalidatePath("/games");
+}
+
+// 폰 공유용 LAN 주소를 만든다. 서버의 LAN IPv4를 골라 :3000 + path로 조립.
+// 같은 WiFi 폰에서 열 수 있도록 사설 대역(192.168 > 10 > 172.16-31)을 우선한다.
+export async function lanUrlAction(
+  path: string,
+): Promise<{ url: string } | { error: string }> {
+  const addrs: string[] = [];
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const ni of list ?? []) {
+      const isV4 = ni.family === "IPv4" || (ni.family as unknown) === 4;
+      if (isV4 && !ni.internal) addrs.push(ni.address);
+    }
+  }
+  const rank = (ip: string) =>
+    ip.startsWith("192.168.") ? 0
+    : ip.startsWith("10.") ? 1
+    : /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ? 2
+    : 3;
+  const host = addrs.sort((a, b) => rank(a) - rank(b))[0];
+  if (!host) return { error: "LAN IP를 찾지 못했습니다. 같은 WiFi에 연결됐는지 확인하세요." };
+  return { url: `http://${host}:3000${path}` };
+}
+
+// 직업 배포 링크에서 플레이어가 자기 좌석을 점유. form action(무JS 동작).
+// seat은 bind로 받는다(hidden input 직렬화 의존 X). 좌석은 서버에서 1회만 점유되고,
+// 점유자는 쿠키로 식별해 다른 사람이 못 엿본다.
+export async function claimSeatAction(
+  gameId: string,
+  seat: number,
+  _formData?: FormData,
+): Promise<void> {
+  const path = `/play/${gameId}/claim`;
+  if (Number.isFinite(seat)) {
+    const jar = await cookies();
+    const key = `botc-claim-${gameId}`;
+    // 이미 내 좌석이면 그대로, 아니면 점유 시도 후 쿠키 발급.
+    if (jar.get(key)?.value !== String(seat)) {
+      const r = claimSeat(gameId, seat);
+      if (r.ok) {
+        jar.set(key, String(seat), {
+          path,
+          maxAge: 60 * 60 * 12,
+          httpOnly: true,
+          sameSite: "lax",
+        });
+      }
+    }
+  }
+  // PRG: 쿠키 set 후 redirect → 브라우저가 새 쿠키로 GET하므로 같은 응답 내 stale-cookie 문제 회피.
+  redirect(path);
 }

@@ -23,6 +23,7 @@ import {
   recordVoteAction,
   redrawAction,
   savePositionsAction,
+  lanUrlAction,
   setBluffsAction,
   setMemoAction,
   setNoteAction,
@@ -43,6 +44,33 @@ const INFO_KINDS = new Set(["number", "yesno", "role", "team"]);
 const TAINT_BASES = new Set(["poisoned", "drunk", "drunk-dusk"]);
 const isTainted = (markers: string[]) =>
   markers.some((m) => TAINT_BASES.has(parseMarker(m).base));
+
+// LAN IP는 비보안 컨텍스트(http)라 navigator.clipboard가 없을 수 있다.
+// 보안 컨텍스트면 Clipboard API, 아니면 execCommand 폴백. 둘 다 실패하면 수동 복사 유도.
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (window.isSecureContext && navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 function Chevron({ dir }: { dir: "left" | "right" }) {
   return (
@@ -145,6 +173,18 @@ export function PlayCanvas({
       else setGame(r);
     });
 
+  // 폰용 공유 주소(LAN)를 만들어 클립보드에 복사.
+  const [share, setShare] = useState<{ url: string; copied: boolean; label: string } | null>(null);
+  const shareLink = async (path: string, label: string) => {
+    const r = await lanUrlAction(path);
+    if ("error" in r) {
+      alert(r.error);
+      return;
+    }
+    const copied = await copyText(r.url);
+    setShare({ url: r.url, copied, label });
+  };
+
   // 마커를 여러 좌석에 순차 적용(add-only). state가 페이즈당 단일 JSON이라
   // 동시 호출 시 lost-update가 나므로 await로 직렬 처리한다.
   const applyMarkers = (seats: number[], markerStr: string) =>
@@ -237,10 +277,23 @@ export function PlayCanvas({
           <button type="button" onClick={() => setShowEnd((v) => !v)} className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">
             게임 종료
           </button>
-          <Link href={`/play/${game.id}/seat`} target="_blank" title="플레이어용 자리 보기(폰)" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">📱 자리</Link>
+          <button type="button" onClick={() => shareLink(`/play/${game.id}/claim`, "직업배포(잠금)")} title="자리 점유형 배포 링크 복사 — 헤더 없음, 한 명이 고르면 그 자리는 잠겨 엿보기 방지" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">🔒 직업배포</button>
+          <button type="button" onClick={() => shareLink(`/play/${game.id}/seat`, "직업공유")} title="자유 선택형 자리 보기 링크 복사 (헤더 있음, 재선택 가능)" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">📱 직업공유</button>
           <Link href="/games" className="rounded-lg px-2 py-2 text-sm text-muted hover:text-text">나가기</Link>
         </div>
       </div>
+
+      {share && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm">
+          <span className="rounded bg-surface-2 px-2 py-0.5 text-xs text-muted">{share.label}</span>
+          <span className={share.copied ? "text-green-400" : "text-amber-400"}>
+            {share.copied ? "📋 주소 복사됨" : "복사 실패 — 아래 주소를 직접 복사하세요"}
+          </span>
+          <code className="select-all rounded bg-surface-2 px-2 py-1 text-xs text-text">{share.url}</code>
+          <span className="text-xs text-muted">같은 WiFi 폰 브라우저에서 열어 자리(직업) 확인</span>
+          <button type="button" onClick={() => setShare(null)} className="ml-auto text-muted hover:text-text" title="닫기">✕</button>
+        </div>
+      )}
 
       {showEnd && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3">

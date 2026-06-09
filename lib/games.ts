@@ -70,6 +70,7 @@ for (const sql of [
   "ALTER TABLE game_phases ADD COLUMN votes TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE game_phases ADD COLUMN note TEXT NOT NULL DEFAULT ''",
   "ALTER TABLE game_phases ADD COLUMN done TEXT NOT NULL DEFAULT '[]'",
+  "ALTER TABLE games ADD COLUMN claimed TEXT NOT NULL DEFAULT '[]'",
 ]) {
   try {
     db.exec(sql);
@@ -232,6 +233,44 @@ export function setBluffs(gameId: string, ids: string[]): void {
     now(),
     gameId,
   );
+}
+
+// 자리 잠금(직업 배포 링크용). 좌석 → 점유 시각(epoch ms) 맵.
+// 한 번 점유된 좌석은 다른 사람이 못 본다(락). 점유 시각으로 30초 만료를 판정한다.
+export type ClaimMap = Record<number, number>;
+
+export function getClaims(gameId: string): ClaimMap {
+  const row = db.prepare("SELECT claimed FROM games WHERE id = ?").get(gameId) as
+    | { claimed: string }
+    | undefined;
+  if (!row?.claimed) return {};
+  try {
+    const parsed = JSON.parse(row.claimed);
+    // 구버전(number[]) 호환: 시각 정보가 없으니 0(=즉시 만료)으로 둔다.
+    if (Array.isArray(parsed)) {
+      const m: ClaimMap = {};
+      for (const s of parsed) m[Number(s)] = 0;
+      return m;
+    }
+    return parsed as ClaimMap;
+  } catch {
+    return {};
+  }
+}
+
+// 좌석 점유 시도. 이미 점유됐으면 ok:false. 동시 요청 대비 트랜잭션으로 처리.
+export function claimSeat(gameId: string, seat: number): { ok: boolean } {
+  return db.transaction(() => {
+    const claims = getClaims(gameId);
+    if (seat in claims) return { ok: false };
+    claims[seat] = Date.now();
+    db.prepare("UPDATE games SET claimed = ? WHERE id = ?").run(JSON.stringify(claims), gameId);
+    return { ok: true };
+  })();
+}
+
+export function resetClaims(gameId: string): void {
+  db.prepare("UPDATE games SET claimed = '{}' WHERE id = ?").run(gameId);
 }
 
 function readVotes(gameId: string, idx: number): VoteRecord[] {
@@ -416,7 +455,7 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
     ).run(gameId, JSON.stringify(state));
     db.prepare("UPDATE game_players SET ghost_vote_used = 0 WHERE game_id = ?").run(gameId);
     db.prepare(
-      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', updated_at = ? WHERE id = ?",
+      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', claimed = '[]', updated_at = ? WHERE id = ?",
     ).run(now(), gameId);
   })();
 }
