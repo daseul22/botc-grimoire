@@ -74,6 +74,7 @@ for (const sql of [
   "ALTER TABLE games ADD COLUMN global_markers TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN lunatic_bluffs TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN lunatic_minions TEXT NOT NULL DEFAULT '[]'",
+  "ALTER TABLE games ADD COLUMN disguises TEXT NOT NULL DEFAULT '{}'",
 ]) {
   try {
     db.exec(sql);
@@ -321,6 +322,31 @@ export function setLunaticMinions(gameId: string, seats: number[]): void {
   );
 }
 
+// 좌석별 가짜 직업(disguise). 미치광이/주정뱅이 본인이 폰에서 볼 화면용.
+export function getDisguises(gameId: string): Record<number, string> {
+  const row = db.prepare("SELECT disguises FROM games WHERE id = ?").get(gameId) as
+    | { disguises: string }
+    | undefined;
+  if (!row?.disguises) return {};
+  try {
+    const obj = JSON.parse(row.disguises) as Record<string, string>;
+    const out: Record<number, string> = {};
+    for (const [k, v] of Object.entries(obj)) out[Number(k)] = v;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function setDisguise(gameId: string, seat: number, characterId: string): void {
+  db.transaction(() => {
+    const cur = getDisguises(gameId);
+    if (characterId) cur[seat] = characterId;
+    else delete cur[seat];
+    db.prepare("UPDATE games SET disguises = ? WHERE id = ?").run(JSON.stringify(cur), gameId);
+  })();
+}
+
 function readVotes(gameId: string, idx: number): VoteRecord[] {
   const row = db
     .prepare("SELECT votes FROM game_phases WHERE game_id = ? AND idx = ?")
@@ -444,6 +470,7 @@ export function getGame(id: string): Game | undefined {
     globalMarkers: getGlobalMarkers(id),
     lunaticBluffs: getLunaticBluffs(id),
     lunaticMinions: getLunaticMinions(id),
+    disguises: getDisguises(id),
   };
 }
 
@@ -506,7 +533,7 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
     ).run(gameId, JSON.stringify(state));
     db.prepare("UPDATE game_players SET ghost_vote_used = 0 WHERE game_id = ?").run(gameId);
     db.prepare(
-      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', claimed = '[]', global_markers = '[]', lunatic_bluffs = '[]', lunatic_minions = '[]', updated_at = ? WHERE id = ?",
+      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', claimed = '[]', global_markers = '[]', lunatic_bluffs = '[]', lunatic_minions = '[]', disguises = '{}', updated_at = ? WHERE id = ?",
     ).run(now(), gameId);
   })();
 }

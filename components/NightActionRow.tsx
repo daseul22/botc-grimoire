@@ -113,6 +113,17 @@ export function NightActionRow({
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <button type="button" onClick={startEdit} className="text-muted hover:text-text">수정</button>
           <button type="button" disabled={busy} onClick={onClear} className="text-muted hover:text-red-400 disabled:opacity-50">지우기</button>
+          {spec.result === "role" && (
+            <a
+              href={`/play/${gameId}/pick/${actor.seat}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
+              className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 text-muted hover:text-text"
+            >
+              📋 직업 목록
+            </a>
+          )}
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {spec.result !== "none" && showcaseArr.length <= 1 && (
               <a
@@ -160,13 +171,26 @@ export function NightActionRow({
   // ── 행동 없음 + 미편집: 기록 버튼 ──
   if (!editing) {
     return (
-      <button
-        type="button"
-        onClick={startEdit}
-        className="mt-1.5 ml-6 inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-xs text-muted hover:border-gold/50 hover:text-gold"
-      >
-        ＋ 행동 기록
-      </button>
+      <div className="mt-1.5 ml-6 flex flex-wrap items-center gap-2 text-xs">
+        <button
+          type="button"
+          onClick={startEdit}
+          className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-muted hover:border-gold/50 hover:text-gold"
+        >
+          ＋ 행동 기록
+        </button>
+        {spec.result === "role" && (
+          <a
+            href={`/play/${gameId}/pick/${actor.seat}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
+            className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text"
+          >
+            📋 직업 목록
+          </a>
+        )}
+      </div>
     );
   }
 

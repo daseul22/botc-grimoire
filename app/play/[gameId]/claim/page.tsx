@@ -55,7 +55,11 @@ export default async function ClaimPage({
               <p className="mb-3 text-center text-xs text-muted">
                 {game.sheetName} · {game.day}일차 {game.phase === "night" ? "밤" : "낮"}
               </p>
-              <ClaimCard me={me} ch={map.get(me.characterId)} remainingMs={remainingMs} />
+              <ClaimCard
+                me={me}
+                ch={map.get(game.disguises[me.seat] ?? me.characterId)}
+                remainingMs={remainingMs}
+              />
             </>
           ) : (
             <Expired />

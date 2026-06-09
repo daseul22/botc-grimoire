@@ -1,20 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import { TEAM_MAP } from "@/lib/constants";
 import type { Character, Game } from "@/lib/types";
+import { RolePickerModal } from "./RolePickerModal";
 
-/** 1일차 밤 전용: 셋업 영향 직업 안내 + 악마 블러핑(3) 기록 */
+/** 1일차 밤 전용: 셋업 영향 직업 안내 + 악마 블러핑(3) + 미치광이/주정뱅이 가짜 직업 */
 export function FirstNightSetup({
   game,
   sheetChars,
   busy,
   onSetBluffs,
+  onSetDisguise,
 }: {
   game: Game;
   sheetChars: Character[];
   busy: boolean;
   onSetBluffs: (ids: string[]) => void;
+  onSetDisguise: (seat: number, characterId: string) => void;
 }) {
+  const [pickerSeat, setPickerSeat] = useState<number | null>(null);
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;
   const inPlay = new Set(game.players.map((p) => p.characterId));
 
@@ -109,6 +114,78 @@ export function FirstNightSetup({
           })}
         </div>
       </div>
+
+      {/* 미치광이/주정뱅이 가짜 직업 — 본인이 폰에서 자기 진짜 직업 대신 볼 직업.
+          하나라도 미선택이면 헤더의 직업배포·직업공유 버튼이 비활성된다. */}
+      {(() => {
+        const disguiseSeats = game.players.filter(
+          (p) => p.characterId === "lunatic" || p.characterId === "drunk",
+        );
+        if (disguiseSeats.length === 0) return null;
+        return (
+          <div>
+            <p className="mb-1.5 text-xs text-muted">
+              가짜 직업 <span className="opacity-70">(미치광이=데몬 / 주정뱅이=마을주민 중 선택)</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {disguiseSeats.map((p) => {
+                const cur = game.disguises[p.seat];
+                const curCh = cur ? charMap[cur] : undefined;
+                const ownCh = charMap[p.characterId];
+                return (
+                  <button
+                    key={p.seat}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setPickerSeat(p.seat)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs ${
+                      cur ? "border-border bg-surface" : "border-amber-500/50 bg-amber-500/10"
+                    }`}
+                  >
+                    <span className="font-medium">{p.nickname}</span>
+                    <span className="text-muted opacity-70">({ownCh?.name.ko ?? p.characterId})</span>
+                    <span className="opacity-50">→</span>
+                    {curCh ? (
+                      <>
+                        {curCh.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={curCh.image} alt="" className="h-4 w-4 rounded-full object-cover" />
+                        )}
+                        <span style={{ color: TEAM_MAP[curCh.team]?.color }}>{curCh.name.ko}</span>
+                      </>
+                    ) : (
+                      <span className="text-amber-400">선택 필요</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <RolePickerModal
+              open={pickerSeat != null}
+              title="가짜 직업 선택"
+              candidates={(() => {
+                if (pickerSeat == null) return [];
+                const p = game.players.find((x) => x.seat === pickerSeat);
+                if (!p) return [];
+                if (p.characterId === "lunatic") {
+                  return sheetChars.filter((c) => c.team === "demon");
+                }
+                if (p.characterId === "drunk") {
+                  return sheetChars.filter((c) => c.team === "townsfolk" && !inPlay.has(c.id));
+                }
+                return [];
+              })()}
+              selected={pickerSeat != null ? game.disguises[pickerSeat] ?? "" : ""}
+              clearLabel="선택 해제"
+              onPick={(id) => {
+                if (pickerSeat == null) return;
+                onSetDisguise(pickerSeat, id);
+              }}
+              onClose={() => setPickerSeat(null)}
+            />
+          </div>
+        );
+      })()}
 
       {/* 데몬에게 첫밤 정보 보여주기. 데몬의 직업 자체는 야간 액션이 첫밤에 없어
           행동 순서 사이드바에 안 나오므로 여기에 직접 노출한다. */}

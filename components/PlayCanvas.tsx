@@ -31,6 +31,7 @@ import {
   toggleGlobalMarkerAction,
   lanUrlAction,
   setBluffsAction,
+  setDisguiseAction,
   setLunaticBluffsAction,
   setLunaticMinionsAction,
   setMemoAction,
@@ -290,8 +291,25 @@ export function PlayCanvas({
           <button type="button" onClick={() => setShowEnd((v) => !v)} className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">
             게임 종료
           </button>
-          <button type="button" onClick={() => shareLink(`/play/${game.id}/claim`, "직업배포(잠금)")} title="자리 점유형 배포 링크 복사 — 헤더 없음, 한 명이 고르면 그 자리는 잠겨 엿보기 방지" className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">🔒 직업배포</button>
-          <button type="button" onClick={() => shareLink(`/play/${game.id}/seat`, "직업공유")} title="자유 선택형 자리 보기 링크 복사 (헤더 있음, 재선택 가능)" className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text">📱 직업공유</button>
+          {(() => {
+            // 본인 진짜 직업을 모르는 직업(미치광이/주정뱅이)은 폰에 진짜 직업을 노출하면 게임이 망한다.
+            // 모든 해당 좌석에 가짜 직업(disguise)이 지정돼야 직업배포·직업공유를 허용한다.
+            const missing = game.players.filter(
+              (p) =>
+                (p.characterId === "lunatic" || p.characterId === "drunk") &&
+                !game.disguises[p.seat],
+            );
+            const blocked = missing.length > 0;
+            const blockTitle = blocked
+              ? `가짜 직업 미지정: ${missing.map((p) => p.nickname).join(", ")} — 1일차 밤 셋업 배너에서 지정하세요`
+              : undefined;
+            return (
+              <>
+                <button type="button" disabled={blocked} onClick={() => shareLink(`/play/${game.id}/claim`, "직업배포(잠금)")} title={blockTitle ?? "자리 점유형 배포 링크 복사 — 헤더 없음, 한 명이 고르면 그 자리는 잠겨 엿보기 방지"} className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted">🔒 직업배포</button>
+                <button type="button" disabled={blocked} onClick={() => shareLink(`/play/${game.id}/seat`, "직업공유")} title={blockTitle ?? "자유 선택형 자리 보기 링크 복사 (헤더 있음, 재선택 가능)"} className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted">📱 직업공유</button>
+              </>
+            );
+          })()}
           <Link href="/games" className="rounded-lg px-3 py-2 text-sm text-muted hover:text-text" title="진행 화면 나가기">나가기</Link>
         </div>
       </div>
@@ -331,6 +349,7 @@ export function PlayCanvas({
           sheetChars={sheetChars}
           busy={pending}
           onSetBluffs={(ids) => run(() => setBluffsAction(game.id, ids))}
+          onSetDisguise={(seat, id) => run(() => setDisguiseAction(game.id, seat, id))}
         />
       )}
       {!canEditRoles && game.bluffs.length > 0 && (

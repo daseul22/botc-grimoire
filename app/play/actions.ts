@@ -25,6 +25,7 @@ import {
   setGhostVote,
   setLock,
   setAlignment,
+  setDisguise,
   setLunaticBluffs,
   setLunaticMinions,
   setMemo,
@@ -336,6 +337,15 @@ export async function setLunaticBluffsAction(gameId: string, ids: string[]): Pro
 
 export async function setLunaticMinionsAction(gameId: string, seats: number[]): Promise<Game> {
   setLunaticMinions(gameId, seats);
+  return getGame(gameId)!;
+}
+
+export async function setDisguiseAction(
+  gameId: string,
+  seat: number,
+  characterId: string,
+): Promise<Game> {
+  setDisguise(gameId, seat, characterId);
   return getGame(gameId)!;
 }
 

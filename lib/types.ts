@@ -148,4 +148,9 @@ export interface Game {
   lunaticBluffs: string[];
   /** 미치광이에게 가짜 하수인이라고 보여줄 좌석 번호들. */
   lunaticMinions: number[];
+  /**
+   * 좌석별 가짜 직업(disguise). 본인이 자기 진짜 직업을 모르는 직업(미치광이/주정뱅이)이
+   * 폰(직업공유·직업배포)에서 볼 화면용. 키=좌석, 값=가짜로 보여줄 directory characterId.
+   */
+  disguises: Record<number, string>;
 }
