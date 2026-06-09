@@ -85,6 +85,28 @@ export function markerLabel(m: string, charMap: Record<string, Character>): stri
   return info?.label ?? m;
 }
 
+/**
+ * 좌석이 *행동 순서·운영상* 어떤 직업으로 다뤄져야 하는지.
+ * - 미치광이/주정뱅이/꼭두각시: disguises[seat] (가짜 직업)
+ * - 식인종(cannibal) 등 능력 획득: gained:<role> 마커가 있으면 그 직업으로
+ * - 직업 변경(became:<role>) 마커가 있으면 그 직업으로 (임프 자살 등)
+ * 가짜/획득 직업이 없으면 원래 characterId 반환.
+ */
+export function effectiveCharacterId(
+  seat: number,
+  characterId: string,
+  markers: string[],
+  disguises: Record<number, string> | undefined,
+): string {
+  const disguise = disguises?.[seat];
+  if (disguise) return disguise;
+  for (const m of markers) {
+    const { base, param } = parseMarker(m);
+    if ((base === "became" || base === "gained") && param) return param;
+  }
+  return characterId;
+}
+
 /** 페이즈 전환 시 이 마커를 유지할지. leavingDay=낮→밤(황혼 통과) 여부. */
 export function keepMarkerOnAdvance(m: string, leavingDay: boolean): boolean {
   const d = markerInfo(m)?.duration ?? "permanent";
