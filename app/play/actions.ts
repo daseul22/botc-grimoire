@@ -22,8 +22,10 @@ import {
   setGhostVote,
   setLock,
   setMemo,
+  setNote,
   setRoles,
   setStatus,
+  toggleDone,
   toggleMarker,
   type RoleAssignment,
 } from "@/lib/games";
@@ -177,6 +179,16 @@ export async function toggleGhostVoteAction(
   used: boolean,
 ): Promise<Game> {
   setGhostVote(gameId, seat, used);
+  return getGame(gameId)!;
+}
+
+export async function toggleDoneAction(gameId: string, seat: number): Promise<Game> {
+  toggleDone(gameId, seat);
+  return getGame(gameId)!;
+}
+
+export async function setNoteAction(gameId: string, note: string): Promise<Game> {
+  setNote(gameId, note);
   return getGame(gameId)!;
 }
 

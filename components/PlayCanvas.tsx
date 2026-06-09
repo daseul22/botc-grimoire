@@ -25,8 +25,10 @@ import {
   savePositionsAction,
   setBluffsAction,
   setMemoAction,
+  setNoteAction,
   setRoleAction,
   setStatusAction,
+  toggleDoneAction,
   toggleGhostVoteAction,
   toggleLockAction,
   toggleMarkerAction,
@@ -255,6 +257,15 @@ export function PlayCanvas({
 
       <StatusBar game={game} charMap={charMap} />
 
+      <textarea
+        key={`note-${game.phaseIndex}`}
+        defaultValue={game.note}
+        onBlur={(e) => { if (e.target.value !== game.note) run(() => setNoteAction(game.id, e.target.value)); }}
+        placeholder={`📝 ${game.day}일차 ${night ? "밤" : "낮"} 이야기꾼 메모…`}
+        rows={1}
+        className="mb-2 w-full resize-y rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none placeholder:text-muted focus:border-gold/60"
+      />
+
       <div className="flex gap-3">
         <div ref={boardRef} className="relative h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}>
           {/* 사이드바 토글 툴바 */}
@@ -329,8 +340,9 @@ export function PlayCanvas({
                 {nightOrder.map(({ p, na }, i) => {
                   const ch = charMap[p.characterId];
                   const dead = p.status === "dead";
+                  const done = game.doneSeats.includes(p.seat);
                   return (
-                    <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""}`}>
+                    <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
                       <div className="flex items-center gap-2 text-sm">
                         <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
                         {ch?.image && (
@@ -339,7 +351,8 @@ export function PlayCanvas({
                         )}
                         <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
                         <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? p.characterId}</span>
-                        {dead && <span className="ml-auto shrink-0 text-xs text-red-400">사망</span>}
+                        {dead && <span className="text-xs text-red-400">사망</span>}
+                        <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                       </div>
                       {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
                       <NightActionRow
@@ -374,8 +387,9 @@ export function PlayCanvas({
               <ol className="flex-1 divide-y divide-border overflow-y-auto">
                 {dayRoles.map(({ p, ch, spec }) => {
                   const dead = p.status === "dead";
+                  const done = game.doneSeats.includes(p.seat);
                   return (
-                    <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""}`}>
+                    <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
                       <div className="flex items-center gap-2 text-sm">
                         {ch.image && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -383,7 +397,8 @@ export function PlayCanvas({
                         )}
                         <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
                         <span className="text-xs" style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
-                        {dead && <span className="ml-auto shrink-0 text-xs text-red-400">사망</span>}
+                        {dead && <span className="text-xs text-red-400">사망</span>}
+                        <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                       </div>
                       <p className="mt-1 break-words pl-0.5 text-xs text-muted">{ch.ability.ko}</p>
                       <NightActionRow
@@ -504,7 +519,15 @@ export function PlayCanvas({
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => run(() => setStatusAction(game.id, sel.seat, sel.status === "dead" ? "alive" : "dead"))} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:text-text">{sel.status === "dead" ? "부활" : "사망 처리"}</button>
               {sel.status === "dead" && (
-                <button type="button" onClick={() => run(() => toggleGhostVoteAction(game.id, sel.seat, !sel.ghostVoteUsed))} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm" style={sel.ghostVoteUsed ? { borderColor: "var(--color-border)", opacity: 0.6 } : { borderColor: "#d4a23a88", color: "#d4a23a", background: "#d4a23a1a" }}>🗳️ {sel.ghostVoteUsed ? "유령표 사용함" : "유령표 사용 가능"}</button>
+                <>
+                  <select value={sel.deathCause} onChange={(e) => run(() => setStatusAction(game.id, sel.seat, "dead", e.target.value))} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-gold/60" title="사망 원인">
+                    <option value="">원인 미지정</option>
+                    <option value="night">밤 살해</option>
+                    <option value="execution">처형</option>
+                    <option value="other">기타</option>
+                  </select>
+                  <button type="button" onClick={() => run(() => toggleGhostVoteAction(game.id, sel.seat, !sel.ghostVoteUsed))} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm" style={sel.ghostVoteUsed ? { borderColor: "var(--color-border)", opacity: 0.6 } : { borderColor: "#d4a23a88", color: "#d4a23a", background: "#d4a23a1a" }}>🗳️ {sel.ghostVoteUsed ? "유령표 사용함" : "유령표 사용 가능"}</button>
+                </>
               )}
               <button type="button" onClick={() => run(() => toggleLockAction(game.id, sel.seat, !sel.locked))} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:text-text">{sel.locked ? "고정 해제" : "위치 고정"}</button>
               <span className="mx-1 text-muted">|</span>

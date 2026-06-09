@@ -138,4 +138,8 @@ export interface Game {
   votes: VoteRecord[];
   /** 악마에게 알려준 블러핑 직업 id (전역, 최대 3) */
   bluffs: string[];
+  /** 현재 페이즈 스냅샷에서 처리(능력 발동) 완료한 좌석 */
+  doneSeats: number[];
+  /** 현재 페이즈 스냅샷의 이야기꾼 메모(스크래치패드) */
+  note: string;
 }

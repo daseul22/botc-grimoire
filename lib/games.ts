@@ -269,6 +269,42 @@ export function setGhostVote(gameId: string, seat: number, used: boolean): void 
   ).run(used ? 1 : 0, gameId, seat);
 }
 
+function readDone(gameId: string, idx: number): number[] {
+  const row = db
+    .prepare("SELECT done FROM game_phases WHERE game_id = ? AND idx = ?")
+    .get(gameId, idx) as { done: string } | undefined;
+  return row?.done ? (JSON.parse(row.done) as number[]) : [];
+}
+
+/** 현재 페이즈 스냅샷에서 한 좌석의 '처리 완료' 토글 */
+export function toggleDone(gameId: string, seat: number): void {
+  const idx = currentIdx(gameId);
+  const cur = readDone(gameId, idx);
+  const next = cur.includes(seat) ? cur.filter((s) => s !== seat) : [...cur, seat];
+  db.prepare("UPDATE game_phases SET done = ? WHERE game_id = ? AND idx = ?").run(
+    JSON.stringify(next),
+    gameId,
+    idx,
+  );
+}
+
+function readNote(gameId: string, idx: number): string {
+  const row = db
+    .prepare("SELECT note FROM game_phases WHERE game_id = ? AND idx = ?")
+    .get(gameId, idx) as { note: string } | undefined;
+  return row?.note ?? "";
+}
+
+/** 현재 페이즈 스냅샷의 이야기꾼 메모 저장 */
+export function setNote(gameId: string, note: string): void {
+  const idx = currentIdx(gameId);
+  db.prepare("UPDATE game_phases SET note = ? WHERE game_id = ? AND idx = ?").run(
+    note,
+    gameId,
+    idx,
+  );
+}
+
 function readPlayers(gameId: string, idx: number): GamePlayer[] {
   const state = readState(gameId, idx);
   return (
@@ -316,6 +352,8 @@ export function getGame(id: string): Game | undefined {
     actions: readActions(id, idx),
     votes: readVotes(id, idx),
     bluffs: g.bluffs ? (JSON.parse(g.bluffs) as string[]) : [],
+    doneSeats: readDone(id, idx),
+    note: readNote(id, idx),
   };
 }
 
