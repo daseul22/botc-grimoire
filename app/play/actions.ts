@@ -25,7 +25,11 @@ import {
   setGhostVote,
   setLock,
   setAlignment,
+  setLunaticBluffs,
+  setLunaticMinions,
   setMemo,
+  setNickname,
+  swapSeats,
   toggleGlobalMarker,
   setNote,
   setRoles,
@@ -215,7 +219,43 @@ export async function recordActionAction(
   bluff = false,
 ): Promise<Game> {
   recordAction(gameId, { actorSeat, characterId, targets, result, bluff });
+  // 직업별 자동 사이드 이펙트.
+  if (!bluff) applyAutoSideEffects(gameId, characterId, actorSeat, result);
+  // 행동을 기록한 좌석은 그 페이즈의 처리완료(✓)로 자동 표시. 이미 표시돼 있으면 그대로.
+  if (!bluff) {
+    const g = getGame(gameId);
+    if (g && !g.doneSeats.includes(actorSeat)) toggleDone(gameId, actorSeat);
+  }
   return getGame(gameId)!;
+}
+
+/**
+ * 능력이 룰상 마커를 즉시 결정짓는 케이스를 자동 처리.
+ * - 철학자(philosopher): 결과로 고른 직업의 'gained' 마커를 본인에게 부여하고,
+ *   그 직업이 이미 인플레이라면 해당 좌석을 영구 drunk 처리(룰: 원본은 능력을 잃음).
+ */
+function applyAutoSideEffects(
+  gameId: string,
+  characterId: string,
+  actorSeat: number,
+  result: string,
+): void {
+  if (characterId !== "philosopher" || !result) return;
+  const game = getGame(gameId);
+  if (!game) return;
+
+  const actor = game.players.find((p) => p.seat === actorSeat);
+  const gainedMarker = `gained:${result}`;
+  if (actor && !actor.markers.includes(gainedMarker)) {
+    toggleMarker(gameId, actorSeat, gainedMarker);
+  }
+
+  for (const p of game.players) {
+    if (p.seat === actorSeat) continue;
+    if (p.characterId !== result) continue;
+    if (p.markers.includes("drunk")) continue;
+    toggleMarker(gameId, p.seat, "drunk");
+  }
 }
 
 export async function clearActionAction(
@@ -263,11 +303,39 @@ export async function setAlignmentAction(
   return getGame(gameId)!;
 }
 
+export async function setNicknameAction(
+  gameId: string,
+  seat: number,
+  nickname: string,
+): Promise<Game> {
+  setNickname(gameId, seat, nickname);
+  return getGame(gameId)!;
+}
+
+export async function swapSeatsAction(
+  gameId: string,
+  a: number,
+  b: number,
+): Promise<Game> {
+  swapSeats(gameId, a, b);
+  return getGame(gameId)!;
+}
+
 export async function toggleGlobalMarkerAction(
   gameId: string,
   marker: string,
 ): Promise<Game> {
   toggleGlobalMarker(gameId, marker);
+  return getGame(gameId)!;
+}
+
+export async function setLunaticBluffsAction(gameId: string, ids: string[]): Promise<Game> {
+  setLunaticBluffs(gameId, ids);
+  return getGame(gameId)!;
+}
+
+export async function setLunaticMinionsAction(gameId: string, seats: number[]): Promise<Game> {
+  setLunaticMinions(gameId, seats);
   return getGame(gameId)!;
 }
 

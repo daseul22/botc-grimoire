@@ -10,6 +10,7 @@ import { AbilityModal } from "./AbilityModal";
 import { MarkerToken } from "./MarkerToken";
 import { RolePickerModal } from "./RolePickerModal";
 import { NightActionRow } from "./NightActionRow";
+import { LunaticActionRow } from "./LunaticActionRow";
 import { ClaimsSidebar } from "./ClaimsSidebar";
 import { FirstNightSetup } from "./FirstNightSetup";
 import { VotesSidebar } from "./VotesSidebar";
@@ -25,9 +26,13 @@ import {
   redrawAction,
   savePositionsAction,
   setAlignmentAction,
+  setNicknameAction,
+  swapSeatsAction,
   toggleGlobalMarkerAction,
   lanUrlAction,
   setBluffsAction,
+  setLunaticBluffsAction,
+  setLunaticMinionsAction,
   setMemoAction,
   setNoteAction,
   setRoleAction,
@@ -371,14 +376,6 @@ export function PlayCanvas({
         })}
       </div>
 
-      <textarea
-        key={`note-${game.phaseIndex}`}
-        defaultValue={game.note}
-        onBlur={(e) => { if (e.target.value !== game.note) run(() => setNoteAction(game.id, e.target.value)); }}
-        placeholder={`📝 ${game.day}일차 ${night ? "밤" : "낮"} 이야기꾼 메모…`}
-        rows={1}
-        className="mb-2 w-full resize-y rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none placeholder:text-muted focus:border-gold/60"
-      />
 
       {/* 사이드바 토글 — 모바일 전용. 데스크탑은 보드 내부 absolute에 동일하게 다시 렌더된다. */}
       <div className="mb-2 flex flex-wrap gap-1 md:hidden">
@@ -487,18 +484,31 @@ export function PlayCanvas({
                         <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                       </div>
                       {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
-                      <NightActionRow
-                        actor={p}
-                        spec={actionSpec(p.characterId)}
-                        players={game.players}
-                        charMap={charMap}
-                        record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
-                        busy={pending}
-                        gameId={game.id}
-                        onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
-                        onClear={() => run(() => clearActionAction(game.id, p.seat))}
-                        onApplyMarker={applyMarkers}
-                      />
+                      {p.characterId === "lunatic" ? (
+                        <LunaticActionRow
+                          gameId={game.id}
+                          game={game}
+                          actorSeat={p.seat}
+                          sheetChars={sheetChars}
+                          charMap={charMap}
+                          busy={pending}
+                          onSetBluffs={(ids) => run(() => setLunaticBluffsAction(game.id, ids))}
+                          onSetMinions={(seats) => run(() => setLunaticMinionsAction(game.id, seats))}
+                        />
+                      ) : (
+                        <NightActionRow
+                          actor={p}
+                          spec={actionSpec(p.characterId)}
+                          players={game.players}
+                          charMap={charMap}
+                          record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
+                          busy={pending}
+                          gameId={game.id}
+                          onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
+                          onClear={() => run(() => clearActionAction(game.id, p.seat))}
+                          onApplyMarker={applyMarkers}
+                        />
+                      )}
                     </li>
                   );
                 })}
@@ -612,6 +622,36 @@ export function PlayCanvas({
               </div>
               <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted hover:text-text">닫기</button>
             </div>
+
+            {/* 1일차 밤 세팅: 닉네임 수정 + 자리(닉네임만) 교환. 직업은 좌석에 고정. */}
+            {canEditRoles && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-2 p-2">
+                <span className="text-xs text-muted">닉네임</span>
+                <input
+                  key={`nick-${sel.seat}`}
+                  defaultValue={sel.nickname}
+                  onBlur={(e) => { if (e.target.value !== sel.nickname) run(() => setNicknameAction(game.id, sel.seat, e.target.value)); }}
+                  placeholder={`플레이어 ${sel.seat + 1}`}
+                  className="w-44 rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-gold/60"
+                />
+                <span className="ml-2 text-xs text-muted">자리 교환</span>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const other = Number(e.target.value);
+                    if (Number.isFinite(other)) run(() => swapSeatsAction(game.id, sel.seat, other));
+                    e.currentTarget.value = "";
+                  }}
+                  className="rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-gold/60"
+                  title="이 자리의 닉네임과 다른 자리의 닉네임을 교환 (직업은 좌석 그대로)"
+                >
+                  <option value="">선택…</option>
+                  {game.players.filter((p) => p.seat !== sel.seat).map((p) => (
+                    <option key={p.seat} value={p.seat}>{p.nickname}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* 1일차 밤 직업 변경 */}
             {canEditRoles && (

@@ -72,6 +72,8 @@ for (const sql of [
   "ALTER TABLE game_phases ADD COLUMN done TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN claimed TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN global_markers TEXT NOT NULL DEFAULT '[]'",
+  "ALTER TABLE games ADD COLUMN lunatic_bluffs TEXT NOT NULL DEFAULT '[]'",
+  "ALTER TABLE games ADD COLUMN lunatic_minions TEXT NOT NULL DEFAULT '[]'",
 ]) {
   try {
     db.exec(sql);
@@ -290,6 +292,35 @@ export function toggleGlobalMarker(gameId: string, marker: string): void {
   })();
 }
 
+// 미치광이용 가짜 블러핑·하수인. 진짜 데몬 정보(game.bluffs)와는 별개로 ST가 자유 지정.
+export function getLunaticBluffs(gameId: string): string[] {
+  const row = db.prepare("SELECT lunatic_bluffs FROM games WHERE id = ?").get(gameId) as
+    | { lunatic_bluffs: string }
+    | undefined;
+  return row?.lunatic_bluffs ? (JSON.parse(row.lunatic_bluffs) as string[]) : [];
+}
+
+export function setLunaticBluffs(gameId: string, ids: string[]): void {
+  db.prepare("UPDATE games SET lunatic_bluffs = ? WHERE id = ?").run(
+    JSON.stringify(ids.slice(0, 3)),
+    gameId,
+  );
+}
+
+export function getLunaticMinions(gameId: string): number[] {
+  const row = db.prepare("SELECT lunatic_minions FROM games WHERE id = ?").get(gameId) as
+    | { lunatic_minions: string }
+    | undefined;
+  return row?.lunatic_minions ? (JSON.parse(row.lunatic_minions) as number[]) : [];
+}
+
+export function setLunaticMinions(gameId: string, seats: number[]): void {
+  db.prepare("UPDATE games SET lunatic_minions = ? WHERE id = ?").run(
+    JSON.stringify(seats),
+    gameId,
+  );
+}
+
 function readVotes(gameId: string, idx: number): VoteRecord[] {
   const row = db
     .prepare("SELECT votes FROM game_phases WHERE game_id = ? AND idx = ?")
@@ -411,6 +442,8 @@ export function getGame(id: string): Game | undefined {
     doneSeats: readDone(id, idx),
     note: readNote(id, idx),
     globalMarkers: getGlobalMarkers(id),
+    lunaticBluffs: getLunaticBluffs(id),
+    lunaticMinions: getLunaticMinions(id),
   };
 }
 
@@ -473,7 +506,7 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
     ).run(gameId, JSON.stringify(state));
     db.prepare("UPDATE game_players SET ghost_vote_used = 0 WHERE game_id = ?").run(gameId);
     db.prepare(
-      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', claimed = '[]', global_markers = '[]', updated_at = ? WHERE id = ?",
+      "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', claimed = '[]', global_markers = '[]', lunatic_bluffs = '[]', lunatic_minions = '[]', updated_at = ? WHERE id = ?",
     ).run(now(), gameId);
   })();
 }
@@ -528,6 +561,34 @@ export function setAlignment(gameId: string, seat: number, alignment: "good" | "
     gameId,
     seat,
   );
+}
+
+// 좌석 닉네임 수정(주로 1일차 밤 세팅 단계).
+export function setNickname(gameId: string, seat: number, nickname: string): void {
+  db.prepare("UPDATE game_players SET nickname = ? WHERE game_id = ? AND seat = ?").run(
+    nickname,
+    gameId,
+    seat,
+  );
+}
+
+// 두 좌석의 닉네임만 교환. 좌석에 고정된 직업/마커/위치는 그대로.
+// 오프라인 세팅에서 직업 배정 후 사람이 자리만 옮긴 케이스 대응.
+export function swapSeats(gameId: string, a: number, b: number): void {
+  if (a === b) return;
+  db.transaction(() => {
+    const get = db.prepare(
+      "SELECT nickname FROM game_players WHERE game_id = ? AND seat = ?",
+    );
+    const aRow = get.get(gameId, a) as { nickname: string } | undefined;
+    const bRow = get.get(gameId, b) as { nickname: string } | undefined;
+    if (!aRow || !bRow) return;
+    const upd = db.prepare(
+      "UPDATE game_players SET nickname = ? WHERE game_id = ? AND seat = ?",
+    );
+    upd.run(bRow.nickname, gameId, a);
+    upd.run(aRow.nickname, gameId, b);
+  })();
 }
 
 /** 현재 페이즈 스냅샷의 한 좌석 상태 변경 (cause: 사망 원인) */

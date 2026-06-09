@@ -12,6 +12,10 @@ export function getDb(): Database.Database {
     // fileMustExist: 시드 전이면 명확히 실패 → `npm run db:seed`
     _db = new Database(file, { fileMustExist: true });
     _db.pragma("journal_mode = WAL");
+    // 다중 디바이스 동시 사용(노트북 ST + 폰 폴링) 시 일시적 락에 대해 즉시 throw 대신
+    // 최대 5초까지 자동 재시도. UI가 '잠깐 멈춤'으로만 보이고 실패하지 않는다.
+    _db.pragma("busy_timeout = 5000");
+    _db.pragma("synchronous = NORMAL");
   }
   return _db;
 }

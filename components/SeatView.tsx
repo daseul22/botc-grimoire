@@ -21,8 +21,16 @@ export function SeatView({ game, sheetChars }: { game: Game; sheetChars: Charact
   }, [game.id]);
 
   useEffect(() => {
-    const t = setInterval(() => router.refresh(), 5000);
-    return () => clearInterval(t);
+    // 화면이 보일 때만 폴링(15초). 백그라운드 탭이면 멈춰 서버 부하·DB 락 경합 줄임.
+    const tick = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    const t = setInterval(tick, 15000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", tick);
+    };
   }, [router]);
 
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;

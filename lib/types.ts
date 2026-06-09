@@ -144,4 +144,8 @@ export interface Game {
   note: string;
   /** 게임 전역 마커(Vortox 영향·일식 등) — 좌석 단위가 아닌 게임 전체에 걸치는 효과 */
   globalMarkers: string[];
+  /** 미치광이(lunatic)에게 보여줄 가짜 블러핑 직업 id 3개. 진짜 데몬 정보(game.bluffs)와는 별개. */
+  lunaticBluffs: string[];
+  /** 미치광이에게 가짜 하수인이라고 보여줄 좌석 번호들. */
+  lunaticMinions: number[];
 }

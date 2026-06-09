@@ -39,9 +39,43 @@ export function NightActionRow({
   const markerSeats = spec.targets === 0 ? [actor.seat] : targets;
   const canApplyMarker = !!marker && markerSeats.length > 0 && (spec.marker !== "mad" || !!result);
 
-  // 지목도 결과도 마커도 없으면 기록할 것이 없음(순수 정보 없는 패시브/위장 등)
+  // showcase 배열이면 변형 라벨(악마용/하수인용) — 보여주기 버튼 N개로 분기
+  const showcaseArr = Array.isArray(spec.showcase) ? spec.showcase : spec.showcase ? [spec.showcase] : [];
+  const showcaseLabels = spec.showcaseLabels ?? [];
+  const hasShowcase = showcaseArr.length > 0;
+
+  // 지목도 결과도 마커도 *없고* showcase조차 없는 패시브 직업은 행 자체를 숨긴다.
   const nothingToRecord = spec.targets === 0 && spec.result === "none" && !marker;
-  if (nothingToRecord && !record) return null;
+  if (nothingToRecord && !record && !hasShowcase) return null;
+
+  // showcase URL 빌더 — i번째 변형, mode 있으면 ?mode= 추가, 배열이면 ?v= 추가
+  const showcaseHref = (i: number) => {
+    const s = showcaseArr[i];
+    const qs: string[] = [];
+    if (s?.mode) qs.push(`mode=${s.mode}`);
+    if (showcaseArr.length > 1) qs.push(`v=${i}`);
+    return `/play/${gameId}/show/${actor.seat}${qs.length ? `?${qs.join("&")}` : ""}`;
+  };
+
+  // 기록할 게 없지만 showcase는 있는 케이스(마술사/꼭두각시): record 없이도 보여주기만 노출.
+  const showcaseOnly = nothingToRecord && hasShowcase;
+  if (showcaseOnly) {
+    return (
+      <div className="mt-1.5 ml-6 flex flex-wrap items-center gap-2 text-xs">
+        {showcaseArr.map((_, i) => (
+          <a
+            key={i}
+            href={showcaseHref(i)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25"
+          >
+            🎴 보여주기{showcaseArr.length > 1 ? ` · ${showcaseLabels[i] ?? `#${i + 1}`}` : ""}
+          </a>
+        ))}
+      </div>
+    );
+  }
 
   const startEdit = () => {
     setTargets(record?.targets ?? []);
@@ -79,10 +113,10 @@ export function NightActionRow({
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <button type="button" onClick={startEdit} className="text-muted hover:text-text">수정</button>
           <button type="button" disabled={busy} onClick={onClear} className="text-muted hover:text-red-400 disabled:opacity-50">지우기</button>
-          <div className="ml-auto flex items-center gap-2">
-            {spec.result !== "none" && (
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {spec.result !== "none" && showcaseArr.length <= 1 && (
               <a
-                href={`/play/${gameId}/show/${actor.seat}`}
+                href={showcaseHref(0)}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="결과를 새 창에 풀스크린으로 — 플레이어에게 보여주기"
@@ -91,6 +125,18 @@ export function NightActionRow({
                 🎴 보여주기
               </a>
             )}
+            {showcaseArr.length > 1 &&
+              showcaseArr.map((_, i) => (
+                <a
+                  key={i}
+                  href={showcaseHref(i)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25"
+                >
+                  🎴 {showcaseLabels[i] ?? `#${i + 1}`}
+                </a>
+              ))}
             {canApplyMarker && (
               <button
                 type="button"

@@ -21,6 +21,56 @@ import type { Character } from "./types";
 
 export type ResultKind = "none" | "number" | "yesno" | "role" | "team" | "text";
 
+/**
+ * 결과 보여주기 화면(showcase)에 표시할 토큰 슬롯.
+ * - actor   : 능력 사용자 본인 직업 토큰(세레노버스 등)
+ * - result  : result가 role/team일 때 그 직업/팀 토큰
+ * - target  : targets[0] 좌석의 직업 토큰 (정체 노출됨)
+ * - target2 : targets[1] 좌석의 직업 토큰 (정체 노출됨)
+ * - targets : 모든 targets 좌석의 직업 토큰 (정체 노출됨)
+ * - name    : targets[0] 좌석의 닉네임만(직업 정체 안 노출). 점쟁이·재봉사 등.
+ * - name2   : targets[1] 좌석의 닉네임만.
+ * - names   : 모든 targets 좌석의 닉네임만. 귀족 3명 등.
+ */
+export type ShowcaseToken =
+  | "actor"
+  | "result"
+  | "target"
+  | "target2"
+  | "targets"
+  | "name"
+  | "name2"
+  | "names";
+
+/**
+ * 직업별 보여주기 메시지/토큰 구성.
+ * - heading    : 받는 사람용 큰 메시지 템플릿. placeholder: {role} {target} {target2} {targets} {actor} {result} {count} {yn} {team}
+ * - subheading : 부가 설명(작게)
+ * - tokens     : 표시할 토큰 슬롯 순서
+ * - recipient  : 화면을 보는 사람("actor" 기본, 세레노버스/처단자 등은 "target")
+ */
+export type ShowcaseSpec = {
+  heading?: string;
+  subheading?: string;
+  tokens?: ShowcaseToken[];
+  /**
+   * 화면을 보는 사람.
+   * - actor : 능력 사용자 본인(기본)
+   * - target: 첫 지목 좌석(세레노버스/처단자)
+   * - none  : 받는 사람을 화면에 표기하지 않음(꼭두각시처럼 능력 주인이 아닌 제3자에게 보여줄 때)
+   */
+  recipient?: "actor" | "target" | "none";
+  /**
+   * 특수 데이터 기반 보여주기 모드.
+   * - bluffs         : 게임의 블러핑 3개 직업 토큰(데몬용).
+   * - minions        : 하수인 좌석 닉네임 + 마술사 닉네임(데몬용).
+   * - lunatic-bluffs : 미치광이용 *가짜* 블러핑(game.lunaticBluffs).
+   * - lunatic-minions: 미치광이용 *가짜* 하수인 좌석(game.lunaticMinions).
+   * show 페이지가 ?mode=...으로 분기 렌더한다.
+   */
+  mode?: "bluffs" | "minions" | "lunatic-bluffs" | "lunatic-minions";
+};
+
 export type ActionSpec = {
   /** 지목 가능한 좌석 수의 상한 (0~상한) */
   targets: number;
@@ -30,6 +80,10 @@ export type ActionSpec = {
   marker?: string;
   /** 결과 입력 힌트 */
   hint?: string;
+  /** 보여주기 화면 커스터마이즈. 배열이면 ?v=N으로 변형 선택(마술사 = 데몬용/하수인용). */
+  showcase?: ShowcaseSpec | ShowcaseSpec[];
+  /** 배열 showcase일 때 각 변형의 label(버튼 라벨) */
+  showcaseLabels?: string[];
 };
 
 export const RESULT_KIND_LABEL: Record<ResultKind, string> = {
@@ -50,22 +104,32 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   poisoner: { targets: 1, result: "none", marker: "poisoned" },
   scarletwoman: { targets: 0, result: "none" },
   imp: { targets: 1, result: "none", marker: "dying" },
-  washerwoman: { targets: 2, result: "role", hint: "둘 중 1명의 주민 직업" },
-  librarian: { targets: 2, result: "role", hint: "둘 중 1명의 외지인(없으면 비움)" },
-  investigator: { targets: 2, result: "role", hint: "둘 중 1명의 하수인 직업" },
-  chef: { targets: 0, result: "number", hint: "이웃한 악 쌍 수" },
-  empath: { targets: 0, result: "number", hint: "이웃 2명 중 악 수 (0~2)" },
-  fortuneteller: { targets: 2, result: "yesno", hint: "둘 중 악마 있는가" },
+  washerwoman: { targets: 2, result: "role", hint: "둘 중 1명의 주민 직업", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", tokens: ["target", "target2", "result"] } },
+  librarian: { targets: 2, result: "role", hint: "둘 중 1명의 외지인(없으면 비움)", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", subheading: "외지인이 없다면 결과가 비어 있습니다", tokens: ["target", "target2", "result"] } },
+  investigator: { targets: 2, result: "role", hint: "둘 중 1명의 하수인 직업", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", tokens: ["target", "target2", "result"] } },
+  chef: { targets: 0, result: "number", hint: "이웃한 악 쌍 수", showcase: { heading: "{count}쌍이 인접해 있습니다", subheading: "악 진영끼리 이웃한 쌍의 수" } },
+  empath: { targets: 0, result: "number", hint: "이웃 2명 중 악 수 (0~2)", showcase: { heading: "양 옆 이웃 중 {count}명이 악입니다" } },
+  fortuneteller: { targets: 2, result: "yesno", hint: "둘 중 악마 있는가", showcase: { heading: "이 두 명 중 데몬이 있는가: {yn}", tokens: ["name", "name2"] } },
   butler: { targets: 1, result: "none" },
   spy: { targets: 0, result: "none" },
-  ravenkeeper: { targets: 1, result: "role", hint: "지목한 플레이어 직업" },
-  undertaker: { targets: 0, result: "role", hint: "처형된 플레이어 직업" },
+  ravenkeeper: { targets: 1, result: "role", hint: "지목한 플레이어 직업", showcase: { heading: "{target}의 직업은 {role}입니다", tokens: ["target", "result"] } },
+  undertaker: { targets: 0, result: "role", hint: "처형된 플레이어 직업", showcase: { heading: "오늘 처형된 사람의 직업은 {role}입니다", tokens: ["result"] } },
 
   // ── 배드 문 라이징 ──
   apprentice: { targets: 0, result: "text", hint: "얻은 능력" },
   innkeeper: { targets: 2, result: "none", marker: "protected", hint: "둘 보호, 1명 취함" },
   gambler: { targets: 1, result: "role", hint: "추측한 직업" },
-  lunatic: { targets: 1, result: "none" },
+  // 미치광이: 지목 절차 X. ST가 lunatic_bluffs/lunatic_minions를 별도 지정하고
+  // show 페이지 ?mode=lunatic-bluffs|lunatic-minions 분기로 가짜 정보를 미치광이에게 보여준다.
+  lunatic: {
+    targets: 0,
+    result: "none",
+    showcase: [
+      { mode: "lunatic-bluffs" },
+      { mode: "lunatic-minions" },
+    ],
+    showcaseLabels: ["블러핑", "하수인"],
+  },
   sailor: { targets: 1, result: "none", marker: "drunk-dusk" },
   courtier: { targets: 1, result: "none", marker: "drunk", hint: "3일 밤낮 취함" },
   exorcist: { targets: 1, result: "none" },
@@ -87,12 +151,12 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   harlot: { targets: 1, result: "role", hint: "지목한 플레이어 직업" },
   barista: { targets: 1, result: "none" },
   bonecollector: { targets: 1, result: "none", hint: "능력 되찾을 사망자" },
-  philosopher: { targets: 0, result: "role", hint: "얻은 선한 직업" },
+  philosopher: { targets: 0, result: "role", hint: "얻은 선한 직업", showcase: { heading: "당신은 {role}의 능력을 얻었습니다", subheading: "기존 능력 대신 이 직업처럼 행동합니다", tokens: ["result"] } },
   pithag: { targets: 1, result: "role", hint: "바꿀 직업" },
   snakecharmer: { targets: 1, result: "none" },
   eviltwin: { targets: 0, result: "none" },
   witch: { targets: 1, result: "none", hint: "저주: 지목하면 사망" },
-  cerenovus: { targets: 1, result: "role", marker: "mad", hint: "집착시킬 선한 직업" },
+  cerenovus: { targets: 1, result: "role", marker: "mad", hint: "집착시킬 선한 직업", showcase: { recipient: "target", heading: "당신은 {role}에 집착해야 합니다", subheading: "그 직업이 아닌 척하면 이야기꾼이 처형할 수 있습니다", tokens: ["actor", "result"] } },
   fanggu: { targets: 1, result: "none", marker: "dying" },
   nodashii: { targets: 1, result: "none", marker: "dying", hint: "이웃 주민 2명 중독" },
   vortox: { targets: 1, result: "none", marker: "dying" },
@@ -100,18 +164,18 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   clockmaker: { targets: 0, result: "number", hint: "악마-하수인 거리" },
   dreamer: { targets: 1, result: "text", hint: "선 직업 / 악 직업" },
   barber: { targets: 0, result: "none" },
-  seamstress: { targets: 2, result: "yesno", hint: "둘이 같은 소속인가" },
+  seamstress: { targets: 2, result: "yesno", hint: "둘이 같은 소속인가", showcase: { heading: "두 사람이 같은 진영인가: {yn}", tokens: ["name", "name2"] } },
   sweetheart: { targets: 1, result: "none", marker: "drunk" },
   sage: { targets: 2, result: "none", hint: "둘 중 1명이 악마" },
   mathematician: { targets: 0, result: "number", hint: "비정상 작동 능력 수" },
   flowergirl: { targets: 0, result: "yesno", hint: "악마가 투표했는가" },
   towncrier: { targets: 0, result: "yesno", hint: "하수인이 지목했는가" },
-  oracle: { targets: 0, result: "number", hint: "사망자 중 악 수" },
+  oracle: { targets: 0, result: "number", hint: "사망자 중 악 수", showcase: { heading: "사망자 중 {count}명이 악입니다" } },
   juggler: { targets: 0, result: "number", hint: "맞힌 추측 수" },
 
   // ── 기타/실험 직업 ──
   princess: { targets: 0, result: "none" },
-  noble: { targets: 3, result: "none", hint: "3명 중 1명만 악" },
+  noble: { targets: 3, result: "none", hint: "3명 중 1명만 악", showcase: { heading: "이 세 명 중 정확히 한 명이 악입니다", tokens: ["names"] } },
   engineer: { targets: 0, result: "text", hint: "지정한 악역 구성" },
   knight: { targets: 2, result: "none", hint: "악마 아닌 2명" },
   amnesiac: { targets: 0, result: "text" },
@@ -119,6 +183,8 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   farmer: { targets: 1, result: "none" },
   lycanthrope: { targets: 1, result: "none", marker: "dying" },
   highpriestess: { targets: 1, result: "none" },
+  // 마술사: 자체 보여주기 X. 데몬/하수인 정보 단계에 자동 포함되어 노출된다.
+  // (show 페이지 ?mode=bluffs/minions가 인플레이 마술사 닉네임을 함께 표시.)
   magician: { targets: 0, result: "none" },
   villageidiot: { targets: 1, result: "team", hint: "대상의 팀" },
   banshee: { targets: 0, result: "none" },
@@ -132,9 +198,9 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   alchemist: { targets: 0, result: "text", hint: "가진 하수인 능력" },
   balloonist: { targets: 1, result: "role", hint: "알게 된 플레이어 직업" },
   king: { targets: 0, result: "role", hint: "알게 된 생존 직업" },
-  general: { targets: 0, result: "text", hint: "우세 팀(선/악/없음)" },
+  general: { targets: 0, result: "text", hint: "우세 팀(선/악/없음)", showcase: { heading: "오늘 우세한 진영: {result}" } },
   preacher: { targets: 1, result: "none" },
-  pixie: { targets: 0, result: "role", hint: "알게 된 주민 직업" },
+  pixie: { targets: 0, result: "role", hint: "집착할 주민 직업", showcase: { heading: "당신은 {role}에 집착해야 합니다", subheading: "집착에 성공했을 때, 그 사람이 죽으면 그의 능력을 얻습니다", tokens: ["result"] } },
   bountyhunter: { targets: 1, result: "none", hint: "악한 플레이어" },
   hatter: { targets: 0, result: "none" },
   snitch: { targets: 0, result: "none" },
@@ -144,11 +210,22 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   organgrinder: { targets: 0, result: "none", marker: "drunk-dusk" },
   fearmonger: { targets: 1, result: "none" },
   boffin: { targets: 0, result: "none" },
-  marionette: { targets: 0, result: "none" },
+  // 꼭두각시는 데몬에게 town으로 보이지만 실제로 evil. 데몬에게 두 가지 방식으로 알려준다.
+  // 정확: "{actor}이 꼭두각시" / 모호: "이웃 중 한 명이 꼭두각시" (좌석은 안 알려줌)
+  // recipient: none — 데몬에게 보여주는 화면이라 "꼭두각시 본인 닉네임 님께" 안내는 안 띄움.
+  marionette: {
+    targets: 0,
+    result: "none",
+    showcase: [
+      { heading: "{actor}은(는) 꼭두각시입니다", subheading: "마을사람으로 보이지만 실제로는 악입니다", recipient: "none" },
+      { heading: "이웃 중 한 명이 꼭두각시입니다", subheading: "양 옆 두 명 중 한 명이 꼭두각시(가짜 마을사람·악)입니다", recipient: "none" },
+    ],
+    showcaseLabels: ["정확", "이웃"],
+  },
   wizard: { targets: 0, result: "text", hint: "소원/결과" },
   // ST가 메제펠리스에게 비밀 단어를 알려주고, 누군가 그 단어를 말하면 변절(turning) 처리.
   // result=text로 단어를 입력해 두면 show 페이지에서 큰 글자로 보여줄 수 있다.
-  mezepheles: { targets: 0, result: "text", hint: "비밀 단어" },
+  mezepheles: { targets: 0, result: "text", hint: "비밀 단어", showcase: { heading: "당신의 비밀 단어:", subheading: "이 단어를 누가 말하면 그 사람이 악으로 변절합니다", } },
   widow: { targets: 1, result: "none", marker: "poisoned" },
   summoner: { targets: 1, result: "none", hint: "악마가 될 대상" },
   wraith: { targets: 0, result: "none" },
