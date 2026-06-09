@@ -96,6 +96,22 @@ export interface GamePlayer {
   markers: string[];
   /** 게임 내내 누적되는 이야기꾼 메모 (스냅샷 무관, 전역) */
   memo: string;
+  /** 사망 원인 (현재 스냅샷): "execution" | "night" | "other" | "" */
+  deathCause: string;
+  /** 유령표(데드 보트) 사용 여부 (전역) */
+  ghostVoteUsed: boolean;
+}
+
+/** 한 낮의 지목·투표 기록 (스냅샷별). 대상(nominee) 기준 1건. */
+export interface VoteRecord {
+  /** 지목한 좌석 */
+  nominator: number;
+  /** 지목된 좌석 */
+  nominee: number;
+  /** 찬성표 수 */
+  votes: number;
+  /** 이 지목으로 처형됐는가 */
+  executed: boolean;
 }
 
 export interface Game {
@@ -118,6 +134,8 @@ export interface Game {
   players: GamePlayer[];
   /** 현재 페이즈 스냅샷의 야간 행동 기록 */
   actions: NightActionRecord[];
+  /** 현재 페이즈 스냅샷의 지목·투표 기록 */
+  votes: VoteRecord[];
   /** 악마에게 알려준 블러핑 직업 id (전역, 최대 3) */
   bluffs: string[];
 }

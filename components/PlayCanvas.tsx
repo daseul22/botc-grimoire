@@ -11,18 +11,23 @@ import { MarkerToken } from "./MarkerToken";
 import { NightActionRow } from "./NightActionRow";
 import { ClaimsSidebar } from "./ClaimsSidebar";
 import { FirstNightSetup } from "./FirstNightSetup";
+import { VotesSidebar } from "./VotesSidebar";
+import { StatusBar } from "./StatusBar";
 import {
   advancePhaseAction,
   clearActionAction,
+  clearVoteAction,
   finishGameAction,
   prevPhaseAction,
   recordActionAction,
+  recordVoteAction,
   redrawAction,
   savePositionsAction,
   setBluffsAction,
   setMemoAction,
   setRoleAction,
   setStatusAction,
+  toggleGhostVoteAction,
   toggleLockAction,
   toggleMarkerAction,
 } from "@/app/play/actions";
@@ -51,7 +56,7 @@ export function PlayCanvas({
   const [showEnd, setShowEnd] = useState(false);
   const [showRoles, setShowRoles] = useState(false);
   const [modalChar, setModalChar] = useState<Character | null>(null);
-  const [sidebar, setSidebar] = useState<"night" | "day" | "abilities" | "claims" | null>(
+  const [sidebar, setSidebar] = useState<"night" | "day" | "abilities" | "claims" | "votes" | null>(
     initial.phase === "night" ? "night" : "day",
   );
   const [pending, startTransition] = useTransition();
@@ -248,6 +253,8 @@ export function PlayCanvas({
         </div>
       )}
 
+      <StatusBar game={game} charMap={charMap} />
+
       <div className="flex gap-3">
         <div ref={boardRef} className="relative h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}>
           {/* 사이드바 토글 툴바 */}
@@ -269,6 +276,11 @@ export function PlayCanvas({
             <button type="button" onClick={() => setSidebar((s) => (s === "claims" ? null : "claims"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "claims" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
               🗣️ 주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}
             </button>
+            {!night && (
+              <button type="button" onClick={() => setSidebar((s) => (s === "votes" ? null : "votes"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "votes" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
+                🗳️ 투표{game.votes.length > 0 ? ` · ${game.votes.length}` : ""}
+              </button>
+            )}
           </div>
 
           {game.players.map((p) => {
@@ -287,6 +299,7 @@ export function PlayCanvas({
                   {dead && <span className="absolute inset-0 flex items-center justify-center text-2xl text-red-500">✕</span>}
                   {p.locked && <span className="absolute -right-1 -top-1 rounded-full bg-surface-2 px-1 text-[10px]">📌</span>}
                   {p.memo && <span className="absolute -left-1 -top-1 rounded-full bg-surface-2 px-1 text-[10px]" title={p.memo}>📝</span>}
+                  {dead && <span className="absolute -bottom-1 -right-1 rounded-full bg-surface-2 px-1 text-[10px]" title={p.ghostVoteUsed ? "유령표 사용함" : "유령표 사용 가능"} style={{ opacity: p.ghostVoteUsed ? 0.35 : 1 }}>🗳️</span>}
                 </div>
                 <span className="max-w-24 truncate text-sm font-medium">{p.nickname}</span>
                 <span className="max-w-24 truncate text-xs" style={{ color: teamColor }}>{ch?.name.ko ?? p.characterId}</span>
@@ -423,6 +436,17 @@ export function PlayCanvas({
             onClose={() => setSidebar(null)}
           />
         )}
+
+        {/* 지목·투표 사이드바 */}
+        {sidebar === "votes" && !night && (
+          <VotesSidebar
+            game={game}
+            busy={pending}
+            onRecordVote={(nom, nee, votes, ex) => run(() => recordVoteAction(game.id, nom, nee, votes, ex))}
+            onClearVote={(nee) => run(() => clearVoteAction(game.id, nee))}
+            onClose={() => setSidebar(null)}
+          />
+        )}
       </div>
 
       {modalChar && <AbilityModal character={modalChar} onClose={() => setModalChar(null)} />}
@@ -479,6 +503,9 @@ export function PlayCanvas({
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => run(() => setStatusAction(game.id, sel.seat, sel.status === "dead" ? "alive" : "dead"))} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:text-text">{sel.status === "dead" ? "부활" : "사망 처리"}</button>
+              {sel.status === "dead" && (
+                <button type="button" onClick={() => run(() => toggleGhostVoteAction(game.id, sel.seat, !sel.ghostVoteUsed))} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm" style={sel.ghostVoteUsed ? { borderColor: "var(--color-border)", opacity: 0.6 } : { borderColor: "#d4a23a88", color: "#d4a23a", background: "#d4a23a1a" }}>🗳️ {sel.ghostVoteUsed ? "유령표 사용함" : "유령표 사용 가능"}</button>
+              )}
               <button type="button" onClick={() => run(() => toggleLockAction(game.id, sel.seat, !sel.locked))} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:text-text">{sel.locked ? "고정 해제" : "위치 고정"}</button>
               <span className="mx-1 text-muted">|</span>
               {MARKERS.filter((m) => !m.needsTarget).map((m) => {

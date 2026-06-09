@@ -12,11 +12,14 @@ import {
   finishGame,
   getGame,
   getGameConfig,
+  clearVote,
   prevPhase,
   recordAction,
+  recordVote,
   redrawRoles,
   savePositions,
   setBluffs,
+  setGhostVote,
   setLock,
   setMemo,
   setRoles,
@@ -146,8 +149,34 @@ export async function setStatusAction(
   gameId: string,
   seat: number,
   status: string,
+  cause = "",
 ): Promise<Game> {
-  setStatus(gameId, seat, status);
+  setStatus(gameId, seat, status, cause);
+  return getGame(gameId)!;
+}
+
+export async function recordVoteAction(
+  gameId: string,
+  nominator: number,
+  nominee: number,
+  votes: number,
+  executed: boolean,
+): Promise<Game> {
+  recordVote(gameId, { nominator, nominee, votes, executed });
+  return getGame(gameId)!;
+}
+
+export async function clearVoteAction(gameId: string, nominee: number): Promise<Game> {
+  clearVote(gameId, nominee);
+  return getGame(gameId)!;
+}
+
+export async function toggleGhostVoteAction(
+  gameId: string,
+  seat: number,
+  used: boolean,
+): Promise<Game> {
+  setGhostVote(gameId, seat, used);
   return getGame(gameId)!;
 }
 

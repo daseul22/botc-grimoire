@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { keepMarkerOnAdvance, parseMarker } from "./markers";
-import type { Game, GamePlayer, NightActionRecord } from "./types";
+import type { Game, GamePlayer, NightActionRecord, VoteRecord } from "./types";
 
 // 서버 전용. 게임 상태는 가변 데이터 → seed가 건드리지 않는 별도 테이블.
 //
@@ -66,6 +66,10 @@ for (const sql of [
   "ALTER TABLE games ADD COLUMN current_idx INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE game_players ADD COLUMN memo TEXT NOT NULL DEFAULT ''",
   "ALTER TABLE games ADD COLUMN bluffs TEXT NOT NULL DEFAULT '[]'",
+  "ALTER TABLE game_players ADD COLUMN ghost_vote_used INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE game_phases ADD COLUMN votes TEXT NOT NULL DEFAULT '[]'",
+  "ALTER TABLE game_phases ADD COLUMN note TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE game_phases ADD COLUMN done TEXT NOT NULL DEFAULT '[]'",
 ]) {
   try {
     db.exec(sql);
@@ -76,7 +80,7 @@ for (const sql of [
 
 const now = () => new Date().toISOString();
 
-type SeatState = { status: string; markers: string[] };
+type SeatState = { status: string; markers: string[]; cause?: string };
 type StateMap = Record<number, SeatState>;
 
 function stateFromList(
@@ -142,10 +146,14 @@ type PlayerRow = {
   y: number;
   locked: number;
   memo: string;
+  ghost_vote_used: number;
 };
 
 export type GameConfig = { excludedIds: string[]; counts: Record<string, number> };
-export type NewPlayer = Omit<GamePlayer, "locked" | "status" | "markers" | "memo">;
+export type NewPlayer = Omit<
+  GamePlayer,
+  "locked" | "status" | "markers" | "memo" | "deathCause" | "ghostVoteUsed"
+>;
 export type RoleAssignment = { seat: number; characterId: string; alignment: string };
 
 function phaseCount(gameId: string): number {
@@ -226,12 +234,47 @@ export function setBluffs(gameId: string, ids: string[]): void {
   );
 }
 
+function readVotes(gameId: string, idx: number): VoteRecord[] {
+  const row = db
+    .prepare("SELECT votes FROM game_phases WHERE game_id = ? AND idx = ?")
+    .get(gameId, idx) as { votes: string } | undefined;
+  return row?.votes ? (JSON.parse(row.votes) as VoteRecord[]) : [];
+}
+function writeVotes(gameId: string, idx: number, list: VoteRecord[]): void {
+  db.prepare("UPDATE game_phases SET votes = ? WHERE game_id = ? AND idx = ?").run(
+    JSON.stringify(list),
+    gameId,
+    idx,
+  );
+}
+
+/** 현재 페이즈 스냅샷에 지목·투표 기록 (대상 좌석 기준 upsert) */
+export function recordVote(gameId: string, rec: VoteRecord): void {
+  const idx = currentIdx(gameId);
+  const list = readVotes(gameId, idx).filter((v) => v.nominee !== rec.nominee);
+  list.push(rec);
+  writeVotes(gameId, idx, list);
+}
+
+/** 현재 페이즈 스냅샷에서 한 지목 기록 삭제 */
+export function clearVote(gameId: string, nominee: number): void {
+  const idx = currentIdx(gameId);
+  writeVotes(gameId, idx, readVotes(gameId, idx).filter((v) => v.nominee !== nominee));
+}
+
+/** 유령표 사용 토글 (전역) */
+export function setGhostVote(gameId: string, seat: number, used: boolean): void {
+  db.prepare(
+    "UPDATE game_players SET ghost_vote_used = ? WHERE game_id = ? AND seat = ?",
+  ).run(used ? 1 : 0, gameId, seat);
+}
+
 function readPlayers(gameId: string, idx: number): GamePlayer[] {
   const state = readState(gameId, idx);
   return (
     db
       .prepare(
-        "SELECT seat,nickname,character_id,alignment,x,y,locked,memo FROM game_players WHERE game_id = ? ORDER BY seat",
+        "SELECT seat,nickname,character_id,alignment,x,y,locked,memo,ghost_vote_used FROM game_players WHERE game_id = ? ORDER BY seat",
       )
       .all(gameId) as PlayerRow[]
   ).map((r) => ({
@@ -245,6 +288,8 @@ function readPlayers(gameId: string, idx: number): GamePlayer[] {
     status: state[r.seat]?.status ?? "alive",
     markers: state[r.seat]?.markers ?? [],
     memo: r.memo ?? "",
+    deathCause: state[r.seat]?.cause ?? "",
+    ghostVoteUsed: !!r.ghost_vote_used,
   }));
 }
 
@@ -269,6 +314,7 @@ export function getGame(id: string): Game | undefined {
     phaseCount: phaseCount(id),
     players: readPlayers(id, idx),
     actions: readActions(id, idx),
+    votes: readVotes(id, idx),
     bluffs: g.bluffs ? (JSON.parse(g.bluffs) as string[]) : [],
   };
 }
@@ -330,6 +376,7 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
     db.prepare(
       "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,0,1,'night',?)",
     ).run(gameId, JSON.stringify(state));
+    db.prepare("UPDATE game_players SET ghost_vote_used = 0 WHERE game_id = ?").run(gameId);
     db.prepare(
       "UPDATE games SET current_idx = 0, status = 'playing', result = NULL, bluffs = '[]', updated_at = ? WHERE id = ?",
     ).run(now(), gameId);
@@ -379,11 +426,20 @@ export function setMemo(gameId: string, seat: number, memo: string): void {
   );
 }
 
-/** 현재 페이즈 스냅샷의 한 좌석 상태 변경 */
-export function setStatus(gameId: string, seat: number, status: string): void {
+/** 현재 페이즈 스냅샷의 한 좌석 상태 변경 (cause: 사망 원인) */
+export function setStatus(
+  gameId: string,
+  seat: number,
+  status: string,
+  cause = "",
+): void {
   const idx = currentIdx(gameId);
   const s = readState(gameId, idx);
-  s[seat] = { status, markers: s[seat]?.markers ?? [] };
+  s[seat] = {
+    status,
+    markers: s[seat]?.markers ?? [],
+    cause: status === "dead" ? cause : "",
+  };
   writeState(gameId, idx, s);
 }
 
@@ -467,6 +523,7 @@ export type HistoryPlayer = {
   alignment: string;
   status: string;
   markers: string[];
+  deathCause: string;
 };
 export type HistoryEntry = {
   idx: number;
@@ -474,6 +531,7 @@ export type HistoryEntry = {
   day: number;
   players: HistoryPlayer[];
   actions: NightActionRecord[];
+  votes: VoteRecord[];
 };
 
 export function getHistory(gameId: string): HistoryEntry[] {
@@ -497,6 +555,7 @@ export function getHistory(gameId: string): HistoryEntry[] {
       day: ph.day,
       phase: ph.phase,
       actions: readActions(gameId, ph.idx),
+      votes: readVotes(gameId, ph.idx),
       players: ids.map((p) => ({
         seat: p.seat,
         nickname: p.nickname,
@@ -504,6 +563,7 @@ export function getHistory(gameId: string): HistoryEntry[] {
         alignment: p.alignment,
         status: state[p.seat]?.status ?? "alive",
         markers: state[p.seat]?.markers ?? [],
+        deathCause: state[p.seat]?.cause ?? "",
       })),
     };
   });

@@ -6,6 +6,8 @@ import { MarkerToken } from "./MarkerToken";
 import type { HistoryEntry } from "@/lib/games";
 import type { Character, Game } from "@/lib/types";
 
+const CAUSE_LABEL: Record<string, string> = { execution: "처형", night: "밤 살해", other: "기타" };
+
 const phaseLabel = (day: number, phase: string | null) =>
   `${day}일차 ${phase === "night" ? "밤" : phase === "day" ? "낮" : ""}`;
 
@@ -105,7 +107,7 @@ export function GameReplay({
                       <div key={p.seat} className="flex flex-wrap items-center gap-2">
                         <span className={dead ? "text-muted line-through" : ""}>{p.nickname}</span>
                         <span className="text-xs text-muted">{ch?.name.ko ?? p.characterId}</span>
-                        {dead && <span className="text-xs text-red-400">사망</span>}
+                        {dead && <span className="text-xs text-red-400">사망{p.deathCause ? ` · ${CAUSE_LABEL[p.deathCause] ?? p.deathCause}` : ""}</span>}
                         {p.markers.map((m) => {
                           const mk = markerInfo(m);
                           return (
@@ -136,6 +138,23 @@ export function GameReplay({
                           <span className="text-muted">{ch?.name.ko ?? a.characterId}</span>
                           {a.targets.length > 0 && <span className="text-muted">→ {tnames}</span>}
                           {res && <span className="font-semibold text-gold">＝ {res}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {h.votes.length > 0 && (
+                  <div className="mt-2 space-y-1 border-t border-border pt-2">
+                    <p className="text-[11px] font-medium text-muted">지목·투표</p>
+                    {h.votes.map((v) => {
+                      const nom = h.players.find((p) => p.seat === v.nominator)?.nickname ?? `${v.nominator}`;
+                      const nee = h.players.find((p) => p.seat === v.nominee)?.nickname ?? `${v.nominee}`;
+                      return (
+                        <div key={v.nominee} className="flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="font-medium">{nom}</span>
+                          <span className="text-muted">→ {nee}</span>
+                          <span className="font-semibold text-gold">{v.votes}표</span>
+                          {v.executed && <span className="rounded bg-red-500/20 px-1 text-[10px] font-semibold text-red-400">처형</span>}
                         </div>
                       );
                     })}
