@@ -14,6 +14,7 @@
 erDiagram
   games ||--o{ game_players : "전역 정체성/배치"
   games ||--o{ game_phases : "페이즈별 스냅샷"
+  games ||--o{ game_phase_actions : "페이즈별 행동/주장"
   games {
     text id PK
     text sheet_id
@@ -21,6 +22,7 @@ erDiagram
     int  current_idx "현재 보는 스냅샷"
     text config "재추첨용(제외·비율)"
     text result "good|evil"
+    text bluffs "악마 블러핑 3직업"
   }
   game_players {
     int  seat
@@ -31,18 +33,30 @@ erDiagram
     real y "0..1"
     int  locked
     text memo "전역 누적 메모"
+    int  ghost_vote_used "유령표"
   }
   game_phases {
     int  idx "0,1,2..."
     int  day
     text phase "night|day"
-    text state "JSON: 좌석→{status,markers}"
+    text state "JSON: 좌석→{status,markers,cause}"
+    text votes "JSON: 지목·투표"
+    text done "JSON: 처리완료 좌석"
+    text note "이야기꾼 메모"
+  }
+  game_phase_actions {
+    int  idx
+    text actions "JSON: 행동/주장 기록"
   }
 ```
 
-- **`game_players`** = 전역. 좌석·닉네임·직업·진영·캔버스 위치(0~1 비율)·고정·메모. 페이즈 무관.
-- **`game_phases`** = 페이즈별 독립 스냅샷. `state` = `{ [seat]: {status, markers[]} }` JSON.
-  `games.current_idx`가 지금 보는 스냅샷을 가리킨다.
+- **`game_players`** = 전역. 좌석·닉네임·직업·진영·캔버스 위치(0~1 비율)·고정·메모·유령표. 페이즈 무관.
+- **`game_phases`** = 페이즈별 독립 스냅샷. `state` = `{ [seat]: {status, markers[], cause} }` JSON.
+  여기에 그날의 지목·투표(`votes`)·처리완료(`done`)·메모(`note`)도 함께. `games.current_idx`가
+  지금 보는 스냅샷을 가리킨다.
+- **`game_phase_actions`** = 페이즈별 야간/낮 행동·주장 기록(별도 테이블). 다음 페이즈로 복사 안 함.
+
+> 운영 기록(행동·주장·투표·블러핑·운영보조·폰 뷰)의 전모는 → [09 이야기꾼 운영 도구](09-storyteller-tools.md).
 
 `getGame()`은 둘을 합쳐 `Game`(전역 + 현재 스냅샷 상태)을 돌려준다. 화면은 한 장의 일관된
 보드로 보이지만 실제론 "현재 인덱스 스냅샷"을 그리는 것.
@@ -75,9 +89,11 @@ flowchart TD
 
 - 표현은 BotC 관례대로 **원인 직업 토큰 이미지**(중독=독살자, 취함=주정뱅이, 집착=세레노버스,
   보호=수도사, 사망예정=임프). `public/icons`의 직업 토큰 재사용.
-- **집착**은 대상 역할을 함께 저장(`mad:<roleId>`)하고 토큰·복기에 대상명 표시.
-- 사망은 마커가 아니라 `status`로 관리(영구).
-- `toggleMarker`는 base 기준: 같은 마커면 해제, 다른 같은-base면 교체(집착 대상 바꾸기 등).
+- **직업을 가리키는 마커**(`roleParam`): 집착 `mad:<role>`(세레노버스+대상 토큰), 직업 변경
+  `became:<role>`(↺), 능력 획득 `gained:<role>`(✦), 레드헤링 `herring`. [MarkerToken](../../components/MarkerToken.tsx)이
+  param 직업의 심볼로 렌더 → 정체성은 마커로만 얹어 과거 스냅샷 불변. (→ [09](09-storyteller-tools.md))
+- 사망은 마커가 아니라 `status`로 관리(+사망 원인 `cause`).
+- `toggleMarker`는 base 기준: 같은 마커면 해제, 다른 같은-base면 교체(집착/변경/획득 대상 바꾸기 등).
 
 ## 라이프사이클 & 액션
 
@@ -86,8 +102,10 @@ flowchart TD
   도출**(저장 config가 비어도 안전).
 - **직업 변경/교체** `setRoles` ← `setRoleAction`: 다른 좌석이 가진 직업을 고르면 두 좌석을 교체.
   1일차 밤(idx 0)에서만.
-- **사망/마커/메모/고정/위치**: `setStatus`·`toggleMarker`·`setMemo`·`setLock`·`savePositions`.
-  앞 3개는 현재 스냅샷 상태를, 뒤 2개는 전역(`game_players`)을 변경.
+- **사망/마커/메모/고정/위치**: `setStatus`(+cause)·`toggleMarker`·`setMemo`·`setLock`·`savePositions`.
+- **운영 기록**: `recordAction`/`clearAction`(행동·주장)·`recordVote`/`clearVote`(투표)·`toggleDone`·
+  `setNote`·`setGhostVote`·`setBluffs`. 대부분 현재 스냅샷에, 유령표·블러핑은 전역에 쓴다.
+  자세히 → [09 이야기꾼 운영 도구](09-storyteller-tools.md).
 - **종료** `finishGame`: `status='finished'` + 결과. 종료 게임은 `getHistory`로 모든 스냅샷을
   읽어 [GameReplay](../../components/GameReplay.tsx)(복기)로 렌더.
 

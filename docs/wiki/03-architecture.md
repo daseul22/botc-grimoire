@@ -12,6 +12,7 @@ flowchart TD
     MK[markers.ts]
     RA[ratio.ts]
     TY[types.ts]
+    NA[night-actions.ts]
   end
   subgraph server["서버 전용 (better-sqlite3)"]
     DBm[db.ts]
@@ -46,8 +47,8 @@ flowchart TD
 
 그래서 클라에서 쓰는 로직은 전부 **순수 모듈**로 분리:
 [constants](../../lib/constants.ts)(팀·에디션) · [grouping](../../lib/grouping.ts)(팀 그룹핑) ·
-[markers](../../lib/markers.ts)(상태이상) · [ratio](../../lib/ratio.ts)(인원 비율) ·
-[types](../../lib/types.ts).
+[markers](../../lib/markers.ts)(상태이상·직업토큰 마커) · [ratio](../../lib/ratio.ts)(인원 비율) ·
+[night-actions](../../lib/night-actions.ts)(직업별 야간/낮 행동 스펙) · [types](../../lib/types.ts).
 
 [db.ts](../../lib/db.ts)는 `process.cwd()/db/grimoire.db`를 `fileMustExist`로 연다(시드 안 됐으면
 명확히 실패 → `npm run db:seed`). WAL 모드.
@@ -64,7 +65,8 @@ flowchart TD
 | `/rules` | 정적 | 규칙 + 목차 |
 | `/games` | 동적 | 게임 목록 |
 | `/play/setup/[sheetId]` | 동적 | 준비 스텝 |
-| `/play/[gameId]` | 동적 | 진행 스텝 또는 복기 |
+| `/play/[gameId]` | 동적 | 진행 스텝(이야기꾼) 또는 복기 |
+| `/play/[gameId]/seat` | 동적 | 폰 플레이어 뷰 — 자기 자리 직업만 ([09](09-storyteller-tools.md)) |
 
 콘텐츠는 정적/SSG(빌드 시 SQLite 읽음), 게임·커스텀시트는 `force-dynamic`(가변).
 

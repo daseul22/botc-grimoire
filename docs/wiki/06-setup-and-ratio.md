@@ -37,6 +37,8 @@
 주의:
 - **여행자·전설**은 표 밖(별도 추가) → 자동 배정 대상 아님.
 - **셋업 직업**(남작 `[외부인 +2]` 등)은 실제 분포를 바꾼다 → 자동 반영 안 됨, **수동 보정**.
+  진행 화면 1일차 밤 배너([FirstNightSetup](../../components/FirstNightSetup.tsx))가 인플레이 셋업
+  직업을 표시해 보정을 돕는다. (→ [09](09-storyteller-tools.md))
 
 ---
 [← 상태 동기화](05-state-sync.md) · [홈](README.md) · 다음: [컴포넌트 →](07-components.md)
