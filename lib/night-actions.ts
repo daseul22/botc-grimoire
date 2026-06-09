@@ -146,7 +146,9 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   boffin: { targets: 0, result: "none" },
   marionette: { targets: 0, result: "none" },
   wizard: { targets: 0, result: "text", hint: "소원/결과" },
-  mezepheles: { targets: 0, result: "none" },
+  // ST가 메제펠리스에게 비밀 단어를 알려주고, 누군가 그 단어를 말하면 변절(turning) 처리.
+  // result=text로 단어를 입력해 두면 show 페이지에서 큰 글자로 보여줄 수 있다.
+  mezepheles: { targets: 0, result: "text", hint: "비밀 단어" },
   widow: { targets: 1, result: "none", marker: "poisoned" },
   summoner: { targets: 1, result: "none", hint: "악마가 될 대상" },
   wraith: { targets: 0, result: "none" },

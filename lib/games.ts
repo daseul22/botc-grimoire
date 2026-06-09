@@ -584,17 +584,29 @@ export function advancePhase(gameId: string): void {
   const nextDay = leavingDay ? cur.day + 1 : cur.day;
   const state = JSON.parse(cur.state) as StateMap;
   const next: StateMap = {};
+  // 자동 변절(메제펠리스 단어 발화): 낮→밤 전환 시 turning 마커가 있는 좌석은 alignment=evil로 변경.
+  const turningSeats: number[] = [];
   for (const seat of Object.keys(state)) {
     const k = Number(seat);
+    const seatMarkers = state[k].markers;
+    if (leavingDay && seatMarkers.some((m) => parseMarker(m).base === "turning")) {
+      turningSeats.push(k);
+    }
     next[k] = {
       status: state[k].status,
-      markers: state[k].markers.filter((m) => keepMarkerOnAdvance(m, leavingDay)),
+      markers: seatMarkers.filter((m) => keepMarkerOnAdvance(m, leavingDay)),
     };
   }
   db.transaction(() => {
     db.prepare(
       "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,?,?,?,?)",
     ).run(gameId, idx + 1, nextDay, nextPhase, JSON.stringify(next));
+    if (turningSeats.length) {
+      const upd = db.prepare(
+        "UPDATE game_players SET alignment = 'evil' WHERE game_id = ? AND seat = ?",
+      );
+      for (const s of turningSeats) upd.run(gameId, s);
+    }
     db.prepare("UPDATE games SET current_idx = ?, updated_at = ? WHERE id = ?").run(
       idx + 1,
       now(),

@@ -46,6 +46,9 @@ export const MARKERS: Marker[] = [
   // needsTarget/roleParam — 대상 있는 케이스(처형자가 가졌던 좋은 직업) 토큰도 함께 보일 수 있게.
   // 대상 없이도 마커 단독 적용 가능(아래 PlayCanvas의 onPick 로직 참고).
   { id: "noability", label: "능력 없음", icon: "", color: "#7a7a7a", duration: "permanent", needsTarget: true, roleParam: true, letter: "✕" },
+  // 변절 예정(메제펠리스 단어 발화 후 다음 밤에 악으로 변절). dusk로 만료될 때
+  // advancePhase 내부에서 자동으로 alignment를 evil로 바꾼다.
+  { id: "turning", label: "변절 예정", icon: "", color: "#d23b3b", duration: "dusk", letter: "⇄" },
 
   // ── 글로벌(게임 전체) 마커 ──
   // Vortox(SnV 데몬): 살아있는 동안 모든 정보 직업이 거짓 정보를 받는다.
