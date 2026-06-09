@@ -78,7 +78,7 @@ export function SeatView({ game, sheetChars }: { game: Game; sheetChars: Charact
         <button type="button" onClick={reset} className="text-xs text-muted hover:text-text">다른 자리</button>
       </div>
 
-      <RoleCard me={me} ch={charMap[game.disguises[me.seat] ?? me.characterId]} />
+      <RoleCard me={me} ch={charMap[game.disguises?.[me.seat] ?? me.characterId]} />
 
       <p className="mt-4 text-center text-[11px] text-muted">5초마다 자동 갱신 · 이야기꾼 화면이 아닌 내 정보만 표시됩니다</p>
     </div>

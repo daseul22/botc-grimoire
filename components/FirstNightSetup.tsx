@@ -118,18 +118,23 @@ export function FirstNightSetup({
       {/* 미치광이/주정뱅이 가짜 직업 — 본인이 폰에서 자기 진짜 직업 대신 볼 직업.
           하나라도 미선택이면 헤더의 직업배포·직업공유 버튼이 비활성된다. */}
       {(() => {
+        // 가짜 직업 표시가 필요한 좌석: 미치광이(데몬 토큰) / 주정뱅이(마을주민 토큰) /
+        // 꼭두각시(마을주민 토큰 — 본인은 town이라 믿는다).
         const disguiseSeats = game.players.filter(
-          (p) => p.characterId === "lunatic" || p.characterId === "drunk",
+          (p) =>
+            p.characterId === "lunatic" ||
+            p.characterId === "drunk" ||
+            p.characterId === "marionette",
         );
         if (disguiseSeats.length === 0) return null;
         return (
           <div>
             <p className="mb-1.5 text-xs text-muted">
-              가짜 직업 <span className="opacity-70">(미치광이=데몬 / 주정뱅이=마을주민 중 선택)</span>
+              가짜 직업 <span className="opacity-70">(미치광이=데몬 / 주정뱅이·꼭두각시=마을주민 중 선택)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {disguiseSeats.map((p) => {
-                const cur = game.disguises[p.seat];
+                const cur = game.disguises?.[p.seat];
                 const curCh = cur ? charMap[cur] : undefined;
                 const ownCh = charMap[p.characterId];
                 return (
@@ -170,12 +175,13 @@ export function FirstNightSetup({
                 if (p.characterId === "lunatic") {
                   return sheetChars.filter((c) => c.team === "demon");
                 }
-                if (p.characterId === "drunk") {
+                // 주정뱅이·꼭두각시 둘 다 마을주민(인플레이 아님) 중에서 고른다.
+                if (p.characterId === "drunk" || p.characterId === "marionette") {
                   return sheetChars.filter((c) => c.team === "townsfolk" && !inPlay.has(c.id));
                 }
                 return [];
               })()}
-              selected={pickerSeat != null ? game.disguises[pickerSeat] ?? "" : ""}
+              selected={pickerSeat != null ? game.disguises?.[pickerSeat] ?? "" : ""}
               clearLabel="선택 해제"
               onPick={(id) => {
                 if (pickerSeat == null) return;

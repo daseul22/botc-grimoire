@@ -122,14 +122,30 @@ export function PlayCanvas({
   const isFirstNight = game.day === 1;
   const canEditRoles = night && isFirstNight && game.phaseIndex === 0;
 
+  // 첫밤 ST 운영서 별도 단계로 진행되는 두 정보 노드(botc 공식 firstNight order 기준).
+  // 룰상 마술사(magician=18) → MINION_INFO → 미치광이(lunatic=21) → DEMON_INFO 순.
+  // - MINION_INFO=19: 마술사 다음, 미치광이 전. 하수인끼리 + 데몬 알려줌.
+  // - DEMON_INFO=22: 미치광이 다음. 데몬에게 자기 직업·블러핑·하수인 알려줌.
+  // 일부 직업(철학자=14, 세레노버스=42 등)은 이 노드 앞·뒤에 위치한다.
   const nightOrder = night
-    ? game.players
-        .map((p) => ({
-          p,
-          na: (isFirstNight ? charMap[p.characterId]?.firstNight : charMap[p.characterId]?.otherNight) as NightAction,
-        }))
-        .filter((x): x is { p: (typeof game.players)[number]; na: NonNullable<NightAction> } => !!x.na)
-        .sort((a, b) => a.na.order - b.na.order)
+    ? (() => {
+        type Role = { kind: "role"; order: number; p: (typeof game.players)[number]; na: NonNullable<NightAction> };
+        type Info = { kind: "info"; order: number; infoKind: "minion" | "demon" };
+        const roles: Role[] = game.players
+          .map((p) => {
+            const na = (isFirstNight ? charMap[p.characterId]?.firstNight : charMap[p.characterId]?.otherNight) as NightAction;
+            return na ? { kind: "role" as const, order: na.order, p, na } : null;
+          })
+          .filter((x): x is Role => !!x);
+        const items: (Role | Info)[] = [...roles];
+        if (isFirstNight) {
+          const hasMinion = game.players.some((p) => charMap[p.characterId]?.team === "minion");
+          const hasDemon = game.players.some((p) => charMap[p.characterId]?.team === "demon");
+          if (hasMinion) items.push({ kind: "info", order: 19, infoKind: "minion" });
+          if (hasDemon) items.push({ kind: "info", order: 22, infoKind: "demon" });
+        }
+        return items.sort((a, b) => a.order - b.order);
+      })()
     : [];
 
   const dayRoles = !night
@@ -292,12 +308,14 @@ export function PlayCanvas({
             게임 종료
           </button>
           {(() => {
-            // 본인 진짜 직업을 모르는 직업(미치광이/주정뱅이)은 폰에 진짜 직업을 노출하면 게임이 망한다.
+            // 본인 진짜 직업을 모르는 직업(미치광이·주정뱅이·꼭두각시)은 폰에 진짜 직업을 노출하면 게임이 망한다.
             // 모든 해당 좌석에 가짜 직업(disguise)이 지정돼야 직업배포·직업공유를 허용한다.
             const missing = game.players.filter(
               (p) =>
-                (p.characterId === "lunatic" || p.characterId === "drunk") &&
-                !game.disguises[p.seat],
+                (p.characterId === "lunatic" ||
+                  p.characterId === "drunk" ||
+                  p.characterId === "marionette") &&
+                !game.disguises?.[p.seat],
             );
             const blocked = missing.length > 0;
             const blockTitle = blocked
@@ -484,7 +502,40 @@ export function PlayCanvas({
               <p className="px-3 py-3 text-sm text-muted">이 밤에 행동하는 직업이 없습니다.</p>
             ) : (
               <ol className="flex-1 divide-y divide-border overflow-y-auto">
-                {nightOrder.map(({ p, na }, i) => {
+                {nightOrder.map((item, i) => {
+                  if (item.kind === "info") {
+                    // 데몬 좌석 — 보여주기는 데몬 본인 폰에 노출. 데몬이 여럿이면 첫 번째 사용.
+                    const demonSeat = game.players.find((x) => charMap[x.characterId]?.team === "demon")?.seat;
+                    const isMinion = item.infoKind === "minion";
+                    return (
+                      <li key={`info-${item.infoKind}`} className="bg-surface-2/40 px-3 py-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
+                          <span className="text-base" aria-hidden>{isMinion ? "👥" : "😈"}</span>
+                          <span className="font-semibold" style={{ color: isMinion ? "#d23b3b" : "#d23b3b" }}>
+                            {isMinion ? "하수인 정보" : "악마 정보"}
+                          </span>
+                          <span className="text-xs text-muted">단계</span>
+                          {demonSeat != null && (
+                            <a
+                              href={`/play/${game.id}/show/${demonSeat}?mode=${isMinion ? "minions" : "bluffs"}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-auto inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-xs text-gold hover:bg-gold/25"
+                            >
+                              🎴 보여주기
+                            </a>
+                          )}
+                        </div>
+                        <p className="mt-1 break-words pl-6 text-xs text-muted">
+                          {isMinion
+                            ? "하수인들에게 서로 누구인지, 데몬이 누구인지 알려줍니다. (꼭두각시·마술사 인플레이 시 변형 적용)"
+                            : "데몬에게 자기 직업·블러핑 3개·하수인 좌석을 알려줍니다."}
+                        </p>
+                      </li>
+                    );
+                  }
+                  const { p, na } = item;
                   const ch = charMap[p.characterId];
                   const dead = p.status === "dead";
                   const done = game.doneSeats.includes(p.seat);

@@ -57,7 +57,7 @@ export default async function ClaimPage({
               </p>
               <ClaimCard
                 me={me}
-                ch={map.get(game.disguises[me.seat] ?? me.characterId)}
+                ch={map.get(game.disguises?.[me.seat] ?? me.characterId)}
                 remainingMs={remainingMs}
               />
             </>
