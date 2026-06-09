@@ -11,6 +11,7 @@ import { MarkerToken } from "./MarkerToken";
 import { RolePickerModal } from "./RolePickerModal";
 import { NightActionRow } from "./NightActionRow";
 import { LunaticActionRow } from "./LunaticActionRow";
+import { TimerPanel } from "./TimerPanel";
 import { ClaimsSidebar } from "./ClaimsSidebar";
 import { FirstNightSetup } from "./FirstNightSetup";
 import { VotesSidebar } from "./VotesSidebar";
@@ -31,6 +32,10 @@ import {
   toggleGlobalMarkerAction,
   lanUrlAction,
   setBluffsAction,
+  setTimerDurationAction,
+  startTimerAction,
+  stopTimerAction,
+  clearTimerAction,
   setDisguiseAction,
   setLunaticBluffsAction,
   setLunaticMinionsAction,
@@ -398,6 +403,17 @@ export function PlayCanvas({
       )}
 
       <StatusBar game={game} charMap={charMap} />
+
+      {!night && (
+        <TimerPanel
+          game={game}
+          busy={pending}
+          onSetDuration={(k, s) => run(() => setTimerDurationAction(game.id, k, s))}
+          onStart={(k) => run(() => startTimerAction(game.id, k))}
+          onStop={(k) => run(() => stopTimerAction(game.id, k))}
+          onClear={(k) => run(() => clearTimerAction(game.id, k))}
+        />
+      )}
 
       {/* 글로벌 마커: Vortox(전체 정보 직업 거짓) 등 게임 전체에 걸치는 효과. 항상 노출(룰 참고용). */}
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">

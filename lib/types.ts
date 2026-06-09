@@ -153,4 +153,21 @@ export interface Game {
    * 폰(직업공유·직업배포)에서 볼 화면용. 키=좌석, 값=가짜로 보여줄 directory characterId.
    */
   disguises: Record<number, string>;
+  /** 현재 페이즈(낮)의 타이머 — 밀담/공개토론. 다른 페이즈로 advance하면 새 record. */
+  phaseTimers: PhaseTimers;
+}
+
+/** 한 번의 타이머 한 종류(밀담 또는 공개토론). */
+export interface PhaseTimer {
+  /** 설정된 길이(초). 0이면 미설정. */
+  durationSec: number;
+  /** 시작 timestamp(ms). 미시작이면 undefined. */
+  startedAt?: number;
+  /** 종료 timestamp(ms). 자연 만료 또는 ST가 정지. */
+  finishedAt?: number;
+}
+
+export interface PhaseTimers {
+  whisper?: PhaseTimer;
+  open?: PhaseTimer;
 }

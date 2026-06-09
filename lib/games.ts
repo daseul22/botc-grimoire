@@ -1,6 +1,13 @@
 import { getDb } from "./db";
 import { keepMarkerOnAdvance, parseMarker } from "./markers";
-import type { Game, GamePlayer, NightActionRecord, VoteRecord } from "./types";
+import type {
+  Game,
+  GamePlayer,
+  NightActionRecord,
+  PhaseTimer,
+  PhaseTimers,
+  VoteRecord,
+} from "./types";
 
 // 서버 전용. 게임 상태는 가변 데이터 → seed가 건드리지 않는 별도 테이블.
 //
@@ -75,6 +82,7 @@ for (const sql of [
   "ALTER TABLE games ADD COLUMN lunatic_bluffs TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN lunatic_minions TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN disguises TEXT NOT NULL DEFAULT '{}'",
+  "ALTER TABLE game_phases ADD COLUMN timers TEXT NOT NULL DEFAULT '{}'",
 ]) {
   try {
     db.exec(sql);
@@ -308,6 +316,84 @@ export function setLunaticBluffs(gameId: string, ids: string[]): void {
   );
 }
 
+// 페이즈별 타이머(밀담/공개토론) — game_phases.timers JSON 컬럼.
+type TimerKind = "whisper" | "open";
+
+function readTimers(gameId: string, idx: number): PhaseTimers {
+  const row = db
+    .prepare("SELECT timers FROM game_phases WHERE game_id = ? AND idx = ?")
+    .get(gameId, idx) as { timers: string } | undefined;
+  if (!row?.timers) return {};
+  try {
+    return JSON.parse(row.timers) as PhaseTimers;
+  } catch {
+    return {};
+  }
+}
+
+function writeTimers(gameId: string, idx: number, t: PhaseTimers): void {
+  db.prepare("UPDATE game_phases SET timers = ? WHERE game_id = ? AND idx = ?").run(
+    JSON.stringify(t),
+    gameId,
+    idx,
+  );
+}
+
+export function getPhaseTimers(gameId: string): PhaseTimers {
+  const row = db.prepare("SELECT current_idx FROM games WHERE id = ?").get(gameId) as
+    | { current_idx: number }
+    | undefined;
+  return row ? readTimers(gameId, row.current_idx) : {};
+}
+
+export function setTimerDuration(gameId: string, kind: TimerKind, durationSec: number): void {
+  db.transaction(() => {
+    const idx = (db.prepare("SELECT current_idx FROM games WHERE id = ?").get(gameId) as {
+      current_idx: number;
+    }).current_idx;
+    const cur = readTimers(gameId, idx);
+    const prev: PhaseTimer = cur[kind] ?? { durationSec: 0 };
+    cur[kind] = { ...prev, durationSec: Math.max(0, Math.floor(durationSec)) };
+    writeTimers(gameId, idx, cur);
+  })();
+}
+
+export function startTimer(gameId: string, kind: TimerKind): void {
+  db.transaction(() => {
+    const idx = (db.prepare("SELECT current_idx FROM games WHERE id = ?").get(gameId) as {
+      current_idx: number;
+    }).current_idx;
+    const cur = readTimers(gameId, idx);
+    const prev: PhaseTimer = cur[kind] ?? { durationSec: 0 };
+    cur[kind] = { ...prev, startedAt: Date.now(), finishedAt: undefined };
+    writeTimers(gameId, idx, cur);
+  })();
+}
+
+export function stopTimer(gameId: string, kind: TimerKind): void {
+  db.transaction(() => {
+    const idx = (db.prepare("SELECT current_idx FROM games WHERE id = ?").get(gameId) as {
+      current_idx: number;
+    }).current_idx;
+    const cur = readTimers(gameId, idx);
+    const prev = cur[kind];
+    if (!prev?.startedAt) return;
+    cur[kind] = { ...prev, finishedAt: Date.now() };
+    writeTimers(gameId, idx, cur);
+  })();
+}
+
+export function clearTimer(gameId: string, kind: TimerKind): void {
+  db.transaction(() => {
+    const idx = (db.prepare("SELECT current_idx FROM games WHERE id = ?").get(gameId) as {
+      current_idx: number;
+    }).current_idx;
+    const cur = readTimers(gameId, idx);
+    delete cur[kind];
+    writeTimers(gameId, idx, cur);
+  })();
+}
+
 export function getLunaticMinions(gameId: string): number[] {
   const row = db.prepare("SELECT lunatic_minions FROM games WHERE id = ?").get(gameId) as
     | { lunatic_minions: string }
@@ -471,6 +557,7 @@ export function getGame(id: string): Game | undefined {
     lunaticBluffs: getLunaticBluffs(id),
     lunaticMinions: getLunaticMinions(id),
     disguises: getDisguises(id),
+    phaseTimers: readTimers(id, idx),
   };
 }
 
@@ -736,6 +823,7 @@ export type HistoryEntry = {
   players: HistoryPlayer[];
   actions: NightActionRecord[];
   votes: VoteRecord[];
+  timers: PhaseTimers;
 };
 
 export function getHistory(gameId: string): HistoryEntry[] {
@@ -760,6 +848,7 @@ export function getHistory(gameId: string): HistoryEntry[] {
       phase: ph.phase,
       actions: readActions(gameId, ph.idx),
       votes: readVotes(gameId, ph.idx),
+      timers: readTimers(gameId, ph.idx),
       players: ids.map((p) => ({
         seat: p.seat,
         nickname: p.nickname,

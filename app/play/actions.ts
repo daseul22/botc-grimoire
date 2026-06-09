@@ -28,6 +28,10 @@ import {
   setDisguise,
   setLunaticBluffs,
   setLunaticMinions,
+  setTimerDuration,
+  startTimer,
+  stopTimer,
+  clearTimer,
   setMemo,
   setNickname,
   swapSeats,
@@ -337,6 +341,30 @@ export async function setLunaticBluffsAction(gameId: string, ids: string[]): Pro
 
 export async function setLunaticMinionsAction(gameId: string, seats: number[]): Promise<Game> {
   setLunaticMinions(gameId, seats);
+  return getGame(gameId)!;
+}
+
+export async function setTimerDurationAction(
+  gameId: string,
+  kind: "whisper" | "open",
+  durationSec: number,
+): Promise<Game> {
+  setTimerDuration(gameId, kind, durationSec);
+  return getGame(gameId)!;
+}
+
+export async function startTimerAction(gameId: string, kind: "whisper" | "open"): Promise<Game> {
+  startTimer(gameId, kind);
+  return getGame(gameId)!;
+}
+
+export async function stopTimerAction(gameId: string, kind: "whisper" | "open"): Promise<Game> {
+  stopTimer(gameId, kind);
+  return getGame(gameId)!;
+}
+
+export async function clearTimerAction(gameId: string, kind: "whisper" | "open"): Promise<Game> {
+  clearTimer(gameId, kind);
   return getGame(gameId)!;
 }
 

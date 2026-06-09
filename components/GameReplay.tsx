@@ -160,6 +160,27 @@ export function GameReplay({
                     })}
                   </div>
                 )}
+                {(h.timers?.whisper || h.timers?.open) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-border pt-2 text-[11px] text-muted">
+                    {(["whisper", "open"] as const).map((k) => {
+                      const t = h.timers?.[k];
+                      if (!t) return null;
+                      const label = k === "whisper" ? "🤫 밀담" : "📣 공개토론";
+                      const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+                      const used =
+                        t.startedAt != null
+                          ? Math.floor(((t.finishedAt ?? t.startedAt) - t.startedAt) / 1000)
+                          : 0;
+                      return (
+                        <span key={k} className="inline-flex items-center gap-1">
+                          <span className="font-medium text-text">{label}</span>
+                          <span className="tabular-nums">설정 {fmt(t.durationSec)}</span>
+                          {t.startedAt != null && <span className="tabular-nums">· 실제 {fmt(used)}</span>}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </li>
             ))}
           </ol>
