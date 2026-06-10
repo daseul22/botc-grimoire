@@ -12,10 +12,12 @@ import { RoleCard } from "./RoleCard";
 export function ClaimCard({
   me,
   ch,
+  disguised,
   remainingMs,
 }: {
   me: GamePlayer;
   ch?: Character;
+  disguised?: boolean;
   remainingMs: number;
 }) {
   // 실제 시계 기반 카운트. setInterval로 누적하지 않아 폰 잠금/탭 백그라운드 후에도 정확.
@@ -44,7 +46,7 @@ export function ClaimCard({
       <div className="mb-3 rounded-lg border px-3 py-2 text-center text-sm font-medium" style={{ borderColor: "#d4a23a66", color: "#d4a23a", background: "#d4a23a14" }}>
         ⏳ {left}초 후 이 화면이 사라집니다 · 지금 본인 직업을 확인하세요
       </div>
-      <RoleCard me={me} ch={ch} />
+      <RoleCard me={me} ch={ch} disguised={disguised} />
     </>
   );
 }

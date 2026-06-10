@@ -7,9 +7,16 @@ const ALIGN = {
   evil: { label: "악 진영", color: "#d23b3b" },
 } as const;
 
-/** 내 직업 카드(닉네임·직업·진영·능력). 순수 presentational — 서버/클라 양쪽에서 쓴다. */
-export function RoleCard({ me, ch }: { me: GamePlayer; ch?: Character }) {
-  const align = ALIGN[me.alignment];
+/**
+ * 내 직업 카드(닉네임·직업·진영·능력). 순수 presentational — 서버/클라 양쪽에서 쓴다.
+ * disguised: ch가 가짜 직업(미치광이·주정뱅이·꼭두각시)일 때 — 진영도 실제값 대신
+ * 가짜 직업의 팀 기준으로 보여준다(꼭두각시는 "선 진영 · 마을주민"으로 보여야 함).
+ */
+export function RoleCard({ me, ch, disguised }: { me: GamePlayer; ch?: Character; disguised?: boolean }) {
+  const align =
+    disguised && ch
+      ? ALIGN[ch.team === "minion" || ch.team === "demon" ? "evil" : "good"]
+      : ALIGN[me.alignment];
   const dead = me.status === "dead";
   return (
     <>
