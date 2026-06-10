@@ -226,8 +226,12 @@ export function SelectionPanel({
                     : { borderColor: "var(--color-border)" }
                 }
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.icon} alt="" draggable={false} className="h-5 w-5 rounded-full object-cover" />
+                {m.icon ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.icon} alt="" draggable={false} className="h-5 w-5 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-[11px]" style={{ background: `${m.color}33`, color: m.color }}>{m.letter ?? "●"}</span>
+                )}
                 {m.label}
                 <span className="text-[10px] opacity-70">({DURATION_LABEL[m.duration]})</span>
               </button>

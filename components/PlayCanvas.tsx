@@ -77,24 +77,42 @@ export function PlayCanvas({
   // 낮 능력 토글 버튼 노출 여부 (목록 자체는 DaySidebar가 계산).
   const hasDayRoles = !night && game.players.some((p) => dayActionSpec(p.characterId) && charMap[p.characterId]);
 
+  // 서버 액션이 응답을 영영 안 주면(서버 일시 블로킹·네트워크 단절) pending이 영구
+  // true로 남아 화면이 "멈춘 것처럼" 보인다. 타임아웃을 걸어 알리고 풀어준다.
+  const withTimeout = <T,>(p: Promise<T>, ms = 15000): Promise<T> =>
+    Promise.race([
+      p,
+      new Promise<never>((_, rej) =>
+        setTimeout(() => rej(new Error("서버 응답이 없습니다. 새로고침 후 다시 시도하세요.")), ms),
+      ),
+    ]);
+
   const run = (fn: () => Promise<Game | { error: string }>) =>
     startTransition(async () => {
-      const r = await fn();
-      if ("error" in r) alert(r.error);
-      else setGame(r);
+      try {
+        const r = await withTimeout(fn());
+        if ("error" in r) alert(r.error);
+        else setGame(r);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "요청이 실패했습니다.");
+      }
     });
 
   // 마커를 여러 좌석에 순차 적용(add-only). state가 페이즈당 단일 JSON이라
   // 동시 호출 시 lost-update가 나므로 await로 직렬 처리한다.
   const applyMarkers = (seats: number[], markerStr: string) =>
     startTransition(async () => {
-      let latest: Game | null = null;
-      for (const seat of seats) {
-        const cur = (latest?.players ?? game.players).find((p) => p.seat === seat);
-        if (cur?.markers.includes(markerStr)) continue; // 이미 있으면 토글 끄지 않도록 skip
-        latest = await toggleMarkerAction(game.id, seat, markerStr);
+      try {
+        let latest: Game | null = null;
+        for (const seat of seats) {
+          const cur = (latest?.players ?? game.players).find((p) => p.seat === seat);
+          if (cur?.markers.includes(markerStr)) continue; // 이미 있으면 토글 끄지 않도록 skip
+          latest = await withTimeout(toggleMarkerAction(game.id, seat, markerStr));
+        }
+        if (latest) setGame(latest);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "요청이 실패했습니다.");
       }
-      if (latest) setGame(latest);
     });
 
   // 토큰을 원형으로 자동 배치
