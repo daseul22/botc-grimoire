@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { TEAM_MAP } from "@/lib/constants";
 import { MARKERS } from "@/lib/markers";
 import { dayActionSpec } from "@/lib/night-actions";
@@ -67,6 +67,15 @@ export function PlayCanvas({
     () => Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>,
     [sheetChars],
   );
+
+  // 페이즈가 바뀌면(다음/이전 이동 포함) 그 페이즈의 행동 순서 사이드바를 자동으로 연다.
+  const phaseKey = `${game.day}-${game.phase}`;
+  const prevPhaseKey = useRef(phaseKey);
+  useEffect(() => {
+    if (prevPhaseKey.current === phaseKey) return;
+    prevPhaseKey.current = phaseKey;
+    setSidebar(game.phase === "night" ? "night" : "day");
+  }, [phaseKey, game.phase]);
 
   const sel = game.players.find((p) => p.seat === selected);
   const night = game.phase === "night";
