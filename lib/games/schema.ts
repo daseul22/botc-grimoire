@@ -57,6 +57,13 @@ CREATE TABLE IF NOT EXISTS game_phase_actions (
   actions TEXT NOT NULL DEFAULT '[]',
   PRIMARY KEY (game_id, idx)
 );
+CREATE TABLE IF NOT EXISTS game_undo_stack (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  game_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 `);
 // 구버전 db 컬럼 보강 (idempotent)
 for (const sql of [

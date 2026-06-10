@@ -19,11 +19,13 @@ import {
 } from "./schema";
 import { readActions, readDone, readNote, readTimers, readVotes } from "./phase-data";
 import {
+  getClaims,
   getDisguises,
   getGlobalMarkers,
   getLunaticBluffs,
   getLunaticMinions,
 } from "./meta";
+import { undoInfo } from "./undo";
 
 export type GameConfig = { excludedIds: string[]; counts: Record<string, number> };
 export type NewPlayer = Omit<
@@ -86,6 +88,8 @@ export function getGame(id: string): Game | undefined {
     lunaticMinions: getLunaticMinions(id),
     disguises: getDisguises(id),
     phaseTimers: readTimers(id, idx),
+    undo: undoInfo(id),
+    claimedSeats: Object.keys(getClaims(id)).map(Number),
   };
 }
 
@@ -323,6 +327,7 @@ export function deleteGame(id: string): void {
     db.prepare("DELETE FROM game_log WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM game_phases WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM game_phase_actions WHERE game_id = ?").run(id);
+    db.prepare("DELETE FROM game_undo_stack WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM games WHERE id = ?").run(id);
   })();
 }

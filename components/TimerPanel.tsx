@@ -1,7 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Game, PhaseTimer } from "@/lib/types";
+
+// 타이머 종료 알림음 — Web Audio 비프 3회. AudioContext는 첫 호출 때 생성(사용자 제스처 이후라 OK).
+let audioCtx: AudioContext | null = null;
+function beep() {
+  try {
+    audioCtx ??= new AudioContext();
+    const ctx = audioCtx;
+    for (let i = 0; i < 3; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.35);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.35 + 0.25);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.35);
+      osc.stop(ctx.currentTime + i * 0.35 + 0.3);
+    }
+  } catch {
+    /* 오디오 차단 환경 무시 */
+  }
+}
 
 /**
  * 낮 페이즈 타이머 — 밀담(생존*25초) / 공개토론(생존*15초) 기본값.
@@ -95,14 +117,35 @@ function TimerCard({
   const remaining = Math.max(0, durationSec - elapsed);
   const overtime = running && remaining === 0 ? Math.floor((now - (timer?.startedAt ?? now)) / 1000) - durationSec : 0;
 
+  // 0초 도달 순간 1회: 비프 + 진동(폰) — 같은 startedAt에 대해 중복 알림 방지.
+  const alerted = useRef<number | null>(null);
+  useEffect(() => {
+    if (!running || remaining > 0) return;
+    const key = timer?.startedAt ?? 0;
+    if (alerted.current === key) return;
+    alerted.current = key;
+    beep();
+    try {
+      navigator.vibrate?.([200, 100, 200, 100, 400]);
+    } catch {
+      /* ignore */
+    }
+  }, [running, remaining, timer?.startedAt]);
+
   const fmt = (sec: number) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  // 시간 초과 동안 테두리 깜빡 (1초 주기)
+  const flashing = running && remaining === 0 && Math.floor(now / 500) % 2 === 0;
+
   return (
-    <div className="flex min-w-[180px] flex-1 flex-col gap-1.5 rounded-lg border border-border bg-surface px-3 py-2">
+    <div
+      className="flex min-w-[180px] flex-1 flex-col gap-1.5 rounded-lg border bg-surface px-3 py-2 transition-colors"
+      style={{ borderColor: flashing ? "#d23b3b" : "var(--color-border)", background: flashing ? "#d23b3b14" : undefined }}
+    >
       <div className="flex items-center gap-2 text-sm">
         <span className="font-semibold">{label}</span>
         {finished && <span className="rounded bg-muted/20 px-1.5 py-0.5 text-[10px] text-muted">완료</span>}

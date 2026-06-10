@@ -54,7 +54,11 @@ export function Expired() {
     <div className="rounded-2xl border border-border bg-surface p-8 text-center">
       <p className="text-4xl">🔒</p>
       <p className="mt-3 text-lg font-bold">확인 시간이 끝났습니다</p>
-      <p className="mt-2 text-sm leading-relaxed text-muted">직업은 더 이상 표시되지 않습니다.</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted">
+        직업은 더 이상 표시되지 않습니다.
+        <br />
+        다시 봐야 한다면 이야기꾼에게 요청하세요.
+      </p>
     </div>
   );
 }

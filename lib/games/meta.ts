@@ -50,6 +50,16 @@ export function resetClaims(gameId: string): void {
   db.prepare("UPDATE games SET claimed = '{}' WHERE id = ?").run(gameId);
 }
 
+/** 한 좌석의 점유만 해제 — 만료된 플레이어에게 ST가 직업 재열람을 허용할 때. */
+export function releaseSeat(gameId: string, seat: number): void {
+  db.transaction(() => {
+    const claims = getClaims(gameId);
+    if (!(seat in claims)) return;
+    delete claims[seat];
+    db.prepare("UPDATE games SET claimed = ? WHERE id = ?").run(JSON.stringify(claims), gameId);
+  })();
+}
+
 // 게임 전역 마커(Vortox 영향·일식 등). 좌석 단위가 아닌 게임 전체에 걸치는 효과.
 export function getGlobalMarkers(gameId: string): string[] {
   const row = db.prepare("SELECT global_markers FROM games WHERE id = ?").get(gameId) as

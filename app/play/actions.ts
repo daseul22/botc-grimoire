@@ -8,11 +8,13 @@ import { charactersForSheet, getCharacter, getSheet } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
 import {
   advancePhase,
+  captureUndo,
   claimSeat,
   clearAction,
   createGame,
   deleteGame,
   finishGame,
+  getClaims,
   getGame,
   getGameConfig,
   clearVote,
@@ -20,6 +22,7 @@ import {
   recordAction,
   recordVote,
   redrawRoles,
+  releaseSeat,
   savePositions,
   setBluffs,
   setGhostVote,
@@ -41,6 +44,7 @@ import {
   setStatus,
   toggleDone,
   toggleMarker,
+  undoLast,
   type RoleAssignment,
 } from "@/lib/games";
 import { TEAM_MAP } from "@/lib/constants";
@@ -147,11 +151,13 @@ export async function redrawAction(gameId: string): Promise<Game | { error: stri
 
   const res = assignRoles(sheet, cfg.excludedIds, counts);
   if ("error" in res) return res;
+  captureUndo(gameId, "재추첨");
   redrawRoles(gameId, res.roles);
   return getGame(gameId)!;
 }
 
 export async function advancePhaseAction(gameId: string): Promise<Game> {
+  captureUndo(gameId, "페이즈 전환");
   advancePhase(gameId);
   return getGame(gameId)!;
 }
@@ -167,6 +173,7 @@ export async function setStatusAction(
   status: string,
   cause = "",
 ): Promise<Game> {
+  captureUndo(gameId, "생사 변경");
   setStatus(gameId, seat, status, cause);
   return getGame(gameId)!;
 }
@@ -178,11 +185,13 @@ export async function recordVoteAction(
   votes: number,
   executed: boolean,
 ): Promise<Game> {
+  captureUndo(gameId, "투표 기록");
   recordVote(gameId, { nominator, nominee, votes, executed });
   return getGame(gameId)!;
 }
 
 export async function clearVoteAction(gameId: string, nominee: number): Promise<Game> {
+  captureUndo(gameId, "투표 삭제");
   clearVote(gameId, nominee);
   return getGame(gameId)!;
 }
@@ -192,6 +201,7 @@ export async function toggleGhostVoteAction(
   seat: number,
   used: boolean,
 ): Promise<Game> {
+  captureUndo(gameId, "유령표");
   setGhostVote(gameId, seat, used);
   return getGame(gameId)!;
 }
@@ -211,6 +221,7 @@ export async function toggleMarkerAction(
   seat: number,
   markerId: string,
 ): Promise<Game> {
+  captureUndo(gameId, "마커 변경");
   toggleMarker(gameId, seat, markerId);
   return getGame(gameId)!;
 }
@@ -223,6 +234,7 @@ export async function recordActionAction(
   result: string,
   bluff = false,
 ): Promise<Game> {
+  captureUndo(gameId, "행동 기록");
   recordAction(gameId, { actorSeat, characterId, targets, result, bluff });
   // 직업별 자동 사이드 이펙트.
   if (!bluff) applyAutoSideEffects(gameId, characterId, actorSeat, result);
@@ -269,6 +281,7 @@ export async function clearActionAction(
   characterId = "",
   bluff = false,
 ): Promise<Game> {
+  captureUndo(gameId, "행동 삭제");
   clearAction(gameId, actorSeat, characterId, bluff);
   return getGame(gameId)!;
 }
@@ -277,6 +290,7 @@ export async function setBluffsAction(
   gameId: string,
   ids: string[],
 ): Promise<Game> {
+  captureUndo(gameId, "블러핑 변경");
   setBluffs(gameId, ids);
   return getGame(gameId)!;
 }
@@ -304,6 +318,7 @@ export async function setAlignmentAction(
   seat: number,
   alignment: "good" | "evil",
 ): Promise<Game> {
+  captureUndo(gameId, "진영 변경");
   setAlignment(gameId, seat, alignment);
   return getGame(gameId)!;
 }
@@ -313,6 +328,7 @@ export async function setNicknameAction(
   seat: number,
   nickname: string,
 ): Promise<Game> {
+  captureUndo(gameId, "닉네임 변경");
   setNickname(gameId, seat, nickname);
   return getGame(gameId)!;
 }
@@ -322,6 +338,7 @@ export async function swapSeatsAction(
   a: number,
   b: number,
 ): Promise<Game> {
+  captureUndo(gameId, "자리 교환");
   swapSeats(gameId, a, b);
   return getGame(gameId)!;
 }
@@ -330,6 +347,7 @@ export async function toggleGlobalMarkerAction(
   gameId: string,
   marker: string,
 ): Promise<Game> {
+  captureUndo(gameId, "전역 마커");
   toggleGlobalMarker(gameId, marker);
   return getGame(gameId)!;
 }
@@ -393,6 +411,7 @@ export async function setRoleAction(
   if (!me) return { error: "플레이어를 찾을 수 없습니다." };
   if (me.characterId === characterId) return game;
 
+  captureUndo(gameId, "직업 변경");
   const newAlign = alignmentOf(ch.team);
   const other = game.players.find(
     (p) => p.seat !== seat && p.characterId === characterId,
@@ -413,6 +432,7 @@ export async function finishGameAction(
   gameId: string,
   result: "good" | "evil",
 ): Promise<void> {
+  captureUndo(gameId, "게임 종료");
   finishGame(gameId, result);
   revalidatePath(`/play/${gameId}`);
   redirect(`/play/${gameId}`);
@@ -428,6 +448,20 @@ export async function savePositionsAction(
 export async function deleteGameAction(gameId: string): Promise<void> {
   deleteGame(gameId);
   revalidatePath("/games");
+}
+
+/** 실행 취소 — 가장 최근 조작 직전 상태로 복원. */
+export async function undoAction(gameId: string): Promise<Game | { error: string }> {
+  const label = undoLast(gameId);
+  if (label === null) return { error: "되돌릴 조작이 없습니다." };
+  revalidatePath(`/play/${gameId}`);
+  return getGame(gameId)!;
+}
+
+/** 한 좌석의 직업배포 점유 해제 — 만료된 플레이어가 다시 볼 수 있게 ST가 허용. */
+export async function releaseSeatAction(gameId: string, seat: number): Promise<Game> {
+  releaseSeat(gameId, seat);
+  return getGame(gameId)!;
 }
 
 // 폰 공유용 LAN 주소를 만든다. 서버의 LAN IPv4를 골라 :3000 + path로 조립.
@@ -464,8 +498,11 @@ export async function claimSeatAction(
   if (Number.isFinite(seat)) {
     const jar = await cookies();
     const key = `botc-claim-${gameId}`;
-    // 이미 내 좌석이면 그대로, 아니면 점유 시도 후 쿠키 발급.
-    if (jar.get(key)?.value !== String(seat)) {
+    // 쿠키가 내 좌석이어도 점유 기록이 해제됐을 수 있다(ST의 재열람 허용).
+    // claims에 좌석이 없으면 다시 점유해야 30초 카운트가 새로 시작된다.
+    const mine = jar.get(key)?.value === String(seat);
+    const claimedNow = seat in getClaims(gameId);
+    if (!mine || !claimedNow) {
       const r = claimSeat(gameId, seat);
       if (r.ok) {
         // path는 '/' — proxy.ts가 모든 경로 요청에서 이 쿠키를 봐야 가두기가 동작.

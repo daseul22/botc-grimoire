@@ -6,6 +6,7 @@ import { DURATION_LABEL, MARKERS, parseMarker } from "@/lib/markers";
 import type { Character, Game, GamePlayer } from "@/lib/types";
 import { RolePickerModal } from "./RolePickerModal";
 import {
+  releaseSeatAction,
   setAlignmentAction,
   setMemoAction,
   setNicknameAction,
@@ -194,6 +195,17 @@ export function SelectionPanel({
           >
             {sel.locked ? "고정 해제" : "위치 고정"}
           </button>
+          {game.claimedSeats.includes(sel.seat) && (
+            <button
+              type="button"
+              onClick={() => run(() => releaseSeatAction(game.id, sel.seat))}
+              title="직업배포 점유 해제 — 이 플레이어가 배포 링크에서 자기 직업을 다시 30초간 볼 수 있게 합니다"
+              className="rounded-lg border px-3 py-1.5 text-sm"
+              style={{ borderColor: "#d4a23a88", color: "#d4a23a", background: "#d4a23a14" }}
+            >
+              🔓 직업 재열람 허용
+            </button>
+          )}
           <button
             type="button"
             onClick={() =>

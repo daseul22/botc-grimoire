@@ -8,6 +8,7 @@
     "prebuild": "node scripts/seed-db.mjs",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
+    "party": "node scripts/party.mjs",
     "lint": "eslint",
     "db:seed": "node scripts/seed-db.mjs",
     "data:scrape": "node scripts/scrape-vnamu.mjs && node scripts/seed-db.mjs"

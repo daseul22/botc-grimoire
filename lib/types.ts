@@ -155,6 +155,10 @@ export interface Game {
   disguises: Record<number, string>;
   /** 현재 페이즈(낮)의 타이머 — 밀담/공개토론. 다른 페이즈로 advance하면 새 record. */
   phaseTimers: PhaseTimers;
+  /** 실행 취소 스택 정보 — count=쌓인 조작 수, lastLabel=가장 최근 조작 이름. */
+  undo: { count: number; lastLabel: string | null };
+  /** 직업배포(claim)에서 점유된 좌석들 — ST가 좌석별 재열람 허용(점유 해제)할 때 사용. */
+  claimedSeats: number[];
 }
 
 /** 한 번의 타이머 한 종류(밀담 또는 공개토론). */

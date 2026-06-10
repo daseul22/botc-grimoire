@@ -9,6 +9,7 @@ import {
   lanUrlAction,
   prevPhaseAction,
   redrawAction,
+  undoAction,
 } from "@/app/play/actions";
 
 // LAN IP는 비보안 컨텍스트(http)라 navigator.clipboard가 없을 수 있다.
@@ -138,6 +139,19 @@ export function HeaderToolbar({
               다음 {night ? "낮" : "밤"} <Chevron dir="right" />
             </button>
           </div>
+          <button
+            type="button"
+            disabled={busy || game.undo.count === 0}
+            onClick={() => run(() => undoAction(game.id))}
+            title={
+              game.undo.lastLabel
+                ? `실행 취소: ${game.undo.lastLabel} (${game.undo.count}개 가능)`
+                : "되돌릴 조작이 없습니다"
+            }
+            className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            ↩ 취소
+          </button>
           <button
             type="button"
             onClick={onArrangeCircle}
