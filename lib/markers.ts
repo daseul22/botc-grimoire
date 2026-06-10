@@ -114,3 +114,11 @@ export function keepMarkerOnAdvance(m: string, leavingDay: boolean): boolean {
   if (d === "phase") return false;
   return !leavingDay; // dusk: 낮이 끝날 때만 소멸
 }
+
+// 거짓 정보 경고: taints 마커(중독·취함·Vortox 영향 등)가 좌석/전역 어디든 있으면
+// 정보 직업의 결과는 거짓이어야 한다.
+const TAINT_BASES = new Set(MARKERS.filter((m) => m.taints).map((m) => m.id));
+const hasTaintInList = (markers: string[]) =>
+  markers.some((m) => TAINT_BASES.has(parseMarker(m).base));
+export const isTainted = (seatMarkers: string[], globalMarkers: string[]): boolean =>
+  hasTaintInList(seatMarkers) || hasTaintInList(globalMarkers);

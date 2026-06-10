@@ -95,6 +95,14 @@ export const RESULT_KIND_LABEL: Record<ResultKind, string> = {
   text: "메모",
 };
 
+/** 결과가 "정보"인 종류 — 취함/중독이면 거짓 정보 경고 대상. */
+export const INFO_KINDS: ReadonlySet<ResultKind> = new Set<ResultKind>([
+  "number",
+  "yesno",
+  "role",
+  "team",
+]);
+
 // 직업별 스펙. 야간 행동이 있는 직업만 등재(없으면 기본값으로 처리).
 export const ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 트러블 브루잉 ──

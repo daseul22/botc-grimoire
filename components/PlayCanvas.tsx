@@ -1,17 +1,18 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import { TEAM_MAP, TEAMS } from "@/lib/constants";
-import { MARKERS, effectiveCharacterId, parseMarker } from "@/lib/markers";
-import { actionSpec, dayActionSpec } from "@/lib/night-actions";
-import type { Alignment, Character, Game, NightAction } from "@/lib/types";
+import { TEAM_MAP } from "@/lib/constants";
+import { MARKERS } from "@/lib/markers";
+import { dayActionSpec } from "@/lib/night-actions";
+import type { Alignment, Character, Game } from "@/lib/types";
 import { AbilityModal } from "./AbilityModal";
 import { MarkerToken } from "./MarkerToken";
-import { NightActionRow } from "./NightActionRow";
-import { LunaticActionRow } from "./LunaticActionRow";
 import { TimerPanel } from "./TimerPanel";
 import { SelectionPanel } from "./SelectionPanel";
 import { HeaderToolbar } from "./HeaderToolbar";
+import { NightSidebar } from "./NightSidebar";
+import { DaySidebar } from "./DaySidebar";
+import { AbilitiesSidebar } from "./AbilitiesSidebar";
 import { ClaimsSidebar } from "./ClaimsSidebar";
 import { FirstNightSetup } from "./FirstNightSetup";
 import { VotesSidebar } from "./VotesSidebar";
@@ -29,25 +30,12 @@ import {
   stopTimerAction,
   clearTimerAction,
   setDisguiseAction,
-  setLunaticBluffsAction,
-  setLunaticMinionsAction,
   setNoteAction,
-  toggleDoneAction,
   toggleMarkerAction,
 } from "@/app/play/actions";
 
 const ALIGN_COLOR: Record<Alignment, string> = { good: "#4a90d9", evil: "#d23b3b" };
-const TEAM_ORDER = TEAMS.map((t) => t.id);
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-
-// 거짓 정보 경고: 정보 결과 직업이 취함/중독이면 거짓 정보를 줘야 함
-const INFO_KINDS = new Set(["number", "yesno", "role", "team"]);
-// taints: 정보 직업이 거짓 정보를 받아야 하는 상태. markers.ts에서 taints:true인 마커 목록.
-const TAINT_BASES = new Set(MARKERS.filter((m) => m.taints).map((m) => m.id));
-const hasTaintInList = (markers: string[]) =>
-  markers.some((m) => TAINT_BASES.has(parseMarker(m).base));
-const isTainted = (seatMarkers: string[], globalMarkers: string[]) =>
-  hasTaintInList(seatMarkers) || hasTaintInList(globalMarkers);
 
 function Chevron({ dir }: { dir: "left" | "right" }) {
   return (
@@ -86,84 +74,8 @@ export function PlayCanvas({
   const isFirstNight = game.day === 1;
   const canEditRoles = night && isFirstNight && game.phaseIndex === 0;
 
-  // 첫밤 ST 운영서 별도 단계로 진행되는 두 정보 노드(botc 공식 firstNight order 기준).
-  // 룰상 마술사(magician=18) → MINION_INFO → 미치광이(lunatic=21) → DEMON_INFO 순.
-  // - MINION_INFO=19: 마술사 다음, 미치광이 전. 하수인끼리 + 데몬 알려줌.
-  // - DEMON_INFO=22: 미치광이 다음. 데몬에게 자기 직업·블러핑·하수인 알려줌.
-  // 일부 직업(철학자=14, 세레노버스=42 등)은 이 노드 앞·뒤에 위치한다.
-  // 좌석마다 실제 운영상 어떤 직업으로 다루는지(disguise / gained / became 마커 반영).
-  // 미치광이는 데몬처럼, 식인종은 처형된 town 능력처럼, 임프 자살자는 새 직업으로 행동 순서에 노출.
-  const effectiveCharId = (p: (typeof game.players)[number]) =>
-    effectiveCharacterId(p.seat, p.characterId, p.markers, game.disguises);
-
-  const nightOrder = night
-    ? (() => {
-        type Role = { kind: "role"; order: number; p: (typeof game.players)[number]; effId: string; na: NonNullable<NightAction> };
-        type Info = { kind: "info"; order: number; infoKind: "minion" | "demon" };
-        const roles: Role[] = game.players
-          .map((p) => {
-            const effId = effectiveCharId(p);
-            const na = (isFirstNight ? charMap[effId]?.firstNight : charMap[effId]?.otherNight) as NightAction;
-            return na ? { kind: "role" as const, order: na.order, p, effId, na } : null;
-          })
-          .filter((x): x is Role => !!x);
-        const items: (Role | Info)[] = [...roles];
-        if (isFirstNight) {
-          // 정보 노드는 *실제* 게임 구성에 따라 노출 (effective char 무관).
-          const hasMinion = game.players.some((p) => charMap[p.characterId]?.team === "minion");
-          const hasDemon = game.players.some((p) => charMap[p.characterId]?.team === "demon");
-          if (hasMinion) items.push({ kind: "info", order: 19, infoKind: "minion" });
-          if (hasDemon) items.push({ kind: "info", order: 22, infoKind: "demon" });
-        }
-        return items.sort((a, b) => a.order - b.order);
-      })()
-    : [];
-
-  const dayRoles = !night
-    ? game.players
-        .map((p) => ({ p, ch: charMap[p.characterId], spec: dayActionSpec(p.characterId) }))
-        .filter((x): x is { p: (typeof game.players)[number]; ch: Character; spec: NonNullable<ReturnType<typeof dayActionSpec>> } => !!x.spec && !!x.ch)
-        .sort((a, b) => TEAM_ORDER.indexOf(a.ch.team) - TEAM_ORDER.indexOf(b.ch.team) || a.ch.name.ko.localeCompare(b.ch.name.ko, "ko"))
-    : [];
-
-  const { inPlayRoles, otherRoles } = useMemo(() => {
-    const sortFn = (a: Character, b: Character) =>
-      TEAM_ORDER.indexOf(a.team) - TEAM_ORDER.indexOf(b.team) ||
-      a.name.ko.localeCompare(b.name.ko, "ko");
-    const inPlaySet = new Set(game.players.map((p) => p.characterId));
-    const seen = new Set<string>();
-    const inPlay: Character[] = [];
-    for (const p of game.players) {
-      const c = charMap[p.characterId];
-      if (c && !seen.has(c.id)) {
-        seen.add(c.id);
-        inPlay.push(c);
-      }
-    }
-    const others = sheetChars.filter((c) => !inPlaySet.has(c.id)).slice();
-    return { inPlayRoles: inPlay.sort(sortFn), otherRoles: others.sort(sortFn) };
-  }, [game.players, charMap, sheetChars]);
-
-  const roleItem = (c: Character, dim: boolean) => (
-    <li key={c.id} className={dim ? "opacity-50" : ""}>
-      <button
-        type="button"
-        onClick={() => setModalChar(c)}
-        className="flex w-full items-start gap-2.5 px-3 py-2 text-left hover:bg-surface-2"
-      >
-        {c.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.image} alt="" className="mt-0.5 h-7 w-7 shrink-0 rounded-full object-cover" />
-        )}
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium" style={{ color: TEAM_MAP[c.team]?.color }}>
-            {c.name.ko}
-          </span>
-          <span className="block break-words text-xs text-muted">{c.ability.ko}</span>
-        </span>
-      </button>
-    </li>
-  );
+  // 낮 능력 토글 버튼 노출 여부 (목록 자체는 DaySidebar가 계산).
+  const hasDayRoles = !night && game.players.some((p) => dayActionSpec(p.characterId) && charMap[p.characterId]);
 
   const run = (fn: () => Promise<Game | { error: string }>) =>
     startTransition(async () => {
@@ -320,7 +232,7 @@ export function PlayCanvas({
         {night ? (
           <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>🌙 행동 순서</button>
         ) : (
-          dayRoles.length > 0 && (
+          hasDayRoles && (
             <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>☀️ 낮 능력</button>
           )
         )}
@@ -341,7 +253,7 @@ export function PlayCanvas({
                 🌙 행동 순서
               </button>
             ) : (
-              dayRoles.length > 0 && (
+              hasDayRoles && (
                 <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
                   ☀️ 낮 능력
                 </button>
@@ -394,180 +306,39 @@ export function PlayCanvas({
 
         {/* 밤 행동 순서 사이드바 */}
         {sidebar === "night" && night && (
-          <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
-            <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-              <span className="text-sm font-semibold">🌙 {isFirstNight ? "첫째 밤" : "그 외 밤"} 행동 순서<span className="ml-1 font-normal text-muted">· {nightOrder.length}</span></span>
-              <button type="button" onClick={() => setSidebar(null)} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron dir="right" /></button>
-            </div>
-            {nightOrder.length === 0 ? (
-              <p className="px-3 py-3 text-sm text-muted">이 밤에 행동하는 직업이 없습니다.</p>
-            ) : (
-              <ol className="flex-1 divide-y divide-border overflow-y-auto">
-                {nightOrder.map((item, i) => {
-                  if (item.kind === "info") {
-                    // 데몬 좌석 — 보여주기는 데몬 본인 폰에 노출. 데몬이 여럿이면 첫 번째 사용.
-                    const demonSeat = game.players.find((x) => charMap[x.characterId]?.team === "demon")?.seat;
-                    const isMinion = item.infoKind === "minion";
-                    return (
-                      <li key={`info-${item.infoKind}`} className="bg-surface-2/40 px-3 py-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={isMinion ? "/icons/minion-info.png" : "/icons/demon-info.png"} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
-                          <span className="font-semibold" style={{ color: isMinion ? "#d23b3b" : "#d23b3b" }}>
-                            {isMinion ? "하수인 정보" : "악마 정보"}
-                          </span>
-                          <span className="text-xs text-muted">단계</span>
-                          {demonSeat != null && (
-                            <a
-                              href={`/play/${game.id}/show/${demonSeat}?mode=${isMinion ? "minions" : "bluffs"}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="ml-auto inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-xs text-gold hover:bg-gold/25"
-                            >
-                              🎴 보여주기
-                            </a>
-                          )}
-                        </div>
-                        <p className="mt-1 break-words pl-6 text-xs text-muted">
-                          {isMinion
-                            ? "하수인들에게 서로 누구인지, 데몬이 누구인지 알려줍니다. (꼭두각시·마술사 인플레이 시 변형 적용)"
-                            : "데몬에게 자기 직업·블러핑 3개·하수인 좌석을 알려줍니다."}
-                        </p>
-                      </li>
-                    );
-                  }
-                  const { p, na, effId } = item;
-                  // ch = 운영상 다루는 직업(가짜/획득), realCh = 좌석에 적힌 진짜 직업.
-                  const ch = charMap[effId];
-                  const realCh = effId !== p.characterId ? charMap[p.characterId] : undefined;
-                  const dead = p.status === "dead";
-                  const done = game.doneSeats.includes(p.seat);
-                  return (
-                    <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
-                        <span className="relative inline-flex shrink-0">
-                          {ch?.image && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={ch.image} alt="" className="h-6 w-6 rounded-full object-cover" />
-                          )}
-                          {realCh?.image && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={realCh.image}
-                              alt=""
-                              title={`원래 직업: ${realCh.name.ko}`}
-                              className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border border-bg object-cover ring-1 ring-border"
-                            />
-                          )}
-                        </span>
-                        <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
-                        <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? effId}</span>
-                        {realCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`실제 직업: ${realCh.name.ko}`}>←{realCh.name.ko}</span>}
-                        {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(actionSpec(effId).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
-                        {dead && <span className="text-xs text-red-400">사망</span>}
-                        <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
-                      </div>
-                      {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
-                      {p.characterId === "lunatic" ? (
-                        <LunaticActionRow
-                          gameId={game.id}
-                          game={game}
-                          actorSeat={p.seat}
-                          sheetChars={sheetChars}
-                          charMap={charMap}
-                          busy={pending}
-                          onSetBluffs={(ids) => run(() => setLunaticBluffsAction(game.id, ids))}
-                          onSetMinions={(seats) => run(() => setLunaticMinionsAction(game.id, seats))}
-                        />
-                      ) : (
-                        <NightActionRow
-                          actor={p}
-                          spec={actionSpec(effId)}
-                          players={game.players}
-                          charMap={charMap}
-                          record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
-                          busy={pending}
-                          gameId={game.id}
-                          onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, effId, targets, result))}
-                          onClear={() => run(() => clearActionAction(game.id, p.seat))}
-                          onApplyMarker={applyMarkers}
-                        />
-                      )}
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </aside>
+          <NightSidebar
+            game={game}
+            charMap={charMap}
+            sheetChars={sheetChars}
+            isFirstNight={isFirstNight}
+            busy={pending}
+            run={run}
+            onApplyMarker={applyMarkers}
+            onClose={() => setSidebar(null)}
+          />
         )}
 
         {/* 낮 능력 사이드바 */}
         {sidebar === "day" && !night && (
-          <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
-            <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-              <span className="text-sm font-semibold">☀️ 낮 능력<span className="ml-1 font-normal text-muted">· {dayRoles.length}</span></span>
-              <button type="button" onClick={() => setSidebar(null)} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron dir="right" /></button>
-            </div>
-            {dayRoles.length === 0 ? (
-              <p className="px-3 py-3 text-sm text-muted">낮에 쓰는 능력을 가진 직업이 없습니다.</p>
-            ) : (
-              <ol className="flex-1 divide-y divide-border overflow-y-auto">
-                {dayRoles.map(({ p, ch, spec }) => {
-                  const dead = p.status === "dead";
-                  const done = game.doneSeats.includes(p.seat);
-                  return (
-                    <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
-                      <div className="flex items-center gap-2 text-sm">
-                        {ch.image && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={ch.image} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
-                        )}
-                        <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
-                        <span className="text-xs" style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
-                        {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(spec.result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
-                        {dead && <span className="text-xs text-red-400">사망</span>}
-                        <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
-                      </div>
-                      <p className="mt-1 break-words pl-0.5 text-xs text-muted">{ch.ability.ko}</p>
-                      <NightActionRow
-                        actor={p}
-                        spec={spec}
-                        players={game.players}
-                        charMap={charMap}
-                        record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
-                        busy={pending}
-                        gameId={game.id}
-                        onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
-                        onClear={() => run(() => clearActionAction(game.id, p.seat))}
-                        onApplyMarker={applyMarkers}
-                      />
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </aside>
+          <DaySidebar
+            game={game}
+            charMap={charMap}
+            busy={pending}
+            run={run}
+            onApplyMarker={applyMarkers}
+            onClose={() => setSidebar(null)}
+          />
         )}
 
         {/* 상세 능력 사이드바 */}
         {sidebar === "abilities" && (
-          <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
-            <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-              <span className="text-sm font-semibold">📖 직업 능력<span className="ml-1 font-normal text-muted">· {inPlayRoles.length}</span></span>
-              <button type="button" onClick={() => setSidebar(null)} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron dir="right" /></button>
-            </div>
-            <ul className="flex-1 divide-y divide-border overflow-y-auto">
-              {inPlayRoles.map((c) => roleItem(c, false))}
-              {otherRoles.length > 0 && (
-                <li className="bg-surface-2/40 px-3 py-1.5 text-[11px] font-medium text-muted">
-                  시트의 다른 직업 (미사용 · {otherRoles.length})
-                </li>
-              )}
-              {otherRoles.map((c) => roleItem(c, true))}
-            </ul>
-          </aside>
+          <AbilitiesSidebar
+            game={game}
+            charMap={charMap}
+            sheetChars={sheetChars}
+            onShowChar={setModalChar}
+            onClose={() => setSidebar(null)}
+          />
         )}
 
         {/* 주장(블러핑) 기록 사이드바 */}
