@@ -28,7 +28,8 @@ export function ActionFields({
   result: string;
   setResult: (v: string) => void;
 }) {
-  const pickable = players.filter((p) => p.seat !== actorSeat);
+  // 본인 좌석도 지목 가능 — 임프 자결(스타패스), 핏해그·갬블러 자기 지정 등.
+  const pickable = players;
   const toggleTarget = (seat: number) =>
     setTargets((cur) =>
       cur.includes(seat)
