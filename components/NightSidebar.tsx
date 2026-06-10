@@ -53,13 +53,21 @@ export function NightSidebar({
 }) {
   // 좌석마다 실제 운영상 어떤 직업으로 다루는지(disguise / gained / became 마커 반영).
   // 미치광이는 데몬처럼, 식인종은 처형된 town 능력처럼, 임프 자살자는 새 직업으로 노출.
-  const roles: RoleItem[] = game.players
-    .map((p) => {
-      const effId = effectiveCharacterId(p.seat, p.characterId, p.markers, game.disguises);
-      const na = (isFirstNight ? charMap[effId]?.firstNight : charMap[effId]?.otherNight) as NightAction;
-      return na ? { kind: "role" as const, order: na.order, p, effId, na } : null;
-    })
-    .filter((x): x is RoleItem => !!x);
+  const roles: RoleItem[] = game.players.flatMap((p) => {
+    const effId = effectiveCharacterId(p.seat, p.characterId, p.markers, game.disguises);
+    const nightOf = (id: string) =>
+      (isFirstNight ? charMap[id]?.firstNight : charMap[id]?.otherNight) as NightAction;
+    const out: RoleItem[] = [];
+    const na = nightOf(effId);
+    if (na) out.push({ kind: "role", order: na.order, p, effId, na });
+    // disguise 좌석(미치광이·꼭두각시)은 가짜 직업이 행동 순서를 대체하지만, 본체의 운영
+    // 단계(미치광이 가짜 블러핑·하수인 지정, 꼭두각시 보여주기)는 별도로 필요 — 본체 노드도 노출.
+    if (game.disguises?.[p.seat] && effId !== p.characterId) {
+      const realNa = nightOf(p.characterId);
+      if (realNa) out.push({ kind: "role", order: realNa.order, p, effId: p.characterId, na: realNa });
+    }
+    return out;
+  });
   const items: (RoleItem | InfoItem)[] = [...roles];
   if (isFirstNight) {
     // 정보 노드는 *실제* 게임 구성에 따라 노출 (effective char 무관).
@@ -125,10 +133,13 @@ export function NightSidebar({
             // ch = 운영상 다루는 직업(가짜/획득), realCh = 좌석에 적힌 진짜 직업.
             const ch = charMap[effId];
             const realCh = effId !== p.characterId ? charMap[p.characterId] : undefined;
+            // 본체 노드(disguise 좌석의 진짜 직업 행)에는 반대로 가짜 직업을 뱃지로 표기.
+            const fakeId = game.disguises?.[p.seat];
+            const fakeCh = effId === p.characterId && fakeId && fakeId !== p.characterId ? charMap[fakeId] : undefined;
             const dead = p.status === "dead";
             const done = game.doneSeats.includes(p.seat);
             return (
-              <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
+              <li key={`${p.seat}-${effId}`} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
                   <span className="relative inline-flex shrink-0">
@@ -149,12 +160,13 @@ export function NightSidebar({
                   <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
                   <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? effId}</span>
                   {realCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`실제 직업: ${realCh.name.ko}`}>←{realCh.name.ko}</span>}
+                  {fakeCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`가짜 직업: ${fakeCh.name.ko}`}>→{fakeCh.name.ko}</span>}
                   {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(actionSpec(effId).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
                   {dead && <span className="text-xs text-red-400">사망</span>}
                   <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                 </div>
                 {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
-                {p.characterId === "lunatic" ? (
+                {effId === "lunatic" ? (
                   <LunaticActionRow
                     gameId={game.id}
                     game={game}
