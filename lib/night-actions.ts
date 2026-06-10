@@ -66,9 +66,10 @@ export type ShowcaseSpec = {
    * - minions        : 하수인 좌석 닉네임 + 마술사 닉네임(데몬용).
    * - lunatic-bluffs : 미치광이용 *가짜* 블러핑(game.lunaticBluffs).
    * - lunatic-minions: 미치광이용 *가짜* 하수인 좌석(game.lunaticMinions).
+   * - lunatic-choice : 미치광이의 가짜 공격 지목을 *진짜 데몬*에게 보여주기.
    * show 페이지가 ?mode=...으로 분기 렌더한다.
    */
-  mode?: "bluffs" | "minions" | "lunatic-bluffs" | "lunatic-minions";
+  mode?: "bluffs" | "minions" | "lunatic-bluffs" | "lunatic-minions" | "lunatic-choice";
 };
 
 export type ActionSpec = {
@@ -288,9 +289,32 @@ export const DAY_ACTION_SPECS: Record<string, ActionSpec> = {
   gangster: { targets: 1, result: "none", marker: "dying" },
 };
 
+// 첫째 밤과 그 외 밤의 행동이 다른 직업 — 그 외 밤에만 이 스펙으로 오버라이드.
+export const OTHER_NIGHT_SPECS: Record<string, ActionSpec> = {
+  // 메제펠레스: 첫밤=비밀 단어 전달(text), 그 외 밤=단어를 말한 선한 플레이어 1명을 변절 처리.
+  // 보여주기는 변절된 본인에게(recipient=target).
+  mezepheles: {
+    targets: 1,
+    result: "none",
+    marker: "turning",
+    hint: "비밀 단어를 말한 변절자",
+    showcase: {
+      recipient: "target",
+      heading: "{target}은(는) 메제펠레스에 의해 변절되었습니다",
+      subheading: "지금부터 당신은 악 진영입니다",
+    },
+  },
+};
+
 /** 직업의 행동 스펙. 미등재(커스텀)는 자유 입력으로 폴백. */
 export function actionSpec(characterId: string): ActionSpec {
   return ACTION_SPECS[characterId] ?? { targets: 1, result: "text" };
+}
+
+/** 밤 행동 스펙 — 그 외 밤에 행동이 달라지는 직업(메제펠레스 등) 반영. */
+export function nightActionSpec(characterId: string, isFirstNight: boolean): ActionSpec {
+  if (!isFirstNight && OTHER_NIGHT_SPECS[characterId]) return OTHER_NIGHT_SPECS[characterId];
+  return actionSpec(characterId);
 }
 
 /** 낮 능력 스펙. 낮 능력 없으면 undefined. */
@@ -298,10 +322,10 @@ export function dayActionSpec(characterId: string): ActionSpec | undefined {
   return DAY_ACTION_SPECS[characterId];
 }
 
-/** 페이즈에 맞는 스펙. 복기 등에서 기록을 해석할 때 사용. */
-export function specForPhase(characterId: string, phase: string): ActionSpec {
+/** 페이즈에 맞는 스펙. 복기 등에서 기록을 해석할 때 사용. day 생략 시 첫밤 기준. */
+export function specForPhase(characterId: string, phase: string, day?: number): ActionSpec {
   if (phase === "day") return DAY_ACTION_SPECS[characterId] ?? actionSpec(characterId);
-  return actionSpec(characterId);
+  return nightActionSpec(characterId, day === undefined || day === 1);
 }
 
 /** 마커 적용 시 실제 저장 문자열. mad는 결과(직업)를 파라미터로 결합. */

@@ -127,7 +127,7 @@ export function GameReplay({
                     {h.actions.map((a) => {
                       const actor = h.players.find((p) => p.seat === a.actorSeat);
                       const ch = charMap[a.characterId];
-                      const res = formatResult(specForPhase(a.characterId, h.phase).result, a.result, charMap);
+                      const res = formatResult(specForPhase(a.characterId, h.phase, h.day).result, a.result, charMap);
                       const tnames = a.targets
                         .map((s) => h.players.find((p) => p.seat === s)?.nickname ?? `${s}`)
                         .join(", ");

@@ -75,7 +75,44 @@ export default async function ShowPage({
 
   const actorChar = map.get(actor.characterId);
   const record = game.actions.find((a) => a.actorSeat === seat && !a.bluff);
-  const spec = specForPhase(actor.characterId, game.phase ?? "night");
+  const spec = specForPhase(actor.characterId, game.phase ?? "night", game.day);
+
+  // ─── 특수 모드: 미치광이의 가짜 공격 지목을 *진짜 데몬*에게 보여주기 ───
+  // seat = 미치광이 좌석. 받는 사람은 데몬이라 "님께" 안내는 띄우지 않는다.
+  if (mode === "lunatic-choice") {
+    const choiceTargets = (record?.targets ?? [])
+      .map((s) => game.players.find((p) => p.seat === s))
+      .filter((p): p is NonNullable<typeof p> => !!p);
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-bg px-6 py-8">
+        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6">
+            {choiceTargets.length === 0 ? (
+              <p className="text-base text-muted">아직 지목이 기록되지 않았습니다.</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  {choiceTargets.map((p) => (
+                    <NameOnlyBig key={p.seat} nickname={p.nickname} />
+                  ))}
+                </div>
+                <h1 className="break-keep text-center text-3xl font-bold leading-snug text-text">
+                  {actor.nickname}이(가) {choiceTargets.map((p) => p.nickname).join(", ")}을(를) 지목했습니다
+                </h1>
+                <p className="break-keep text-center text-sm leading-relaxed text-muted">
+                  미치광이(가짜 악마)의 선택입니다 — 실제로 따를지는 당신이 결정합니다
+                </p>
+              </>
+            )}
+          </div>
+          <div className="mt-6 flex items-center justify-between text-sm">
+            <Link href={`/play/${gameId}`} className="text-muted hover:text-text">← 그리모어</Link>
+            <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ─── 특수 모드: 데몬/미치광이에게 첫밤 정보 보여주기 ───
   const isBluffs = mode === "bluffs" || mode === "lunatic-bluffs";

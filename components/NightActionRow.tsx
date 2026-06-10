@@ -125,7 +125,8 @@ export function NightActionRow({
             </a>
           )}
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            {spec.result !== "none" && showcaseArr.length <= 1 && (
+            {/* result 없는 직업도 명시적 showcase가 있으면 노출(미치광이 가짜 공격 → 데몬에게). */}
+            {showcaseArr.length <= 1 && (spec.result !== "none" || hasShowcase) && (
               <a
                 href={showcaseHref(0)}
                 target="_blank"
@@ -157,8 +158,12 @@ export function NightActionRow({
                 style={{ background: `${marker!.color}22`, color: marker!.color }}
                 title={`${marker!.label} 마커 적용`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={marker!.icon} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+                {marker!.icon ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={marker!.icon} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+                ) : (
+                  <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: marker!.color }}>{marker!.letter ?? "●"}</span>
+                )}
                 {marker!.label} 적용
               </button>
             )}
@@ -216,8 +221,12 @@ export function NightActionRow({
           className="inline-flex items-center gap-1 rounded px-2 py-1 disabled:opacity-50"
           style={{ background: `${marker!.color}22`, color: marker!.color }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={marker!.icon} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+          {marker!.icon ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={marker!.icon} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+          ) : (
+            <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: marker!.color }}>{marker!.letter ?? "●"}</span>
+          )}
           {marker!.label} 대상 적용
         </button>
       )}

@@ -11,6 +11,7 @@ import { RolePickerModal } from "./RolePickerModal";
  * - 두 보여주기 버튼(블러핑/하수인) — show 페이지 ?mode=lunatic-bluffs|lunatic-minions로.
  *
  * 저장은 게임 전역(game.lunaticBluffs / lunaticMinions). 진짜 데몬 정보(game.bluffs)와 별개.
+ * readOnly: 그 외 밤 — 첫밤에 알려준 블러핑·하수인을 수정 없이 확인만(보여주기는 가능).
  */
 export function LunaticActionRow({
   gameId,
@@ -19,6 +20,7 @@ export function LunaticActionRow({
   sheetChars,
   charMap,
   busy,
+  readOnly,
   onSetBluffs,
   onSetMinions,
 }: {
@@ -28,6 +30,7 @@ export function LunaticActionRow({
   sheetChars: Character[];
   charMap: Record<string, Character>;
   busy: boolean;
+  readOnly?: boolean;
   onSetBluffs: (ids: string[]) => void;
   onSetMinions: (seats: number[]) => void;
 }) {
@@ -52,11 +55,33 @@ export function LunaticActionRow({
   return (
     <div className="mt-1.5 ml-6 space-y-2 rounded-md border border-gold/30 bg-gold/5 p-2 text-xs">
       <div>
-        <p className="mb-1 text-muted">가짜 블러핑 직업 <span className="opacity-60">(3개 자유 선택)</span></p>
+        <p className="mb-1 text-muted">
+          가짜 블러핑 직업 <span className="opacity-60">{readOnly ? "(첫밤에 알려줌)" : "(3개 자유 선택)"}</span>
+        </p>
         <div className="flex flex-wrap gap-2">
+          {readOnly && !bluffs.some(Boolean) && <span className="text-muted">미지정</span>}
           {[0, 1, 2].map((i) => {
             const id = bluffs[i];
             const ch = id ? charMap[id] : undefined;
+            if (readOnly && !ch) return null;
+            const inner = ch ? (
+              <>
+                {ch.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ch.image} alt="" className="h-5 w-5 rounded-full object-cover" />
+                )}
+                <span style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
+              </>
+            ) : (
+              <span className="text-muted">＋ 직업 {i + 1}</span>
+            );
+            if (readOnly) {
+              return (
+                <span key={i} className="inline-flex items-center gap-1.5 rounded border border-border bg-surface px-2 py-1">
+                  {inner}
+                </span>
+              );
+            }
             return (
               <button
                 key={i}
@@ -64,17 +89,7 @@ export function LunaticActionRow({
                 onClick={() => setPickerSlot(i)}
                 className="inline-flex items-center gap-1.5 rounded border border-border bg-surface px-2 py-1 hover:border-gold/60"
               >
-                {ch ? (
-                  <>
-                    {ch.image && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={ch.image} alt="" className="h-5 w-5 rounded-full object-cover" />
-                    )}
-                    <span style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
-                  </>
-                ) : (
-                  <span className="text-muted">＋ 직업 {i + 1}</span>
-                )}
+                {inner}
               </button>
             );
           })}
@@ -82,12 +97,22 @@ export function LunaticActionRow({
       </div>
 
       <div>
-        <p className="mb-1 text-muted">가짜 하수인 좌석 <span className="opacity-60">(자유 선택)</span></p>
+        <p className="mb-1 text-muted">
+          가짜 하수인 좌석 <span className="opacity-60">{readOnly ? "(첫밤에 알려줌)" : "(자유 선택)"}</span>
+        </p>
         <div className="flex flex-wrap gap-1">
+          {readOnly && minions.length === 0 && <span className="text-muted">미지정</span>}
           {game.players
-            .filter((p) => p.seat !== actorSeat)
+            .filter((p) => p.seat !== actorSeat && (!readOnly || minions.includes(p.seat)))
             .map((p) => {
               const on = minions.includes(p.seat);
+              if (readOnly) {
+                return (
+                  <span key={p.seat} className="rounded bg-gold/20 px-1.5 py-0.5 text-gold ring-1 ring-gold/50">
+                    {p.nickname}
+                  </span>
+                );
+              }
               return (
                 <button
                   key={p.seat}
@@ -122,7 +147,7 @@ export function LunaticActionRow({
       </div>
 
       <RolePickerModal
-        open={pickerSlot != null}
+        open={!readOnly && pickerSlot != null}
         title={`가짜 블러핑 직업 ${(pickerSlot ?? 0) + 1}`}
         candidates={sheetChars}
         selected={pickerCurrent}

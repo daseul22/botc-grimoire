@@ -2,7 +2,7 @@
 
 import { TEAM_MAP } from "@/lib/constants";
 import { effectiveCharacterId, isTainted } from "@/lib/markers";
-import { actionSpec, INFO_KINDS } from "@/lib/night-actions";
+import { actionSpec, INFO_KINDS, nightActionSpec } from "@/lib/night-actions";
 import type { Character, Game, NightAction } from "@/lib/types";
 import { NightActionRow } from "./NightActionRow";
 import { LunaticActionRow } from "./LunaticActionRow";
@@ -57,11 +57,17 @@ export function NightSidebar({
     const effId = effectiveCharacterId(p.seat, p.characterId, p.markers, game.disguises);
     const nightOf = (id: string) =>
       (isFirstNight ? charMap[id]?.firstNight : charMap[id]?.otherNight) as NightAction;
+    // 미치광이: 가짜 악마가 지정돼도 공식 룰상 *미치광이 자체 순서*로 깨운다(진짜 악마보다
+    // 먼저). 가짜 악마의 order 노드는 만들지 않고, 노드 하나에 가짜 행동 기록까지 합친다.
+    if (p.characterId === "lunatic") {
+      const na = nightOf("lunatic");
+      return na ? [{ kind: "role" as const, order: na.order, p, effId: "lunatic", na }] : [];
+    }
     const out: RoleItem[] = [];
     const na = nightOf(effId);
     if (na) out.push({ kind: "role", order: na.order, p, effId, na });
-    // disguise 좌석(미치광이·꼭두각시)은 가짜 직업이 행동 순서를 대체하지만, 본체의 운영
-    // 단계(미치광이 가짜 블러핑·하수인 지정, 꼭두각시 보여주기)는 별도로 필요 — 본체 노드도 노출.
+    // disguise 좌석(꼭두각시 등)은 가짜 직업이 행동 순서를 대체하지만, 본체의 운영 단계
+    // (꼭두각시 보여주기 등)는 별도로 필요 — 본체 노드도 노출.
     if (game.disguises?.[p.seat] && effId !== p.characterId) {
       const realNa = nightOf(p.characterId);
       if (realNa) out.push({ kind: "role", order: realNa.order, p, effId: p.characterId, na: realNa });
@@ -161,26 +167,51 @@ export function NightSidebar({
                   <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? effId}</span>
                   {realCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`실제 직업: ${realCh.name.ko}`}>←{realCh.name.ko}</span>}
                   {fakeCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`가짜 직업: ${fakeCh.name.ko}`}>→{fakeCh.name.ko}</span>}
-                  {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(actionSpec(effId).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
+                  {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(nightActionSpec(effId, isFirstNight).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
                   {dead && <span className="text-xs text-red-400">사망</span>}
                   <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                 </div>
                 {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
                 {effId === "lunatic" ? (
-                  <LunaticActionRow
-                    gameId={game.id}
-                    game={game}
-                    actorSeat={p.seat}
-                    sheetChars={sheetChars}
-                    charMap={charMap}
-                    busy={busy}
-                    onSetBluffs={(ids) => run(() => setLunaticBluffsAction(game.id, ids))}
-                    onSetMinions={(seats) => run(() => setLunaticMinionsAction(game.id, seats))}
-                  />
+                  <>
+                    <LunaticActionRow
+                      gameId={game.id}
+                      game={game}
+                      actorSeat={p.seat}
+                      sheetChars={sheetChars}
+                      charMap={charMap}
+                      busy={busy}
+                      readOnly={!isFirstNight}
+                      onSetBluffs={(ids) => run(() => setLunaticBluffsAction(game.id, ids))}
+                      onSetMinions={(seats) => run(() => setLunaticMinionsAction(game.id, seats))}
+                    />
+                    {!isFirstNight && fakeId && fakeId !== p.characterId && (
+                      // 가짜 악마 공격 흉내 기록 — 미치광이 차례에 함께 처리.
+                      // marker는 제거: 미치광이의 선택은 실제로 아무도 죽이지 않는다.
+                      // showcase: 기록한 지목을 진짜 데몬에게 보여주는 lunatic-choice 모드.
+                      <NightActionRow
+                        actor={p}
+                        spec={{
+                          ...actionSpec(fakeId),
+                          marker: undefined,
+                          showcase: { mode: "lunatic-choice", recipient: "none" },
+                          showcaseLabels: undefined,
+                        }}
+                        players={game.players}
+                        charMap={charMap}
+                        record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
+                        busy={busy}
+                        gameId={game.id}
+                        onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, fakeId, targets, result))}
+                        onClear={() => run(() => clearActionAction(game.id, p.seat))}
+                        onApplyMarker={onApplyMarker}
+                      />
+                    )}
+                  </>
                 ) : (
                   <NightActionRow
                     actor={p}
-                    spec={actionSpec(effId)}
+                    spec={nightActionSpec(effId, isFirstNight)}
                     players={game.players}
                     charMap={charMap}
                     record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
