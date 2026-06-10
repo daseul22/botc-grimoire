@@ -26,7 +26,7 @@
 - **직업별 행동 조정**: [lib/night-actions.ts](../../lib/night-actions.ts)의 `ACTION_SPECS`(밤)/
   `DAY_ACTION_SPECS`(낮)에서 `{targets,result,marker}` 수정. 결과 종류를 늘리려면 `ResultKind` +
   [ActionFields](../../components/ActionFields.tsx) 위젯 추가. (→ [09](09-storyteller-tools.md))
-- **새 게임 동작**: [lib/games.ts](../../lib/games.ts)에 함수 →
+- **새 게임 동작**: [lib/games/](../../lib/games/)의 알맞은 모듈에 함수(`index.ts` 재수출) →
   [app/play/actions.ts](../../app/play/actions.ts)에 액션(반환 `Game`) → PlayCanvas에서 `run(...)`.
   페이즈별 데이터는 `game_phases`의 컬럼/사이드 테이블에, 전역 값은 `games`/`game_players`에.
 - **규칙 텍스트**: [data/rules.json](../../data/rules.json) 직접 수정(수기 관리).

@@ -23,7 +23,7 @@ flowchart LR
   end
   subgraph run["런타임 (로컬 서버)"]
     DB --> RD[data.ts]
-    DB <--> GM[games.ts]
+    DB <--> GM["lib/games/"]
     RD --> UI[React 컴포넌트]
     GM --> UI
     UI -->|"HTTP :3000 (LAN)"| PH[폰 / 노트북]
@@ -42,6 +42,6 @@ flowchart LR
 | 06 | [준비 스텝과 비율](06-setup-and-ratio.md) | 게임 시작, 공식 인원 비율표 |
 | 07 | [컴포넌트 레퍼런스](07-components.md) | 컴포넌트별 책임 |
 | 08 | [설계 결정·확장·용어](08-decisions-and-extending.md) | 왜 이렇게? + 확장 가이드 + 용어집 |
-| 09 | [이야기꾼 운영 도구](09-storyteller-tools.md) | 행동·주장·투표·블러핑·마커·유령표·상태바·폰 뷰 |
+| 09 | [이야기꾼 운영 도구](09-storyteller-tools.md) | 행동·보여주기·disguise·직업배포(claim)·타이머·undo·마커·투표·폰 뷰 |
 
 > 코드 링크는 이 폴더(`docs/wiki/`) 기준 상대경로(`../../lib/...`)다.

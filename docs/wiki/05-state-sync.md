@@ -11,7 +11,7 @@ sequenceDiagram
   participant U as 이야기꾼
   participant C as PlayCanvas (client)
   participant A as play/actions.ts ('use server')
-  participant G as lib/games.ts
+  participant G as lib/games/
   U->>C: 사망/마커/페이즈/재추첨 …
   C->>A: 서버 액션 호출
   A->>G: DB 변경

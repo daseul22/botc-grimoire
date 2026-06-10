@@ -2,7 +2,10 @@
 
 [← 아키텍처](03-architecture.md) · [홈](README.md) · 다음: [상태 동기화 →](05-state-sync.md)
 
-전부 [lib/games.ts](../../lib/games.ts)에 있다. 여기만 이해하면 게임 로직의 90%를 안다.
+전부 [lib/games/](../../lib/games/) 모듈에 있다 — `schema.ts`(DDL·마이그레이션) ·
+`lifecycle.ts`(생성·조회·페이즈) · `seats.ts`(좌석 조작) · `phase-data.ts`(행동·투표·타이머) ·
+`meta.ts`(블러핑·claim·disguise) · `undo.ts`(실행 취소), `index.ts`가 전부 재수출.
+여기만 이해하면 게임 로직의 90%를 안다.
 
 ## 핵심 아이디어: 정체성 ↔ 페이즈 스냅샷 분리
 

@@ -8,7 +8,7 @@
 
 - **레퍼런스**: 시계피 전체 직업(183종)·공식 시트·기본 규칙을 한·영 병기로 열람.
 - **디지털 그리모어**: 이야기꾼이 시트로 게임을 열고, 노트북에서 좌석·직업·상태를 관리하며
-  진행. 같은 WiFi의 폰이 접속해 각자 역할을 확인하는 용도(향후)까지 염두에 둔 로컬 도구.
+  진행. 같은 WiFi의 폰으로 직업 배포(30초 잠금)·직업 공유·행동 결과 보여주기까지 하는 로컬 도구.
 
 ## 왜 이렇게 만들었나 (배경)
 
@@ -32,14 +32,18 @@
 ```jsonc
 "dev":   "next dev -H 0.0.0.0",
 "start": "next start -H 0.0.0.0",
+"party": "node scripts/party.mjs",          // 모임용 production 실행
 "db:seed":   "node scripts/seed-db.mjs",   // data/*.json → db/grimoire.db
 "predev":    "node scripts/seed-db.mjs",    // dev/build 전 자동 시드
 "prebuild":  "node scripts/seed-db.mjs",
 "data:scrape": "node scripts/scrape-vnamu.mjs && node scripts/seed-db.mjs"
 ```
 
-- 노트북: `npm run dev` → `http://localhost:3000`
-- 폰(같은 WiFi): `http://<노트북IP>:3000`
+- 개발: `npm run dev` → `http://localhost:3000`
+- **실제 모임: `npm run party`** ([scripts/party.mjs](../../scripts/party.mjs)) — production
+  빌드로 실행해 dev 모드의 온디맨드 컴파일 멈춤·HMR 모듈 그래프 꼬임을 원천 차단.
+  기존 빌드 재사용(코드 고쳤으면 `npm run party -- --rebuild`), 시작 시 폰용 LAN 주소 출력.
+- 폰(같은 WiFi): `http://<노트북IP>:3000` — 사설대역(192.168 > 10 > 172.16-31) 우선 감지.
 
 ---
 [← 홈](README.md) · 다음: [데이터 파이프라인 →](02-data-pipeline.md)

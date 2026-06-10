@@ -42,7 +42,7 @@ flowchart TD
 ## 경계 규칙 (중요)
 
 `better-sqlite3`를 import하는 모듈([db.ts](../../lib/db.ts) · [data.ts](../../lib/data.ts) ·
-[custom-sheets.ts](../../lib/custom-sheets.ts) · [games.ts](../../lib/games.ts))은 **서버 전용**.
+[custom-sheets.ts](../../lib/custom-sheets.ts) · [lib/games/](../../lib/games/))은 **서버 전용**.
 클라이언트 컴포넌트가 실수로 import하면 **빌드가 깨진다**(의도된 가드).
 
 그래서 클라에서 쓰는 로직은 전부 **순수 모듈**로 분리:
