@@ -106,6 +106,18 @@ export function PlayCanvas({
   const spyIdx = orderedSeats.findIndex((p) => p.characterId === "spy");
   const spyActive = fs && spyView && spyIdx >= 0;
 
+  // 선택 패널이 떠 있을 때 패널·토큰 바깥을 누르면 선택 해제(자동 닫기). 토큰 클릭은 토큰 핸들러가 처리.
+  useEffect(() => {
+    if (selected == null) return;
+    const onDocDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("[data-token]") || t?.closest("[data-selection-panel]")) return;
+      setSelected(null);
+    };
+    document.addEventListener("pointerdown", onDocDown);
+    return () => document.removeEventListener("pointerdown", onDocDown);
+  }, [selected]);
+
   const sel = game.players.find((p) => p.seat === selected);
   const night = game.phase === "night";
   const isPast = game.phaseIndex < game.phaseCount - 1;
@@ -394,7 +406,7 @@ export function PlayCanvas({
             const deathGlyph = p.deathCause === "execution" ? "☠️" : p.deathCause === "night" ? "🌙" : "✕";
             const deathTitle = p.deathCause === "execution" ? "처형됨" : p.deathCause === "night" ? "밤에 사망" : "사망";
             return (
-              <div key={p.seat} onPointerDown={(e) => onDown(e, p.seat)} onPointerMove={(e) => onMove(e, p.locked)} onPointerUp={onUp} className={`absolute flex touch-none select-none ${fs ? "cursor-default" : p.locked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${selected === p.seat ? "z-10" : ""}`} style={{ left: `${px * 100}%`, top: `${py * 100}%`, transform: "translate(-50%, -50%)", transition: fs ? "left 0.45s ease, top 0.45s ease" : undefined }}>
+              <div key={p.seat} data-token onPointerDown={(e) => onDown(e, p.seat)} onPointerMove={(e) => onMove(e, p.locked)} onPointerUp={onUp} className={`absolute flex touch-none select-none ${fs ? "cursor-default" : p.locked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${selected === p.seat ? "z-10" : ""}`} style={{ left: `${px * 100}%`, top: `${py * 100}%`, transform: "translate(-50%, -50%)", transition: fs ? "left 0.45s ease, top 0.45s ease" : undefined }}>
                 {/* 전체화면 시 1.5배 — 위치(translate)는 바깥, 크기(scale)는 안쪽에 둬 드래그가 안 끊기게 분리 */}
                 <div className="flex flex-col items-center gap-1" style={{ transform: `scale(${tokenScale})`, transformOrigin: "center", transition: "transform 0.18s ease" }}>
                 {/* relative 래퍼: 코너 뱃지가 원의 overflow-hidden에 잘리지 않도록 원과 형제로 배치 */}
