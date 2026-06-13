@@ -146,10 +146,10 @@ export function NightSidebar({
             const dead = p.status === "dead";
             const done = game.doneSeats.includes(p.seat);
             const rowSpec = nightActionSpec(effId, isFirstNight);
-            const rowRecord = game.actions.find((a) => a.actorSeat === p.seat && !a.bluff);
-            const usedOnce = !!rowSpec.oncePerGame && !!rowRecord;
+            // 일회성 사용 여부는 'noability' 영구 마커로 판정 → 다음 페이즈에도 "능력 사용함" 유지.
+            const usedOnce = !!rowSpec.oncePerGame && p.markers.some((m) => m === "noability" || m.startsWith("noability:"));
             // 사망 시 발동(까마귀지기): 죽었고 아직 미사용이면 "발동 대기"라 흐리지 않는다.
-            const armed = !!rowSpec.deathTriggered && dead && !rowRecord;
+            const armed = !!rowSpec.deathTriggered && dead && !usedOnce;
             return (
               <li key={`${p.seat}-${effId}`} className={`px-3 py-2 ${dead && !armed ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
                 <div className="flex items-center gap-2 text-sm">

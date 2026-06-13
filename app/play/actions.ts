@@ -48,6 +48,7 @@ import {
   type RoleAssignment,
 } from "@/lib/games";
 import { TEAM_MAP } from "@/lib/constants";
+import { isOncePerGame } from "@/lib/night-actions";
 import { alignmentOf, CORE_TEAMS, ratioTotal, type Ratio } from "@/lib/ratio";
 import type { Character, Game, Sheet } from "@/lib/types";
 
@@ -240,6 +241,15 @@ export async function recordActionAction(
   recordAction(gameId, { actorSeat, characterId, targets, result, bluff });
   // 직업별 자동 사이드 이펙트.
   if (!bluff) applyAutoSideEffects(gameId, characterId, actorSeat, result);
+  // 일회성 능력은 사용 즉시 '능력 없음' 영구 마커 부여 → 캔버스 토큰 + 다음 페이즈에도 '능력 사용함' 유지.
+  // 철학자는 능력을 *획득*하므로(gained 마커) 제외.
+  if (!bluff && isOncePerGame(characterId) && characterId !== "philosopher") {
+    const g = getGame(gameId);
+    const actor = g?.players.find((p) => p.seat === actorSeat);
+    if (actor && !actor.markers.some((m) => m === "noability" || m.startsWith("noability:"))) {
+      toggleMarker(gameId, actorSeat, "noability");
+    }
+  }
   // 행동을 기록한 좌석은 그 페이즈의 처리완료(✓)로 자동 표시. 이미 표시돼 있으면 그대로.
   if (!bluff) {
     const g = getGame(gameId);
@@ -284,6 +294,15 @@ export async function clearActionAction(
   bluff = false,
 ): Promise<Game> {
   captureUndo(gameId, "행동 삭제");
+  // 일회성 능력 기록을 지우면 자동 부여했던 '능력 없음' 마커도 회수(잘못 기록 되돌리기).
+  if (!bluff) {
+    const g0 = getGame(gameId);
+    const cid = characterId || g0?.actions.find((a) => a.actorSeat === actorSeat && !a.bluff)?.characterId || "";
+    if (isOncePerGame(cid)) {
+      const actor = g0?.players.find((p) => p.seat === actorSeat);
+      if (actor?.markers.includes("noability")) toggleMarker(gameId, actorSeat, "noability");
+    }
+  }
   clearAction(gameId, actorSeat, characterId, bluff);
   return getGame(gameId)!;
 }

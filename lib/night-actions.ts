@@ -356,6 +356,11 @@ export function dayActionSpec(characterId: string): ActionSpec | undefined {
   return DAY_ACTION_SPECS[characterId];
 }
 
+/** 게임당 1회 능력(밤·낮 어디든)인지. 사용 시 'noability' 마커 자동 부여 판정용. */
+export function isOncePerGame(characterId: string): boolean {
+  return !!(ACTION_SPECS[characterId]?.oncePerGame || DAY_ACTION_SPECS[characterId]?.oncePerGame);
+}
+
 /** 페이즈에 맞는 스펙. 복기 등에서 기록을 해석할 때 사용. day 생략 시 첫밤 기준. */
 export function specForPhase(characterId: string, phase: string, day?: number): ActionSpec {
   if (phase === "day") return DAY_ACTION_SPECS[characterId] ?? actionSpec(characterId);

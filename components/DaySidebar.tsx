@@ -62,7 +62,8 @@ export function DaySidebar({
           {dayRoles.map(({ p, ch, spec }) => {
             const dead = p.status === "dead";
             const done = game.doneSeats.includes(p.seat);
-            const usedOnce = !!spec.oncePerGame && !!game.actions.find((a) => a.actorSeat === p.seat && !a.bluff);
+            // 일회성 사용 여부는 'noability' 영구 마커로 판정 → 다음 페이즈에도 "능력 사용함" 유지.
+            const usedOnce = !!spec.oncePerGame && p.markers.some((m) => m === "noability" || m.startsWith("noability:"));
             return (
               <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
                 <div className="flex items-center gap-2 text-sm">
