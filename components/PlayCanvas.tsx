@@ -303,19 +303,57 @@ export function PlayCanvas({
             const ch = charMap[p.characterId];
             const dead = p.status === "dead";
             const teamColor = ch ? TEAM_MAP[ch.team]?.color : "#a39bb5";
+            // 위장(미치광이·주정뱅이·꼭두각시): 본인이 믿는 가짜 직업. 메인 토큰엔 진짜 직업,
+            // 우상단 작은 토큰에 가짜 직업을 보여줘 ST가 한눈에 파악.
+            const fakeId = game.disguises?.[p.seat];
+            const fakeCh = fakeId && fakeId !== p.characterId ? charMap[fakeId] : undefined;
+            const fakeTeamColor = fakeCh ? TEAM_MAP[fakeCh.team]?.color : undefined;
+            // 사망 원인별 중앙 글리프 — 처형/밤 살해 구분(시체매장인·점쟁이꾼 추적).
+            const deathGlyph = p.deathCause === "execution" ? "☠️" : p.deathCause === "night" ? "🌙" : "✕";
+            const deathTitle = p.deathCause === "execution" ? "처형됨" : p.deathCause === "night" ? "밤에 사망" : "사망";
             return (
               <div key={p.seat} onPointerDown={(e) => onDown(e, p.seat)} onPointerMove={(e) => onMove(e, p.locked)} onPointerUp={onUp} className={`absolute flex -translate-x-1/2 -translate-y-1/2 touch-none select-none flex-col items-center gap-1 ${p.locked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${selected === p.seat ? "z-10" : ""}`} style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}>
-                <div className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 bg-bg ${dead ? "opacity-40 grayscale" : ""} ${selected === p.seat ? "ring-2 ring-gold ring-offset-2 ring-offset-surface" : ""}`} style={{ borderColor: ALIGN_COLOR[p.alignment] }}>
-                  {ch?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={ch.image} alt={ch.name.ko} className="h-full w-full object-cover" draggable={false} />
+                {/* relative 래퍼: 코너 뱃지가 원의 overflow-hidden에 잘리지 않도록 원과 형제로 배치 */}
+                <div className="relative">
+                  <div className={`flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 bg-bg ${dead ? "opacity-40 grayscale" : ""} ${selected === p.seat ? "ring-2 ring-gold ring-offset-2 ring-offset-surface" : ""}`} style={{ borderColor: ALIGN_COLOR[p.alignment] }}>
+                    {ch?.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={ch.image} alt={ch.name.ko} className="h-full w-full object-cover" draggable={false} />
+                    ) : (
+                      <span style={{ color: teamColor }}>{ch?.name.en.charAt(0) ?? "?"}</span>
+                    )}
+                    {dead && <span className="absolute inset-0 flex items-center justify-center text-2xl text-red-500" title={deathTitle}>{deathGlyph}</span>}
+                  </div>
+                  {/* 메모 — 좌상단 */}
+                  {p.memo && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-surface-2 px-1.5 text-[15px]" title={p.memo}>📝</span>}
+                  {/* 위장 직업 토큰 — 우상단(보라 링=위장 신호). 없으면 잠금 핀 표시 */}
+                  {fakeCh ? (
+                    <span className="absolute -right-2 -top-2 flex h-[33px] w-[33px] items-center justify-center overflow-hidden rounded-full border-2 bg-bg ring-1 ring-purple-400" title={`믿는 직업: ${fakeCh.name.ko}`} style={{ borderColor: fakeTeamColor }}>
+                      {fakeCh.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={fakeCh.image} alt="" className="h-full w-full object-cover" draggable={false} />
+                      ) : (
+                        <span className="text-xs font-bold" style={{ color: fakeTeamColor }}>{fakeCh.name.en.charAt(0)}</span>
+                      )}
+                    </span>
                   ) : (
-                    <span style={{ color: teamColor }}>{ch?.name.en.charAt(0) ?? "?"}</span>
+                    p.locked && <span className="absolute -right-1.5 -top-1.5 rounded-full bg-surface-2 px-1.5 text-[15px]">📌</span>
                   )}
-                  {dead && <span className="absolute inset-0 flex items-center justify-center text-2xl text-red-500">✕</span>}
-                  {p.locked && <span className="absolute -right-1 -top-1 rounded-full bg-surface-2 px-1 text-[10px]">📌</span>}
-                  {p.memo && <span className="absolute -left-1 -top-1 rounded-full bg-surface-2 px-1 text-[10px]" title={p.memo}>📝</span>}
-                  {dead && <span className="absolute -bottom-1 -right-1 rounded-full bg-surface-2 px-1 text-[10px]" title={p.ghostVoteUsed ? "유령표 사용함" : "유령표 사용 가능"} style={{ opacity: p.ghostVoteUsed ? 0.35 : 1 }}>🗳️</span>}
+                  {/* 유령표 — 우하단(사망 시). 남음=금색 채움(카운팅용), 사용=흐림.
+                      투표용지+체크 라인아트(앱 내 다른 SVG와 톤 통일). 사용 시 슬래시로 소진 표시. */}
+                  {dead && (
+                    <span
+                      className="absolute -bottom-1.5 -right-1.5 flex h-[27px] w-[27px] items-center justify-center rounded-full border"
+                      title={p.ghostVoteUsed ? "유령표 사용함" : "유령표 남음"}
+                      style={p.ghostVoteUsed ? { background: "var(--color-surface-2)", borderColor: "var(--color-border)", opacity: 0.45 } : { background: "#d4a23a", borderColor: "#b8862a" }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={p.ghostVoteUsed ? "var(--color-muted)" : "#241a06"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <rect x="4" y="4.5" width="16" height="15" rx="2.5" />
+                        <path d="m8.5 12 2.5 2.5 4.5-5" />
+                        {p.ghostVoteUsed && <path d="M5 19 19 5" stroke="var(--color-muted)" />}
+                      </svg>
+                    </span>
+                  )}
                 </div>
                 <span className="max-w-24 truncate text-sm font-medium">{p.nickname}</span>
                 <span className="max-w-24 truncate text-xs" style={{ color: teamColor }}>{ch?.name.ko ?? p.characterId}</span>
