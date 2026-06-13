@@ -77,6 +77,35 @@ export function PlayCanvas({
     setSidebar(game.phase === "night" ? "night" : "day");
   }, [phaseKey, game.phase]);
 
+  // 전체화면(첩자용 그리모어): 보드만 네이티브 풀스크린으로 띄우고 토큰을 1.5배. Esc로 원복.
+  const [fs, setFs] = useState(false);
+  const [spyView, setSpyView] = useState(false); // 전체화면 전용: 첩자 좌석을 아래로 회전
+  useEffect(() => {
+    const sync = () => {
+      const on = !!(document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement);
+      setFs(on);
+      if (!on) setSpyView(false); // 풀스크린 나가면 항상 이야기꾼 시점으로 복귀
+    };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("webkitfullscreenchange", sync);
+    };
+  }, []);
+  const toggleFullscreen = () => {
+    const el = boardRef.current as (HTMLDivElement & { webkitRequestFullscreen?: () => void }) | null;
+    if (!el) return;
+    const doc = document as Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void };
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) (doc.exitFullscreen ?? doc.webkitExitFullscreen)?.call(doc);
+    else (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el);
+  };
+  const tokenScale = fs ? 1.5 : 1;
+  // 첩자 시점: 좌석 순서(이웃 관계)를 유지한 채 첩자를 6시 방향(아래)에 두고 원형 재배치. 전체화면에서만.
+  const orderedSeats = useMemo(() => [...game.players].sort((a, b) => a.seat - b.seat), [game.players]);
+  const spyIdx = orderedSeats.findIndex((p) => p.characterId === "spy");
+  const spyActive = fs && spyView && spyIdx >= 0;
+
   const sel = game.players.find((p) => p.seat === selected);
   const night = game.phase === "night";
   const isPast = game.phaseIndex < game.phaseCount - 1;
@@ -147,7 +176,7 @@ export function PlayCanvas({
   }
   function onMove(e: React.PointerEvent, locked: boolean) {
     const p = press.current;
-    if (!p || locked) return;
+    if (!p || locked || fs) return; // 전체화면(첩자 발표 모드)에선 위치 고정 — 저장 좌표 오염 방지
     if (!p.moved && Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 5) return;
     p.moved = true;
     const rect = boardRef.current!.getBoundingClientRect();
@@ -272,8 +301,9 @@ export function PlayCanvas({
 
       <div className="flex flex-col gap-3 md:flex-row">
         {/* 좌석 캔버스: 모바일 뷰포트에선 숨김(사용자가 폰에서 운영할 때 행동 순서/주장/투표 UI에 집중) */}
-        <div ref={boardRef} className="relative hidden h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface md:block" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}>
-          {/* 사이드바 토글 툴바 (데스크탑) */}
+        <div ref={boardRef} className="relative hidden h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface md:block" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)", ...(fs ? { height: "100vh", width: "100vw" } : null) }}>
+          {/* 사이드바 토글 툴바 (데스크탑) — 전체화면(첩자 뷰)에선 숨겨 깔끔하게 */}
+          {!fs && (
           <div className="absolute right-2 top-2 z-10 flex gap-1">
             {night ? (
               <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
@@ -298,11 +328,63 @@ export function PlayCanvas({
               </button>
             )}
           </div>
+          )}
+
+          {/* 첩자 시점 토글 — 전체화면 + 첩자가 있을 때만 우상단. 첩자 좌석을 아래로 회전해 오프라인에서 보여주기 쉽게. */}
+          {fs && spyIdx >= 0 && (
+            <button
+              type="button"
+              onClick={() => setSpyView((v) => !v)}
+              className={`absolute right-2 top-2 z-10 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm backdrop-blur transition-colors ${spyView ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 text-muted hover:bg-surface-2 hover:text-text"}`}
+              title={spyView ? "이야기꾼 시점으로 — 원래 배치로" : `첩자 시점으로 — ${orderedSeats[spyIdx].nickname} 좌석을 아래로 회전`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+              </svg>
+              {spyView ? "이야기꾼 시점" : "첩자 시점"}
+            </button>
+          )}
+
+          {/* 전체화면 토글 — 우하단. 첩자에게 그리모어 전체를 크게 보여줄 때(Esc로 종료). */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="absolute bottom-2 right-2 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface/90 text-muted backdrop-blur transition-colors hover:bg-surface-2 hover:text-text"
+            title={fs ? "전체화면 종료 (Esc)" : "전체화면 — 첩자용 그리모어"}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              {fs ? (
+                <>
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                  <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                  <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+                  <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+                </>
+              ) : (
+                <>
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                  <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                  <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                  <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                </>
+              )}
+            </svg>
+          </button>
 
           {game.players.map((p) => {
             const ch = charMap[p.characterId];
             const dead = p.status === "dead";
             const teamColor = ch ? TEAM_MAP[ch.team]?.color : "#a39bb5";
+            // 첩자 시점이면 좌석 순서대로 첩자를 6시(아래)에 두고 원형 재배치, 아니면 저장된 좌표.
+            let px = p.x;
+            let py = p.y;
+            if (spyActive) {
+              const i = orderedSeats.findIndex((o) => o.seat === p.seat);
+              const ang = Math.PI / 2 + ((i - spyIdx) * 2 * Math.PI) / orderedSeats.length;
+              px = 0.5 + 0.4 * Math.cos(ang);
+              py = 0.5 + 0.42 * Math.sin(ang);
+            }
             // 위장(미치광이·주정뱅이·꼭두각시): 본인이 믿는 가짜 직업. 메인 토큰엔 진짜 직업,
             // 우상단 작은 토큰에 가짜 직업을 보여줘 ST가 한눈에 파악.
             const fakeId = game.disguises?.[p.seat];
@@ -312,7 +394,9 @@ export function PlayCanvas({
             const deathGlyph = p.deathCause === "execution" ? "☠️" : p.deathCause === "night" ? "🌙" : "✕";
             const deathTitle = p.deathCause === "execution" ? "처형됨" : p.deathCause === "night" ? "밤에 사망" : "사망";
             return (
-              <div key={p.seat} onPointerDown={(e) => onDown(e, p.seat)} onPointerMove={(e) => onMove(e, p.locked)} onPointerUp={onUp} className={`absolute flex -translate-x-1/2 -translate-y-1/2 touch-none select-none flex-col items-center gap-1 ${p.locked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${selected === p.seat ? "z-10" : ""}`} style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}>
+              <div key={p.seat} onPointerDown={(e) => onDown(e, p.seat)} onPointerMove={(e) => onMove(e, p.locked)} onPointerUp={onUp} className={`absolute flex touch-none select-none ${fs ? "cursor-default" : p.locked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${selected === p.seat ? "z-10" : ""}`} style={{ left: `${px * 100}%`, top: `${py * 100}%`, transform: "translate(-50%, -50%)", transition: fs ? "left 0.45s ease, top 0.45s ease" : undefined }}>
+                {/* 전체화면 시 1.5배 — 위치(translate)는 바깥, 크기(scale)는 안쪽에 둬 드래그가 안 끊기게 분리 */}
+                <div className="flex flex-col items-center gap-1" style={{ transform: `scale(${tokenScale})`, transformOrigin: "center", transition: "transform 0.18s ease" }}>
                 {/* relative 래퍼: 코너 뱃지가 원의 overflow-hidden에 잘리지 않도록 원과 형제로 배치 */}
                 <div className="relative">
                   <div className={`flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 bg-bg ${dead ? "opacity-40 grayscale" : ""} ${selected === p.seat ? "ring-2 ring-gold ring-offset-2 ring-offset-surface" : ""}`} style={{ borderColor: ALIGN_COLOR[p.alignment] }}>
@@ -364,6 +448,7 @@ export function PlayCanvas({
                     ))}
                   </span>
                 )}
+                </div>
               </div>
             );
           })}
