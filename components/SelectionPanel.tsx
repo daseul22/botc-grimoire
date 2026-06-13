@@ -48,7 +48,7 @@ export function SelectionPanel({
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-      <div className="mx-auto max-w-6xl px-4 py-3">
+      <div className="mx-auto max-w-[88rem] px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="text-sm">
             <span className="font-semibold">{sel.nickname}</span>

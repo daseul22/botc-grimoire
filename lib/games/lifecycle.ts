@@ -190,6 +190,8 @@ export function advancePhase(gameId: string): void {
     }
     next[k] = {
       status: state[k].status,
+      // 사망 사유(처형/밤 등)도 다음 페이즈로 이어진다 — 빠뜨리면 다음 날·밤에 사망 글리프가 초기화됨.
+      cause: state[k].status === "dead" ? state[k].cause ?? "" : "",
       markers: seatMarkers.filter((m) => keepMarkerOnAdvance(m, leavingDay)),
     };
   }

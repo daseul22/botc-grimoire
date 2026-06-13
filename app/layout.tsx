@@ -37,7 +37,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <header className="border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-10">
-          <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-6">
+          <div className="mx-auto max-w-[88rem] px-4 h-14 flex items-center gap-6">
             <Link href="/" className="font-bold text-gold tracking-tight">
               BotC 그리모어
             </Link>
@@ -54,11 +54,11 @@ export default function RootLayout({
             </nav>
           </div>
         </header>
-        <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-8">
+        <main className="flex-1 mx-auto w-full max-w-[88rem] px-4 py-8">
           {children}
         </main>
         <footer className="border-t border-border text-muted text-xs">
-          <div className="mx-auto max-w-6xl px-4 py-4">
+          <div className="mx-auto max-w-[88rem] px-4 py-4">
             시계탑에 흐른 피(Blood on the Clocktower)는 The Pandemonium Institute의
             저작물입니다. 본 사이트는 개인 · 로컬 모임용 팬 도구입니다.
           </div>

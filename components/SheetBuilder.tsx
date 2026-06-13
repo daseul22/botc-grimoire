@@ -234,7 +234,7 @@ export function SheetBuilder({
 
       {/* 하단 고정 액션 바 */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex max-w-[88rem] items-center justify-between gap-4 px-4 py-3">
           <span className="text-sm text-muted">
             {selected.size}개 직업 선택됨
             {error && <span className="ml-3 text-red-400">{error}</span>}

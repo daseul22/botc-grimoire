@@ -245,7 +245,7 @@ export function SetupStep({
 
       {/* 하단 고정 바 */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex max-w-[88rem] items-center justify-between gap-4 px-4 py-3">
           <span className="text-sm text-muted">
             {!sumOk
               ? `비율 합(${sum})과 인원(${count})을 맞추세요`
