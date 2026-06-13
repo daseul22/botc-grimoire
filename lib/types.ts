@@ -119,6 +119,8 @@ export interface Game {
   sheetId: string;
   /** 생성 시점 시트 이름 스냅샷 (시트가 바뀌거나 삭제돼도 유지) */
   sheetName: string;
+  /** 이야기꾼이 지정한 게임 이름(구분용). 빈 문자열이면 sheetName으로 폴백 */
+  label: string;
   /** 'playing' | 'finished' */
   status: string;
   /** 현재 페이즈 'night' | 'dusk' | 'day' (향후) */

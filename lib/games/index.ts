@@ -59,6 +59,7 @@ export {
   listGames,
   prevPhase,
   redrawRoles,
+  renameGame,
   type GameConfig,
   type GameSummary,
   type HistoryEntry,

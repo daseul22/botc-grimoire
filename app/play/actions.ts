@@ -23,6 +23,7 @@ import {
   recordVote,
   redrawRoles,
   releaseSeat,
+  renameGame,
   savePositions,
   setBluffs,
   setGhostVote,
@@ -472,6 +473,16 @@ export async function savePositionsAction(
 export async function deleteGameAction(gameId: string): Promise<void> {
   deleteGame(gameId);
   revalidatePath("/games");
+}
+
+/** 게임 표시 이름 변경(내역 구분용). 빈 문자열이면 sheetName으로 폴백 표시. */
+export async function renameGameAction(
+  gameId: string,
+  label: string,
+): Promise<void> {
+  renameGame(gameId, label);
+  revalidatePath("/games");
+  revalidatePath(`/play/${gameId}`);
 }
 
 /** 실행 취소 — 가장 최근 조작 직전 상태로 복원. */

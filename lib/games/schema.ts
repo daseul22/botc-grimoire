@@ -81,6 +81,7 @@ for (const sql of [
   "ALTER TABLE games ADD COLUMN lunatic_minions TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN disguises TEXT NOT NULL DEFAULT '{}'",
   "ALTER TABLE game_phases ADD COLUMN timers TEXT NOT NULL DEFAULT '{}'",
+  "ALTER TABLE games ADD COLUMN label TEXT NOT NULL DEFAULT ''",
 ]) {
   try {
     db.exec(sql);
@@ -142,6 +143,7 @@ export type GameRow = {
   id: string;
   sheet_id: string;
   sheet_name: string;
+  label: string;
   status: string;
   result: string | null;
   config: string | null;

@@ -71,6 +71,7 @@ export function getGame(id: string): Game | undefined {
     id: g.id,
     sheetId: g.sheet_id,
     sheetName: g.sheet_name,
+    label: g.label ?? "",
     status: g.status,
     phase: ph?.phase ?? "night",
     day: ph?.day ?? 1,
@@ -288,6 +289,7 @@ export function getHistory(gameId: string): HistoryEntry[] {
 export type GameSummary = {
   id: string;
   sheetName: string;
+  label: string;
   status: string;
   day: number;
   phase: string | null;
@@ -299,7 +301,7 @@ export type GameSummary = {
 export function listGames(): GameSummary[] {
   const rows = db
     .prepare(
-      `SELECT g.id, g.sheet_name AS sheetName, g.status, g.result, g.current_idx AS currentIdx,
+      `SELECT g.id, g.sheet_name AS sheetName, g.label, g.status, g.result, g.current_idx AS currentIdx,
               g.created_at AS createdAt,
               (SELECT COUNT(*) FROM game_players p WHERE p.game_id = g.id) AS playerCount
        FROM games g ORDER BY g.created_at DESC`,
@@ -313,6 +315,7 @@ export function listGames(): GameSummary[] {
     return {
       id: r.id,
       sheetName: r.sheetName,
+      label: r.label ?? "",
       status: r.status,
       day: p?.day ?? 1,
       phase: p?.phase ?? null,
@@ -321,6 +324,15 @@ export function listGames(): GameSummary[] {
       createdAt: r.createdAt,
     };
   });
+}
+
+/** 게임 표시 이름(구분용) 지정. 빈 문자열이면 목록에서 sheetName으로 폴백. */
+export function renameGame(id: string, label: string): void {
+  db.prepare("UPDATE games SET label = ?, updated_at = ? WHERE id = ?").run(
+    label.trim(),
+    now(),
+    id,
+  );
 }
 
 export function deleteGame(id: string): void {
