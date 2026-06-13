@@ -53,6 +53,8 @@ export type ShowcaseSpec = {
   heading?: string;
   subheading?: string;
   tokens?: ShowcaseToken[];
+  /** 토큰을 가로 한 줄 대신 세로로 쌓아 표시(토큰 → 플레이어 → 설명 순). 세탁부류 공개 카드용. */
+  stack?: boolean;
   /**
    * 화면을 보는 사람.
    * - actor : 능력 사용자 본인(기본)
@@ -113,9 +115,9 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   poisoner: { targets: 1, result: "none", marker: "poisoned" },
   scarletwoman: { targets: 0, result: "none" },
   imp: { targets: 1, result: "none", marker: "dying" },
-  washerwoman: { targets: 2, result: "role", hint: "둘 중 1명의 주민 직업", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", tokens: ["target", "target2", "result"] } },
-  librarian: { targets: 2, result: "role", hint: "둘 중 1명의 외지인(없으면 비움)", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", subheading: "외지인이 없다면 결과가 비어 있습니다", tokens: ["target", "target2", "result"] } },
-  investigator: { targets: 2, result: "role", hint: "둘 중 1명의 하수인 직업", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", tokens: ["target", "target2", "result"] } },
+  washerwoman: { targets: 2, result: "role", hint: "둘 중 1명의 주민 직업", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", tokens: ["result", "names"], stack: true } },
+  librarian: { targets: 2, result: "role", hint: "둘 중 1명의 외지인(없으면 비움)", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", subheading: "외지인이 없다면 결과가 비어 있습니다", tokens: ["result", "names"], stack: true } },
+  investigator: { targets: 2, result: "role", hint: "둘 중 1명의 하수인 직업", showcase: { heading: "이 두 명 중 한 명은 {role}입니다", tokens: ["result", "names"], stack: true } },
   chef: { targets: 0, result: "number", hint: "이웃한 악 쌍 수", showcase: { heading: "{count}쌍이 인접해 있습니다", subheading: "악 진영끼리 이웃한 쌍의 수" } },
   empath: { targets: 0, result: "number", hint: "이웃 2명 중 악 수 (0~2)", showcase: { heading: "양 옆 이웃 중 {count}명이 악입니다" } },
   fortuneteller: { targets: 2, result: "yesno", hint: "둘 중 악마 있는가", showcase: { heading: "이 두 명 중 데몬이 있는가: {yn}", tokens: ["name", "name2"] } },

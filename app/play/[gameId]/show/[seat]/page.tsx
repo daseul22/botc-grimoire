@@ -258,8 +258,10 @@ export default async function ShowPage({
       return targetPlayers[1] ? <NameOnlyBig key={`n2${i}`} nickname={targetPlayers[1].nickname} /> : null;
     }
     if (slot === "names") {
-      return targetPlayers.map((tp, k) =>
-        tp ? <NameOnlyBig key={`ns${i}-${k}`} nickname={tp.nickname} /> : null,
+      return (
+        <div key={`ns${i}`} className="flex flex-wrap items-center justify-center gap-4">
+          {targetPlayers.map((tp, k) => (tp ? <NameOnlyBig key={k} nickname={tp.nickname} /> : null))}
+        </div>
       );
     }
     return null;
@@ -284,7 +286,7 @@ export default async function ShowPage({
 
               {/* 토큰/닉네임 슬롯 */}
               {tokens.length > 0 && (
-                <div className="flex flex-wrap items-center justify-center gap-4">
+                <div className={showcase.stack ? "flex flex-col items-center gap-4" : "flex flex-wrap items-center justify-center gap-4"}>
                   {tokens.flatMap((t, i) => tokenSlot(t, i))}
                 </div>
               )}
