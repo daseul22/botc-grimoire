@@ -64,19 +64,21 @@ export function DaySidebar({
             const done = game.doneSeats.includes(p.seat);
             // 일회성 사용 여부는 'noability:<직업>' 영구 마커로 판정(직업별). 구버전 bare 'noability'도 호환.
             const usedOnce = !!spec.oncePerGame && p.markers.some((m) => m === "noability" || m === `noability:${p.characterId}`);
+            // 능력 사용함 = 흐리게 + 자동 ✓. 사망은 흐리지 않는다(사망 시 발동 능력 때문).
+            const checked = done || usedOnce;
             return (
-              <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
+              <li key={p.seat} className={`px-3 py-2 ${checked ? "opacity-55" : ""}`}>
                 <div className="flex items-center gap-2 text-sm">
                   {ch.image && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={ch.image} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
                   )}
-                  <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
+                  <span className="font-medium">{p.nickname}</span>
                   <span className="text-xs" style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
                   {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(spec.result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
                   {dead && <span className="text-xs text-red-400">사망</span>}
                   {usedOnce && <span className="rounded bg-surface-2 px-1.5 text-[10px] font-medium text-muted" title="일회성 능력 — 사용 완료(부활 능력으로 되살아나지 않는 한)">능력 사용함</span>}
-                  <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
+                  <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${checked ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                 </div>
                 <p className="mt-1 break-words pl-0.5 text-xs text-muted">{ch.ability.ko}</p>
                 <NightActionRow
