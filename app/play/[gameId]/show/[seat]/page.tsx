@@ -73,9 +73,13 @@ export default async function ShowPage({
       if (c) map.set(c.id, c);
     }
 
-  const actorChar = map.get(actor.characterId);
+  // 주정뱅이·꼭두각시·미치광이는 자신이 믿는 가짜 직업(disguise)으로 행동·보여주기 한다.
+  // 행동 순서 사이드바의 effId(=가짜 직업)와 동일한 행동카드로 렌더하도록 disguise를 우선 적용.
+  // (gained/became 마커는 철학자 본인 '능력 획득' 보여주기와 충돌하므로 여기선 disguise만 본다.)
+  const effId = game.disguises?.[seat] ?? actor.characterId;
+  const actorChar = map.get(effId);
   const record = game.actions.find((a) => a.actorSeat === seat && !a.bluff);
-  const spec = specForPhase(actor.characterId, game.phase ?? "night", game.day);
+  const spec = specForPhase(effId, game.phase ?? "night", game.day);
 
   // ─── 특수 모드: 미치광이의 가짜 공격 지목을 *진짜 데몬*에게 보여주기 ───
   // seat = 미치광이 좌석. 받는 사람은 데몬이라 "님께" 안내는 띄우지 않는다.
