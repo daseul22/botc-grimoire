@@ -88,7 +88,7 @@ function GameCard({
         />
       )}
 
-      <div className="relative z-10 flex flex-col gap-3 [&_a]:pointer-events-auto">
+      <div className="pointer-events-none relative z-10 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-2 pointer-events-none">
           <span
             className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${chip.cls}`}
