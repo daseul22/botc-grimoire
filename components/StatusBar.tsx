@@ -42,15 +42,15 @@ export function StatusBar({
   return (
     <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
       <Chip label="생존" n={alive.length} />
-      <Chip label="선" n={aliveGood} color={TEAM_MAP.townsfolk?.color} />
-      <Chip label="악" n={aliveEvil} color="#d23b3b" />
+      <Chip label="선팀" n={aliveGood} color={TEAM_MAP.townsfolk?.color} />
+      <Chip label="악팀" n={aliveEvil} color="#d23b3b" />
       <Chip label="악마" n={aliveDemon} color={TEAM_MAP.demon?.color} />
       <span className="mx-0.5 text-muted">·</span>
       {/* 팀 분포: 셋업 보정 검사용(남작 등 모디파이어 적용 후 인플레이 카운트가 시트와 맞는지) */}
-      <Chip label="마을" n={byTeam.townsfolk} color={TEAM_MAP.townsfolk?.color} />
-      <Chip label="외부" n={byTeam.outsider} color={TEAM_MAP.outsider?.color} />
-      <Chip label="하수" n={byTeam.minion} color={TEAM_MAP.minion?.color} />
-      <Chip label="데몬" n={byTeam.demon} color={TEAM_MAP.demon?.color} />
+      <Chip label="마을주민" n={byTeam.townsfolk} color={TEAM_MAP.townsfolk?.color} />
+      <Chip label="외지인" n={byTeam.outsider} color={TEAM_MAP.outsider?.color} />
+      <Chip label="하수인" n={byTeam.minion} color={TEAM_MAP.minion?.color} />
+      <Chip label="악마" n={byTeam.demon} color={TEAM_MAP.demon?.color} />
       {hint && (
         <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ background: `${hint.color}1f`, color: hint.color, border: `1px solid ${hint.color}66` }}>
           ⚑ {hint.text}
