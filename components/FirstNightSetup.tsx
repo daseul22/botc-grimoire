@@ -44,9 +44,6 @@ export function FirstNightSetup({
     .filter((c) => (c.team === "townsfolk" || c.team === "outsider") && !inPlay.has(c.id))
     .sort((a, b) => a.name.ko.localeCompare(b.name.ko, "ko"));
 
-  // 데몬 좌석(들) — 첫밤 정보(블러핑/하수인)를 들이밀어 보여줄 대상
-  const demonSeats = game.players.filter((p) => charMap[p.characterId]?.team === "demon");
-
   const toggleBluff = (id: string) => {
     const cur = game.bluffs;
     const next = cur.includes(id)
@@ -204,23 +201,6 @@ export function FirstNightSetup({
           </div>
         );
       })()}
-
-      {/* 데몬에게 첫밤 정보 보여주기. 데몬의 직업 자체는 야간 액션이 첫밤에 없어
-          행동 순서 사이드바에 안 나오므로 여기에 직접 노출한다. */}
-      {demonSeats.length > 0 && (
-        <div>
-          <p className="mb-1.5 text-xs text-muted">🎴 데몬에게 보여주기</p>
-          <div className="flex flex-wrap gap-2">
-            {demonSeats.map((p) => (
-              <div key={p.seat} className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs">
-                <span className="font-medium">{p.nickname}</span>
-                <a href={`/play/${game.id}/show/${p.seat}?mode=bluffs`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">블러핑</a>
-                <a href={`/play/${game.id}/show/${p.seat}?mode=minions`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">하수인</a>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

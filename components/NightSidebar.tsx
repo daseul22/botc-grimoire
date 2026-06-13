@@ -104,9 +104,14 @@ export function NightSidebar({
         <ol className="flex-1 divide-y divide-border overflow-y-auto">
           {items.map((item, i) => {
             if (item.kind === "info") {
-              // 데몬 좌석 — 보여주기는 데몬 본인 폰에 노출. 데몬이 여럿이면 첫 번째 사용.
-              const demonSeat = game.players.find((x) => charMap[x.characterId]?.team === "demon")?.seat;
               const isMinion = item.infoKind === "minion";
+              // 하수인 정보: 단체 화면 한 번 — 하수인 전원이 함께 깨어나 받으므로 링크 1개.
+              //   carrier 좌석은 라우트용일 뿐(화면은 데몬을 전역에서 계산). 아무 하수인 좌석.
+              const minionInfoSeat = game.players.find(
+                (x) => charMap[x.characterId]?.team === "minion",
+              )?.seat;
+              // 악마 정보: 각 데몬 폰에 블러핑 3개 + 하수인이 누구인지 보여주기.
+              const demonSeats = game.players.filter((x) => charMap[x.characterId]?.team === "demon");
               return (
                 <li key={`info-${item.infoKind}`} className="bg-surface-2/40 px-3 py-2">
                   <div className="flex items-center gap-2 text-sm">
@@ -117,22 +122,32 @@ export function NightSidebar({
                       {isMinion ? "하수인 정보" : "악마 정보"}
                     </span>
                     <span className="text-xs text-muted">단계</span>
-                    {demonSeat != null && (
-                      <a
-                        href={`/play/${game.id}/show/${demonSeat}?mode=${isMinion ? "minions" : "bluffs"}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-auto inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-xs text-gold hover:bg-gold/25"
-                      >
-                        🎴 보여주기
-                      </a>
-                    )}
                   </div>
                   <p className="mt-1 break-words pl-6 text-xs text-muted">
                     {isMinion
                       ? "하수인들에게 서로 누구인지, 데몬이 누구인지 알려줍니다. (꼭두각시·마술사 인플레이 시 변형 적용)"
                       : "데몬에게 자기 직업·블러핑 3개·하수인 좌석을 알려줍니다."}
                   </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5 pl-6">
+                    {isMinion
+                      ? minionInfoSeat != null && (
+                          <a
+                            href={`/play/${game.id}/show/${minionInfoSeat}?mode=demon`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-xs text-gold hover:bg-gold/25"
+                          >
+                            🎴 보여주기
+                          </a>
+                        )
+                      : demonSeats.map((d) => (
+                          <span key={d.seat} className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-0.5 text-xs">
+                            <span className="text-muted">{d.nickname}</span>
+                            <a href={`/play/${game.id}/show/${d.seat}?mode=bluffs`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">블러핑</a>
+                            <a href={`/play/${game.id}/show/${d.seat}?mode=minions`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">하수인</a>
+                          </span>
+                        ))}
+                  </div>
                 </li>
               );
             }

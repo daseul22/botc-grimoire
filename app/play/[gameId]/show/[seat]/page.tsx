@@ -114,6 +114,39 @@ export default async function ShowPage({
     );
   }
 
+  // ─── 특수 모드: 하수인 정보 단계 — 하수인 전원에게 "악마가 누구인지" 보여주기 ───
+  // 하수인은 모두 함께 깨어나 서로 확인하므로 특정 "님께" 없는 단체 화면.
+  // 마술사 인플레이 시 마술사도 (가짜) 악마로 함께 노출(룰: 하수인은 마술사를 데몬으로 본다).
+  if (mode === "demon") {
+    const magicianSeat = game.players.find((p) => p.characterId === "magician");
+    const demons = [
+      ...game.players.filter((p) => map.get(p.characterId)?.team === "demon"),
+      ...(magicianSeat ? [magicianSeat] : []),
+    ];
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-bg px-6 py-8">
+        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {demons.length === 0 ? (
+                <p className="text-base text-muted">악마가 지정되지 않았습니다.</p>
+              ) : (
+                demons.map((p) => <NameOnlyBig key={p.seat} nickname={p.nickname} />)
+              )}
+            </div>
+            <h1 className="break-keep text-center text-3xl font-bold leading-snug text-text">
+              {demons.length > 1 ? "이들이 악마입니다" : "이 사람이 악마입니다"}
+            </h1>
+          </div>
+          <div className="mt-6 flex items-center justify-between text-sm">
+            <Link href={`/play/${gameId}`} className="text-muted hover:text-text">← 그리모어</Link>
+            <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ─── 특수 모드: 데몬/미치광이에게 첫밤 정보 보여주기 ───
   const isBluffs = mode === "bluffs" || mode === "lunatic-bluffs";
   const isMinions = mode === "minions" || mode === "lunatic-minions";
@@ -133,9 +166,6 @@ export default async function ShowPage({
 
             {isBluffs ? (
               <>
-                <h1 className="text-center text-3xl font-bold leading-snug text-text">
-                  당신의 블러핑 직업입니다
-                </h1>
                 {bluffsIds.length === 0 ? (
                   <p className="text-base text-muted">블러핑이 아직 선택되지 않았습니다.</p>
                 ) : (
@@ -145,6 +175,9 @@ export default async function ShowPage({
                     ))}
                   </div>
                 )}
+                <h1 className="text-center text-3xl font-bold leading-snug text-text">
+                  당신의 블러핑 직업입니다
+                </h1>
               </>
             ) : (
               <>
@@ -165,9 +198,6 @@ export default async function ShowPage({
                       ];
                   return (
                     <>
-                      <h1 className="break-keep text-center text-3xl font-bold leading-snug text-text">
-                        이들은 하수인입니다
-                      </h1>
                       <div className="flex flex-wrap items-center justify-center gap-3">
                         {all.length === 0 ? (
                           <p className="text-base text-muted">하수인이 지정되지 않았습니다.</p>
@@ -175,6 +205,9 @@ export default async function ShowPage({
                           all.map((p) => <NameOnlyBig key={p.seat} nickname={p.nickname} />)
                         )}
                       </div>
+                      <h1 className="break-keep text-center text-3xl font-bold leading-snug text-text">
+                        이들은 하수인입니다
+                      </h1>
                     </>
                   );
                 })()}
