@@ -196,6 +196,34 @@ export function advancePhase(gameId: string): void {
       markers: seatMarkers.filter((m) => keepMarkerOnAdvance(m, leavingDay)),
     };
   }
+  // 식인종(cannibal): 낮 종료 시, 이 낮에 *처형*된 플레이어의 능력을 다음 밤부터 얻는다.
+  //   처형 대상이 악이면 취함(영구)도 적용(거짓 정보), 선이면 취함 해제. 처형이 있을 때마다 갱신.
+  //   처형이 없는 날은 직전 능력/취함을 그대로 유지(permanent 마커가 복사됨).
+  if (leavingDay) {
+    const players = db
+      .prepare("SELECT seat, character_id, alignment FROM game_players WHERE game_id = ?")
+      .all(gameId) as { seat: number; character_id: string; alignment: string }[];
+    const cannibal = players.find((p) => p.character_id === "cannibal");
+    const execVote = readVotes(gameId, idx).find((v) => v.executed);
+    const executed = execVote
+      ? players.find((p) => p.seat === execVote.nominee)
+      : undefined;
+    if (
+      cannibal &&
+      executed &&
+      executed.seat !== cannibal.seat &&
+      next[cannibal.seat] &&
+      next[cannibal.seat].status !== "dead"
+    ) {
+      const st = next[cannibal.seat];
+      // 직전 처형으로 얻은 gained/취함은 걷어내고 이번 처형 기준으로 재적용.
+      st.markers = st.markers.filter(
+        (m) => parseMarker(m).base !== "gained" && m !== "drunk",
+      );
+      st.markers.push(`gained:${executed.character_id}`);
+      if (executed.alignment === "evil") st.markers.push("drunk");
+    }
+  }
   db.transaction(() => {
     db.prepare(
       "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,?,?,?,?)",
