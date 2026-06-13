@@ -145,8 +145,13 @@ export function NightSidebar({
             const fakeCh = effId === p.characterId && fakeId && fakeId !== p.characterId ? charMap[fakeId] : undefined;
             const dead = p.status === "dead";
             const done = game.doneSeats.includes(p.seat);
+            const rowSpec = nightActionSpec(effId, isFirstNight);
+            const rowRecord = game.actions.find((a) => a.actorSeat === p.seat && !a.bluff);
+            const usedOnce = !!rowSpec.oncePerGame && !!rowRecord;
+            // 사망 시 발동(까마귀지기): 죽었고 아직 미사용이면 "발동 대기"라 흐리지 않는다.
+            const armed = !!rowSpec.deathTriggered && dead && !rowRecord;
             return (
-              <li key={`${p.seat}-${effId}`} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
+              <li key={`${p.seat}-${effId}`} className={`px-3 py-2 ${dead && !armed ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
                   <span className="relative inline-flex shrink-0">
@@ -164,12 +169,18 @@ export function NightSidebar({
                       />
                     )}
                   </span>
-                  <span className={`font-medium ${dead ? "line-through" : ""}`}>{p.nickname}</span>
+                  <span className={`font-medium ${dead && !armed ? "line-through" : ""}`}>{p.nickname}</span>
                   <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? effId}</span>
                   {realCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`실제 직업: ${realCh.name.ko}`}>←{realCh.name.ko}</span>}
                   {fakeCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`가짜 직업: ${fakeCh.name.ko}`}>→{fakeCh.name.ko}</span>}
                   {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(nightActionSpec(effId, isFirstNight).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
-                  {dead && <span className="text-xs text-red-400">사망</span>}
+                  {dead &&
+                    (armed ? (
+                      <span className="rounded bg-amber-500/20 px-1.5 text-[10px] font-medium text-amber-300" title="사망 시 발동하는 능력 — 지금 처리하세요">사망 · 능력 발동</span>
+                    ) : (
+                      <span className="text-xs text-red-400">사망</span>
+                    ))}
+                  {usedOnce && <span className="rounded bg-surface-2 px-1.5 text-[10px] font-medium text-muted" title="일회성 능력 — 사용 완료(부활 능력으로 되살아나지 않는 한)">능력 사용함</span>}
                   <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${done ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
                 </div>
                 {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}

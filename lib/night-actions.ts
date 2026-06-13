@@ -87,6 +87,10 @@ export type ActionSpec = {
   showcase?: ShowcaseSpec | ShowcaseSpec[];
   /** 배열 showcase일 때 각 변형의 label(버튼 라벨) */
   showcaseLabels?: string[];
+  /** 게임당 1회만 쓰는 능력(처단자·까마귀지기 등) — 기록되면 "능력 사용함" 표시. */
+  oncePerGame?: boolean;
+  /** 사망 시 발동하는 능력(까마귀지기) — 죽어도 비활성으로 흐리지 않는다. */
+  deathTriggered?: boolean;
 };
 
 export const RESULT_KIND_LABEL: Record<ResultKind, string> = {
@@ -123,7 +127,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   fortuneteller: { targets: 2, result: "yesno", hint: "둘 중 악마 있는가", showcase: { heading: "이 두 명 중 데몬이 있는가: {yn}", tokens: ["name", "name2"] } },
   butler: { targets: 1, result: "none" },
   spy: { targets: 0, result: "none" },
-  ravenkeeper: { targets: 1, result: "role", hint: "지목한 플레이어 직업", showcase: { heading: "{target}의 직업은 {role}입니다", tokens: ["target", "result"] } },
+  ravenkeeper: { targets: 1, result: "role", oncePerGame: true, deathTriggered: true, hint: "지목한 플레이어 직업", showcase: { heading: "{target}의 직업은 {role}입니다", tokens: ["result"] } },
   undertaker: { targets: 0, result: "role", hint: "처형된 플레이어 직업", showcase: { heading: "오늘 처형된 사람의 직업은 {role}입니다", tokens: ["result"] } },
 
   // ── 배드 문 라이징 ──
@@ -150,10 +154,10 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   shabaloth: { targets: 2, result: "none", marker: "dying" },
   po: { targets: 3, result: "none", marker: "dying", hint: "1명 또는 3명" },
   pukka: { targets: 1, result: "none", marker: "poisoned" },
-  assassin: { targets: 1, result: "none", marker: "dying" },
+  assassin: { targets: 1, result: "none", marker: "dying", oncePerGame: true },
   grandmother: { targets: 1, result: "role", hint: "알게 된 선한 플레이어 직업" },
   gossip: { targets: 1, result: "none", marker: "dying" },
-  professor: { targets: 1, result: "none", hint: "부활 대상" },
+  professor: { targets: 1, result: "none", oncePerGame: true, hint: "부활 대상" },
   tinker: { targets: 0, result: "none" },
   moonchild: { targets: 1, result: "none", marker: "dying" },
   chambermaid: { targets: 2, result: "number", hint: "능력으로 깬 수 (0~2)" },
@@ -162,7 +166,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   harlot: { targets: 1, result: "role", hint: "지목한 플레이어 직업" },
   barista: { targets: 1, result: "none" },
   bonecollector: { targets: 1, result: "none", hint: "능력 되찾을 사망자" },
-  philosopher: { targets: 0, result: "role", hint: "얻은 선한 직업", showcase: { heading: "당신은 {role}의 능력을 얻었습니다", subheading: "기존 능력 대신 이 직업처럼 행동합니다", tokens: ["result"] } },
+  philosopher: { targets: 0, result: "role", oncePerGame: true, hint: "얻은 선한 직업", showcase: { heading: "당신은 {role}의 능력을 얻었습니다", subheading: "기존 능력 대신 이 직업처럼 행동합니다", tokens: ["result"] } },
   pithag: { targets: 1, result: "role", hint: "바꿀 직업" },
   snakecharmer: { targets: 1, result: "none" },
   eviltwin: { targets: 0, result: "none" },
@@ -268,8 +272,8 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
 // (곡예사·험담꾼처럼 밤/낮 둘 다 있는 직업은 양쪽에 등재 — 페이즈별로 따로 기록됨)
 export const DAY_ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 트러블 브루잉 ──
-  slayer: { targets: 1, result: "yesno", marker: "dying", hint: "악마 적중?" },
-  virgin: { targets: 1, result: "yesno", marker: "dying", hint: "지목자 주민→처형?" },
+  slayer: { targets: 1, result: "yesno", marker: "dying", oncePerGame: true, hint: "악마 적중?" },
+  virgin: { targets: 1, result: "yesno", marker: "dying", oncePerGame: true, hint: "지목자 주민→처형?" },
   gunslinger: { targets: 1, result: "none", marker: "dying" },
 
   // ── 배드 문 라이징 ──
@@ -284,7 +288,7 @@ export const DAY_ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 기타/실험 직업 ──
   princess: { targets: 1, result: "none", hint: "지목·처형" },
   amnesiac: { targets: 0, result: "text", hint: "능력 추측 정확도" },
-  fisherman: { targets: 0, result: "text", hint: "조언" },
+  fisherman: { targets: 0, result: "text", oncePerGame: true, hint: "조언" },
   alsaahir: { targets: 0, result: "text", hint: "하수인·악마 추측" },
   puzzlemaster: { targets: 1, result: "role", hint: "취한 자 추측→악마" },
   psychopath: { targets: 1, result: "none", marker: "dying" },

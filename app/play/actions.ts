@@ -187,6 +187,8 @@ export async function recordVoteAction(
 ): Promise<Game> {
   captureUndo(gameId, "투표 기록");
   recordVote(gameId, { nominator, nominee, votes, executed });
+  // 처형 체크 시 캔버스에서도 자동 사망 처리(원인=처형). 되돌리려면 좌석에서 수동 부활.
+  if (executed) setStatus(gameId, nominee, "dead", "execution");
   return getGame(gameId)!;
 }
 
