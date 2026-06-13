@@ -1,7 +1,7 @@
 "use client";
 
 import { TEAM_MAP } from "@/lib/constants";
-import { effectiveCharacterId, isTainted } from "@/lib/markers";
+import { effectiveCharacterId, isTainted, parseMarker } from "@/lib/markers";
 import { ACTION_CRITERIA, actionSpec, INFO_KINDS, nightActionSpec } from "@/lib/night-actions";
 import type { Character, Game, NightAction } from "@/lib/types";
 import { NightActionRow } from "./NightActionRow";
@@ -67,9 +67,12 @@ export function NightSidebar({
     const out: RoleItem[] = [];
     const na = nightOf(effId);
     if (na) out.push({ kind: "role", order: na.order, p, effId, na });
-    // disguise 좌석(꼭두각시 등)은 가짜 직업이 행동 순서를 대체하지만, 본체의 운영 단계
-    // (꼭두각시 보여주기 등)는 별도로 필요 — 본체 노드도 노출.
-    if (game.disguises?.[p.seat] && effId !== p.characterId) {
+    // 본체 노드도 별도로 필요한 경우:
+    //  - disguise 좌석(꼭두각시 등): 가짜 직업이 행동 순서를 대체해도 본체 운영(꼭두각시 보여주기) 필요.
+    //  - gained 마커(철학자 등): 획득 직업으로 행동하지만 본인의 '능력 획득' 보여주기도 필요.
+    //  became(임프 자살 등)은 직업이 *완전히* 바뀐 것이라 본체 노드 불필요 → 제외.
+    const fromGained = p.markers.some((m) => parseMarker(m).base === "gained");
+    if (effId !== p.characterId && (game.disguises?.[p.seat] != null || fromGained)) {
       const realNa = nightOf(p.characterId);
       if (realNa) out.push({ kind: "role", order: realNa.order, p, effId: p.characterId, na: realNa });
     }
@@ -230,13 +233,14 @@ export function NightSidebar({
                           showcase: { mode: "lunatic-choice", recipient: "none" },
                           showcaseLabels: undefined,
                         }}
+                        characterId={fakeId}
                         players={game.players}
                         charMap={charMap}
-                        record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
+                        record={game.actions.find((a) => a.actorSeat === p.seat && a.characterId === fakeId && !a.bluff)}
                         busy={busy}
                         gameId={game.id}
                         onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, fakeId, targets, result))}
-                        onClear={() => run(() => clearActionAction(game.id, p.seat))}
+                        onClear={() => run(() => clearActionAction(game.id, p.seat, fakeId))}
                         onApplyMarker={onApplyMarker}
                       />
                     )}
@@ -246,13 +250,14 @@ export function NightSidebar({
                     <NightActionRow
                       actor={p}
                       spec={nightActionSpec(effId, isFirstNight)}
+                      characterId={effId}
                       players={game.players}
                       charMap={charMap}
-                      record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
+                      record={game.actions.find((a) => a.actorSeat === p.seat && a.characterId === effId && !a.bluff)}
                       busy={busy}
                       gameId={game.id}
                       onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, effId, targets, result))}
-                      onClear={() => run(() => clearActionAction(game.id, p.seat))}
+                      onClear={() => run(() => clearActionAction(game.id, p.seat, effId))}
                       onApplyMarker={onApplyMarker}
                     />
                     {/* 점쟁이 첫밤: 레드헤링(데몬으로 보일 선한 1명) 지정 편의 — 깜빡하지 않게 카드에서 바로. */}

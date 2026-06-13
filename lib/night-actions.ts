@@ -34,6 +34,7 @@ export type ResultKind = "none" | "number" | "yesno" | "role" | "team" | "text";
  */
 export type ShowcaseToken =
   | "actor"
+  | "actorName"
   | "result"
   | "target"
   | "target2"
@@ -91,6 +92,11 @@ export type ActionSpec = {
   oncePerGame?: boolean;
   /** 사망 시 발동하는 능력(까마귀지기) — 죽어도 비활성으로 흐리지 않는다. */
   deathTriggered?: boolean;
+  /**
+   * 플레이어가 폰에서 직업을 *직접 골라야* 하는 능력(철학자·도박꾼·핏쥐 등) → '직업 목록' 버튼 노출.
+   * 정보로 직업을 *알게만* 되는 능력(세탁부·까마귀지기 등)은 ST가 보여주므로 목록이 필요 없다.
+   */
+  playerPicks?: boolean;
 };
 
 export const RESULT_KIND_LABEL: Record<ResultKind, string> = {
@@ -127,13 +133,13 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   fortuneteller: { targets: 2, result: "yesno", hint: "둘 중 악마 있는가", showcase: { heading: "이 두 명 중 데몬이 있는가: {yn}", tokens: ["name", "name2"] } },
   butler: { targets: 1, result: "none" },
   spy: { targets: 0, result: "none" },
-  ravenkeeper: { targets: 1, result: "role", oncePerGame: true, deathTriggered: true, hint: "지목한 플레이어 직업", showcase: { heading: "{target}의 직업은 {role}입니다", tokens: ["result"] } },
+  ravenkeeper: { targets: 1, result: "role", oncePerGame: true, deathTriggered: true, hint: "지목한 플레이어 직업", showcase: { heading: "이 사람의 직업입니다", tokens: ["result", "name"], stack: true } },
   undertaker: { targets: 0, result: "role", hint: "처형된 플레이어 직업", showcase: { heading: "오늘 처형된 사람의 직업은 {role}입니다", tokens: ["result"] } },
 
   // ── 배드 문 라이징 ──
   apprentice: { targets: 0, result: "text", hint: "얻은 능력" },
   innkeeper: { targets: 2, result: "none", marker: "protected", hint: "둘 보호, 1명 취함" },
-  gambler: { targets: 1, result: "role", hint: "추측한 직업" },
+  gambler: { targets: 1, result: "role", playerPicks: true, hint: "추측한 직업" },
   // 미치광이: 지목 절차 X. ST가 lunatic_bluffs/lunatic_minions를 별도 지정하고
   // show 페이지 ?mode=lunatic-bluffs|lunatic-minions 분기로 가짜 정보를 미치광이에게 보여준다.
   lunatic: {
@@ -166,12 +172,12 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   harlot: { targets: 1, result: "role", hint: "지목한 플레이어 직업" },
   barista: { targets: 1, result: "none" },
   bonecollector: { targets: 1, result: "none", hint: "능력 되찾을 사망자" },
-  philosopher: { targets: 0, result: "role", oncePerGame: true, hint: "얻은 선한 직업", showcase: { heading: "당신은 {role}의 능력을 얻었습니다", subheading: "기존 능력 대신 이 직업처럼 행동합니다", tokens: ["result"] } },
-  pithag: { targets: 1, result: "role", hint: "바꿀 직업" },
+  philosopher: { targets: 0, result: "role", oncePerGame: true, playerPicks: true, hint: "얻은 선한 직업", showcase: { heading: "당신은 {role}의 능력을 얻었습니다", subheading: "기존 능력 대신 이 직업처럼 행동합니다", tokens: ["result"] } },
+  pithag: { targets: 1, result: "role", playerPicks: true, hint: "바꿀 직업" },
   snakecharmer: { targets: 1, result: "none" },
   eviltwin: { targets: 0, result: "none" },
   witch: { targets: 1, result: "none", hint: "저주: 지목하면 사망" },
-  cerenovus: { targets: 1, result: "role", marker: "mad", hint: "집착시킬 선한 직업", showcase: { recipient: "target", heading: "당신은 {role}에 집착해야 합니다", subheading: "그 직업이 아닌 척하면 이야기꾼이 처형할 수 있습니다", tokens: ["actor", "result"] } },
+  cerenovus: { targets: 1, result: "role", marker: "mad", playerPicks: true, hint: "집착시킬 선한 직업", showcase: { recipient: "target", heading: "당신은 {role}에 집착해야 합니다", subheading: "그 직업이 아닌 척하면 이야기꾼이 처형할 수 있습니다", tokens: ["actor", "result"] } },
   fanggu: { targets: 1, result: "none", marker: "dying" },
   nodashii: { targets: 1, result: "none", marker: "dying", hint: "이웃 주민 2명 중독" },
   vortox: { targets: 1, result: "none", marker: "dying" },
@@ -232,8 +238,8 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
     targets: 0,
     result: "none",
     showcase: [
-      { heading: "{actor}은(는) 꼭두각시입니다", subheading: "마을사람으로 보이지만 실제로는 악입니다", recipient: "none" },
-      { heading: "이웃 중 한 명이 꼭두각시입니다", subheading: "양 옆 두 명 중 한 명이 꼭두각시(가짜 마을사람·악)입니다", recipient: "none" },
+      { heading: "이 사람은 꼭두각시입니다", subheading: "마을사람으로 보이지만 실제로는 악입니다", tokens: ["actor", "actorName"], stack: true, recipient: "none" },
+      { heading: "이웃 중 한 명이 꼭두각시입니다", subheading: "양 옆 두 명 중 한 명이 꼭두각시(가짜 마을사람·악)입니다", tokens: ["actor"], recipient: "none" },
     ],
     showcaseLabels: ["정확", "이웃"],
   },
@@ -265,7 +271,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
 
   // ── 로릭 ──
   tor: { targets: 0, result: "none" },
-  stormcatcher: { targets: 0, result: "role", hint: "이름 댄 선한 직업" },
+  stormcatcher: { targets: 0, result: "role", playerPicks: true, hint: "이름 댄 선한 직업" },
 };
 
 // 낮에 사용하는 능력. 야간순서에 없고 낮에 발동하는 직업만 등재.
@@ -306,7 +312,7 @@ export const OTHER_NIGHT_SPECS: Record<string, ActionSpec> = {
     hint: "비밀 단어를 말한 변절자",
     showcase: {
       recipient: "target",
-      heading: "{target}은(는) 메제펠레스에 의해 변절되었습니다",
+      heading: "당신은 메제펠레스에 의해 변절되었습니다",
       subheading: "지금부터 당신은 악 진영입니다",
     },
   },

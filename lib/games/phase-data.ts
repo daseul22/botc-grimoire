@@ -15,9 +15,11 @@ function writeActions(gameId: string, idx: number, list: NightActionRecord[]): v
   ).run(gameId, idx, JSON.stringify(list));
 }
 
-// 기록 식별 키: 실제 행동은 좌석당 1개, 주장(블러핑)은 (좌석+주장직업)당 1개.
+// 기록 식별 키: (좌석+직업)당 1개. 한 좌석이 여러 직업으로 행동하는 경우(철학자=본인 능력획득 +
+// 획득한 직업 행동, 주정뱅이/꼭두각시=가짜 직업 등)에 기록이 서로 덮어쓰지 않도록 직업까지 포함.
+// 주장(블러핑)도 (좌석+주장직업)당 1개.
 const recKey = (a: { actorSeat: number; characterId: string; bluff?: boolean }) =>
-  a.bluff ? `b:${a.actorSeat}:${a.characterId}` : `a:${a.actorSeat}`;
+  a.bluff ? `b:${a.actorSeat}:${a.characterId}` : `a:${a.actorSeat}:${a.characterId}`;
 
 /** 현재 페이즈 스냅샷에 행동/주장 기록 (키 기준 upsert) */
 export function recordAction(gameId: string, rec: NightActionRecord): void {

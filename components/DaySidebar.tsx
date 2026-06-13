@@ -82,13 +82,14 @@ export function DaySidebar({
                 <NightActionRow
                   actor={p}
                   spec={spec}
+                  characterId={p.characterId}
                   players={game.players}
                   charMap={charMap}
-                  record={game.actions.find((a) => a.actorSeat === p.seat && !a.bluff)}
+                  record={game.actions.find((a) => a.actorSeat === p.seat && a.characterId === p.characterId && !a.bluff)}
                   busy={busy}
                   gameId={game.id}
                   onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
-                  onClear={() => run(() => clearActionAction(game.id, p.seat))}
+                  onClear={() => run(() => clearActionAction(game.id, p.seat, p.characterId))}
                   onApplyMarker={onApplyMarker}
                 />
               </li>

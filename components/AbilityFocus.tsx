@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useBackClose } from "./useBackClose";
 
 /**
  * 능력 텍스트를 탭하면 풀스크린 큰 글자로 보여준다.
@@ -17,6 +18,9 @@ export function AbilityFocus({ ability, hint }: { ability: string; hint?: string
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  // 모바일 뒤로가기 → 모달만 닫기
+  useBackClose(open, () => setOpen(false));
 
   return (
     <>

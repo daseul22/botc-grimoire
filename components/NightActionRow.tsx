@@ -11,6 +11,7 @@ const short = (s: string) => (s.length > 7 ? s.slice(0, 6) + "…" : s);
 export function NightActionRow({
   actor,
   spec,
+  characterId,
   players,
   charMap,
   record,
@@ -22,6 +23,8 @@ export function NightActionRow({
 }: {
   actor: GamePlayer;
   spec: ActionSpec;
+  /** 이 행이 다루는 직업 id(가짜/실제). showcase URL에 핀해 같은 좌석의 다른 노드와 구분. */
+  characterId: string;
   players: GamePlayer[];
   charMap: Record<string, Character>;
   record?: NightActionRecord;
@@ -48,13 +51,13 @@ export function NightActionRow({
   const nothingToRecord = spec.targets === 0 && spec.result === "none" && !marker;
   if (nothingToRecord && !record && !hasShowcase) return null;
 
-  // showcase URL 빌더 — i번째 변형, mode 있으면 ?mode= 추가, 배열이면 ?v= 추가
+  // showcase URL 빌더 — as=직업 핀(같은 좌석 다른 노드 구분), mode 있으면 ?mode=, 배열이면 ?v=.
   const showcaseHref = (i: number) => {
     const s = showcaseArr[i];
-    const qs: string[] = [];
+    const qs: string[] = [`as=${characterId}`];
     if (s?.mode) qs.push(`mode=${s.mode}`);
     if (showcaseArr.length > 1) qs.push(`v=${i}`);
-    return `/play/${gameId}/show/${actor.seat}${qs.length ? `?${qs.join("&")}` : ""}`;
+    return `/play/${gameId}/show/${actor.seat}?${qs.join("&")}`;
   };
 
   // 기록할 게 없지만 showcase는 있는 케이스(마술사/꼭두각시): record 없이도 보여주기만 노출.
@@ -113,7 +116,7 @@ export function NightActionRow({
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <button type="button" onClick={startEdit} className="text-muted hover:text-text">수정</button>
           <button type="button" disabled={busy} onClick={onClear} className="text-muted hover:text-red-400 disabled:opacity-50">지우기</button>
-          {spec.result === "role" && (
+          {spec.playerPicks && (
             <a
               href={`/play/${gameId}/pick/${actor.seat}`}
               target="_blank"
@@ -184,7 +187,7 @@ export function NightActionRow({
         >
           ＋ 행동 기록
         </button>
-        {spec.result === "role" && (
+        {spec.playerPicks && (
           <a
             href={`/play/${gameId}/pick/${actor.seat}`}
             target="_blank"

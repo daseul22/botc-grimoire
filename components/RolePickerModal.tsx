@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { TEAM_MAP, TEAMS } from "@/lib/constants";
 import type { Character } from "@/lib/types";
+import { useBackClose } from "./useBackClose";
 
 const TEAM_ORDER = TEAMS.map((t) => t.id);
 
@@ -37,6 +39,9 @@ export function RolePickerModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // 모바일 뒤로가기 → 모달만 닫기
+  useBackClose(open, onClose);
+
   if (!open) return null;
 
   const sorted = [...candidates].sort(
@@ -45,7 +50,7 @@ export function RolePickerModal({
       a.name.ko.localeCompare(b.name.ko, "ko"),
   );
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
       onClick={onClose}
@@ -105,6 +110,7 @@ export function RolePickerModal({
           })}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -53,10 +53,10 @@ export default async function ShowPage({
   searchParams,
 }: {
   params: Promise<{ gameId: string; seat: string }>;
-  searchParams: Promise<{ v?: string; mode?: string }>;
+  searchParams: Promise<{ v?: string; mode?: string; as?: string }>;
 }) {
   const { gameId, seat: seatStr } = await params;
-  const { v: vStr, mode } = await searchParams;
+  const { v: vStr, mode, as } = await searchParams;
   const seat = Number(seatStr);
   const variant = Math.max(0, Number(vStr ?? 0) | 0);
   const game = getGame(gameId);
@@ -73,12 +73,13 @@ export default async function ShowPage({
       if (c) map.set(c.id, c);
     }
 
-  // 주정뱅이·꼭두각시·미치광이는 자신이 믿는 가짜 직업(disguise)으로 행동·보여주기 한다.
-  // 행동 순서 사이드바의 effId(=가짜 직업)와 동일한 행동카드로 렌더하도록 disguise를 우선 적용.
-  // (gained/became 마커는 철학자 본인 '능력 획득' 보여주기와 충돌하므로 여기선 disguise만 본다.)
-  const effId = game.disguises?.[seat] ?? actor.characterId;
+  // 어떤 직업의 행동카드로 보여줄지 결정.
+  // 한 좌석이 실제 직업과 가짜 직업(disguise) 두 행동 노드를 동시에 갖는 경우(꼭두각시 등)가
+  // 있어, 링크에 ?as=<characterId>로 핀해 정확히 그 노드의 showcase를 렌더한다(행동 순서의 effId).
+  // as가 없으면(레거시/직접 링크) disguise → 실제 순으로 폴백.
+  const effId = as || game.disguises?.[seat] || actor.characterId;
   const actorChar = map.get(effId);
-  const record = game.actions.find((a) => a.actorSeat === seat && !a.bluff);
+  const record = game.actions.find((a) => a.actorSeat === seat && a.characterId === effId && !a.bluff);
   const spec = specForPhase(effId, game.phase ?? "night", game.day);
 
   // ─── 특수 모드: 미치광이의 가짜 공격 지목을 *진짜 데몬*에게 보여주기 ───
@@ -101,7 +102,7 @@ export default async function ShowPage({
                   ))}
                 </div>
                 <h1 className="break-keep text-center text-3xl font-bold leading-snug text-text">
-                  {actor.nickname}이(가) {choiceTargets.map((p) => p.nickname).join(", ")}을(를) 지목했습니다
+                  미치광이가 지목한 가짜 공격 대상입니다
                 </h1>
                 <p className="break-keep text-center text-sm leading-relaxed text-muted">
                   미치광이(가짜 악마)의 선택입니다 — 실제로 따를지는 당신이 결정합니다
@@ -257,6 +258,7 @@ export default async function ShowPage({
   // 토큰 슬롯 렌더링
   const tokenSlot = (slot: ShowcaseToken, i: number) => {
     if (slot === "actor") return <RoleTokenBig key={`a${i}`} ch={actorChar} />;
+    if (slot === "actorName") return <NameOnlyBig key={`an${i}`} nickname={actor.nickname} />;
     if (slot === "result") return <RoleTokenBig key={`r${i}`} ch={resultChar} label={resultStr} />;
     if (slot === "target") {
       const ch = targetPlayers[0] ? map.get(targetPlayers[0].characterId) : undefined;

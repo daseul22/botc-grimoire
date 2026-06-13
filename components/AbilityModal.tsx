@@ -2,6 +2,7 @@
 
 import { EDITION_MAP, TEAM_MAP } from "@/lib/constants";
 import type { Character } from "@/lib/types";
+import { useBackClose } from "./useBackClose";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -19,6 +20,8 @@ export function AbilityModal({
   character: Character;
   onClose: () => void;
 }) {
+  // 마운트 = 열림. 모바일 뒤로가기 → 모달만 닫기
+  useBackClose(true, onClose);
   const team = TEAM_MAP[c.team];
   const edition = EDITION_MAP[c.edition];
   return (
