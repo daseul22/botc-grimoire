@@ -63,10 +63,13 @@ flowchart TD
 | `/sheets/[id]` | SSG+동적 | 시트 상세 + 야간순서표 + `시작하기` |
 | `/sheets/new`, `/sheets/[id]/edit` | 정적/동적 | 커스텀 시트 생성·수정 |
 | `/rules` | 정적 | 규칙 + 목차 |
-| `/games` | 동적 | 게임 목록 |
+| `/games` | 동적 | 게임 목록(내역) — 검색·필터·게임별 이름 지정 |
+| `/stats` | 동적 | 통계 — 종료 게임 집계(플레이어 순위·게임별 기록) |
 | `/play/setup/[sheetId]` | 동적 | 준비 스텝 |
 | `/play/[gameId]` | 동적 | 진행 스텝(이야기꾼) 또는 복기 |
 | `/play/[gameId]/seat` | 동적 | 폰 플레이어 뷰 — 자기 자리 직업만 ([09](09-storyteller-tools.md)) |
+| `/play/[gameId]/show/[seat]` | 동적 | 보여주기 풀스크린(`?as=`·`?mode=`·`?v=`) ([09](09-storyteller-tools.md)) |
+| `/play/[gameId]/pick/[seat]` · `/claim` | 동적 | 직업 목록(플레이어 선택) · 잠금 직업배포 |
 
 콘텐츠는 정적/SSG(빌드 시 SQLite 읽음), 게임·커스텀시트는 `force-dynamic`(가변).
 

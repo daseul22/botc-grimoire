@@ -42,5 +42,7 @@ sequenceDiagram
 
 종료 게임의 [GameReplay](../../components/GameReplay.tsx)도 같은 `sheetChars`를 받아 일관되게 렌더.
 
+> 준비/진행 페이지는 `knownNicknames`(이전 게임 닉네임)도 prop으로 내려 닉네임 입력 자동완성에 쓴다.
+
 ---
 [← 그리모어 엔진](04-grimoire-engine.md) · [홈](README.md) · 다음: [준비 스텝 →](06-setup-and-ratio.md)

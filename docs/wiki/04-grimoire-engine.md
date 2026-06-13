@@ -3,9 +3,9 @@
 [← 아키텍처](03-architecture.md) · [홈](README.md) · 다음: [상태 동기화 →](05-state-sync.md)
 
 전부 [lib/games/](../../lib/games/) 모듈에 있다 — `schema.ts`(DDL·마이그레이션) ·
-`lifecycle.ts`(생성·조회·페이즈) · `seats.ts`(좌석 조작) · `phase-data.ts`(행동·투표·타이머) ·
-`meta.ts`(블러핑·claim·disguise) · `undo.ts`(실행 취소), `index.ts`가 전부 재수출.
-여기만 이해하면 게임 로직의 90%를 안다.
+`lifecycle.ts`(생성·조회·페이즈·이름변경) · `seats.ts`(좌석 조작) · `phase-data.ts`(행동·투표·타이머) ·
+`meta.ts`(블러핑·claim·disguise) · `stats.ts`(종료 게임 통계·닉네임 집계) · `undo.ts`(실행 취소),
+`index.ts`가 전부 재수출. 여기만 이해하면 게임 로직의 90%를 안다.
 
 ## 핵심 아이디어: 정체성 ↔ 페이즈 스냅샷 분리
 
@@ -21,6 +21,8 @@ erDiagram
   games {
     text id PK
     text sheet_id
+    text sheet_name "스크립트명 스냅샷"
+    text label "내역 구분용 이름(빈값=sheet_name)"
     text status "playing|finished"
     int  current_idx "현재 보는 스냅샷"
     text config "재추첨용(제외·비율)"
@@ -72,9 +74,14 @@ flowchart TD
   Q -->|아니오 (과거→진행)| Move[current_idx++<br/>기존 스냅샷으로 이동]
   Q -->|예| Copy[현재 state 복사]
   Copy --> Exp["마커 만료<br/>keepMarkerOnAdvance()"]
-  Exp --> Calc["밤↔낮 전환·일차 계산<br/>낮→밤이면 day+1"]
+  Exp --> Auto["낮→밤 자동처리<br/>변절(turning)·식인종 처형 능력 획득"]
+  Auto --> Calc["밤↔낮 전환·일차 계산<br/>낮→밤이면 day+1"]
   Calc --> Ins[새 스냅샷 삽입 + current_idx++]
 ```
+
+낮→밤 전환 시 [advancePhase](../../lib/games/lifecycle.ts)가 자동 처리하는 것: **변절**(turning 마커
+좌석 → alignment=evil), **식인종**(그 낮 처형 대상의 능력을 `gained:<직업>`로 부여, 악이면 취함(영구)·
+선이면 취함 해제 — 처형마다 갱신). → [09](09-storyteller-tools.md)
 
 핵심: **과거 페이즈로 갔다가 다시 진행하면 새로 만들지 않고 기존 스냅샷으로 포인터만 이동.**
 과거 스냅샷을 수정해도 다른 페이즈로 전파(cascade)되지 않는다 — 각 페이즈는 독립 데이터셋.
@@ -93,8 +100,12 @@ flowchart TD
 - 표현은 BotC 관례대로 **원인 직업 토큰 이미지**(중독=독살자, 취함=주정뱅이, 집착=세레노버스,
   보호=수도사, 사망예정=임프). `public/icons`의 직업 토큰 재사용.
 - **직업을 가리키는 마커**(`roleParam`): 집착 `mad:<role>`(세레노버스+대상 토큰), 직업 변경
-  `became:<role>`(↺), 능력 획득 `gained:<role>`(✦), 레드헤링 `herring`. [MarkerToken](../../components/MarkerToken.tsx)이
-  param 직업의 심볼로 렌더 → 정체성은 마커로만 얹어 과거 스냅샷 불변. (→ [09](09-storyteller-tools.md))
+  `became:<role>`(↺), 능력 획득 `gained:<role>`(✦), 능력 없음 `noability:<role>`(✕, 일회성 소진),
+  레드헤링 `herring`. [MarkerToken](../../components/MarkerToken.tsx)이 param 직업의 심볼로 렌더 →
+  정체성은 마커로만 얹어 과거 스냅샷 불변. (→ [09](09-storyteller-tools.md))
+- `disguise`/`gained`/`became`는 [`effectiveCharacterId`](../../lib/markers.ts)가 "운영상 다루는 직업"을
+  정하는 데 쓴다(disguise > gained/became > 원래). `noability:<role>`는 일회성 능력 소진을 직업별로
+  표시 — 한 좌석에 여러 일회성(철학자+획득직업 등)이 있어도 직업 단위로 정확히 판정.
 - 사망은 마커가 아니라 `status`로 관리(+사망 원인 `cause`).
 - `toggleMarker`는 base 기준: 같은 마커면 해제, 다른 같은-base면 교체(집착/변경/획득 대상 바꾸기 등).
 
