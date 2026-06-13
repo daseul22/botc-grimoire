@@ -242,12 +242,13 @@ export async function recordActionAction(
   // 직업별 자동 사이드 이펙트.
   if (!bluff) applyAutoSideEffects(gameId, characterId, actorSeat, result);
   // 일회성 능력은 사용 즉시 '능력 없음' 영구 마커 부여 → 캔버스 토큰 + 다음 페이즈에도 '능력 사용함' 유지.
+  // 어떤 직업 능력이 소진됐는지 roleParam(noability:직업)으로 달아 토큰에 직업까지 표시(기존 처형자식 호환).
   // 철학자는 능력을 *획득*하므로(gained 마커) 제외.
   if (!bluff && isOncePerGame(characterId) && characterId !== "philosopher") {
     const g = getGame(gameId);
     const actor = g?.players.find((p) => p.seat === actorSeat);
     if (actor && !actor.markers.some((m) => m === "noability" || m.startsWith("noability:"))) {
-      toggleMarker(gameId, actorSeat, "noability");
+      toggleMarker(gameId, actorSeat, `noability:${characterId}`);
     }
   }
   // 행동을 기록한 좌석은 그 페이즈의 처리완료(✓)로 자동 표시. 이미 표시돼 있으면 그대로.
@@ -300,7 +301,9 @@ export async function clearActionAction(
     const cid = characterId || g0?.actions.find((a) => a.actorSeat === actorSeat && !a.bluff)?.characterId || "";
     if (isOncePerGame(cid)) {
       const actor = g0?.players.find((p) => p.seat === actorSeat);
-      if (actor?.markers.includes("noability")) toggleMarker(gameId, actorSeat, "noability");
+      // roleParam이 붙어(noability:직업) 있을 수 있으니 실제 문자열을 찾아 정확히 토글 해제.
+      const existing = actor?.markers.find((m) => m === "noability" || m.startsWith("noability:"));
+      if (existing) toggleMarker(gameId, actorSeat, existing);
     }
   }
   clearAction(gameId, actorSeat, characterId, bluff);
