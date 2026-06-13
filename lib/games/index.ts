@@ -68,3 +68,12 @@ export {
   type RoleAssignment,
 } from "./lifecycle";
 export { captureUndo, clearUndo, undoInfo, undoLast } from "./undo";
+export {
+  listFinishedGames,
+  listKnownNicknames,
+  nicknameLeaderboard,
+  type FinishedGame,
+  type GameStatPlayer,
+  type KnownNickname,
+  type NicknameStat,
+} from "./stats";

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { charactersForSheet, getSheet } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
+import { listKnownNicknames } from "@/lib/games";
 import { SetupStep } from "@/components/SetupStep";
 
 // 커스텀 시트(런타임 데이터)도 시작할 수 있으므로 동적
@@ -22,6 +23,7 @@ export default async function SetupPage({
       sheetId={sheet.id}
       sheetName={sheet.name.ko}
       characters={charactersForSheet(sheet)}
+      knownNicknames={listKnownNicknames().map((k) => k.nickname)}
     />
   );
 }

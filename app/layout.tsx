@@ -22,6 +22,7 @@ const NAV = [
   { href: "/", label: "직업", en: "Characters" },
   { href: "/sheets", label: "시트", en: "Sheets" },
   { href: "/games", label: "내역", en: "Games" },
+  { href: "/stats", label: "통계", en: "Stats" },
   { href: "/rules", label: "규칙", en: "Rules" },
 ];
 

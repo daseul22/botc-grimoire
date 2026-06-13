@@ -48,9 +48,11 @@ function Chevron({ dir }: { dir: "left" | "right" }) {
 export function PlayCanvas({
   game: initial,
   sheetChars,
+  knownNicknames = [],
 }: {
   game: Game;
   sheetChars: Character[];
+  knownNicknames?: string[];
 }) {
   const [game, setGame] = useState(initial);
   const [selected, setSelected] = useState<number | null>(null);
@@ -538,6 +540,7 @@ export function PlayCanvas({
           charMap={charMap}
           sheetChars={sheetChars}
           canEditRoles={canEditRoles}
+          knownNicknames={knownNicknames}
           run={run}
           onClose={() => setSelected(null)}
         />

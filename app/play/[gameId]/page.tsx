@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getGame, getHistory } from "@/lib/games";
+import { getGame, getHistory, listKnownNicknames } from "@/lib/games";
 import { charactersForSheet, getCharacter, getSheet } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
 import type { Character } from "@/lib/types";
@@ -36,5 +36,11 @@ export default async function PlayPage({
       <GameReplay game={game} history={getHistory(gameId)} sheetChars={sheetChars} />
     );
   }
-  return <PlayCanvas game={game} sheetChars={sheetChars} />;
+  return (
+    <PlayCanvas
+      game={game}
+      sheetChars={sheetChars}
+      knownNicknames={listKnownNicknames().map((k) => k.nickname)}
+    />
+  );
 }

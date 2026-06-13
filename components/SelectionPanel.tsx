@@ -32,6 +32,7 @@ export function SelectionPanel({
   charMap,
   sheetChars,
   canEditRoles,
+  knownNicknames = [],
   run,
   onClose,
 }: {
@@ -40,6 +41,7 @@ export function SelectionPanel({
   charMap: Record<string, Character>;
   sheetChars: Character[];
   canEditRoles: boolean;
+  knownNicknames?: string[];
   run: Run;
   onClose: () => void;
 }) {
@@ -68,9 +70,15 @@ export function SelectionPanel({
         {canEditRoles && (
           <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-2 p-2">
             <span className="text-xs text-muted">닉네임</span>
+            <datalist id="known-nicks">
+              {knownNicknames.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
             <input
               key={`nick-${sel.seat}`}
               defaultValue={sel.nickname}
+              list="known-nicks"
               onBlur={(e) => {
                 if (e.target.value !== sel.nickname)
                   run(() => setNicknameAction(game.id, sel.seat, e.target.value));

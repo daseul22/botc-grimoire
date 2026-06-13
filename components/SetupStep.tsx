@@ -23,10 +23,12 @@ export function SetupStep({
   sheetId,
   sheetName,
   characters,
+  knownNicknames = [],
 }: {
   sheetId: string;
   sheetName: string;
   characters: Character[];
+  knownNicknames?: string[];
 }) {
   const [count, setCount] = useState(7);
   const [counts, setCounts] = useState<Ratio>(defaultRatio(7));
@@ -171,7 +173,17 @@ export function SetupStep({
       <section className="mt-5">
         <h2 className="mb-2 text-sm font-semibold text-muted">
           플레이어 닉네임
+          {knownNicknames.length > 0 && (
+            <span className="ml-2 text-xs font-normal text-muted">
+              저장된 닉네임 검색·선택 가능
+            </span>
+          )}
         </h2>
+        <datalist id="known-nicks">
+          {knownNicknames.map((n) => (
+            <option key={n} value={n} />
+          ))}
+        </datalist>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {nicknames.map((nick, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -180,6 +192,7 @@ export function SetupStep({
               </span>
               <input
                 value={nick}
+                list="known-nicks"
                 onChange={(e) =>
                   setNicknames((prev) => {
                     const next = prev.slice();
