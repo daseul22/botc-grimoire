@@ -62,8 +62,8 @@ export function DaySidebar({
           {dayRoles.map(({ p, ch, spec }) => {
             const dead = p.status === "dead";
             const done = game.doneSeats.includes(p.seat);
-            // 일회성 사용 여부는 'noability' 영구 마커로 판정 → 다음 페이즈에도 "능력 사용함" 유지.
-            const usedOnce = !!spec.oncePerGame && p.markers.some((m) => m === "noability" || m.startsWith("noability:"));
+            // 일회성 사용 여부는 'noability:<직업>' 영구 마커로 판정(직업별). 구버전 bare 'noability'도 호환.
+            const usedOnce = !!spec.oncePerGame && p.markers.some((m) => m === "noability" || m === `noability:${p.characterId}`);
             return (
               <li key={p.seat} className={`px-3 py-2 ${dead ? "opacity-45" : ""} ${done ? "opacity-55" : ""}`}>
                 <div className="flex items-center gap-2 text-sm">

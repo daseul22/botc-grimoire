@@ -185,7 +185,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   clockmaker: { targets: 0, result: "number", hint: "악마-하수인 거리" },
   dreamer: { targets: 1, result: "text", hint: "선 직업 / 악 직업" },
   barber: { targets: 0, result: "none" },
-  seamstress: { targets: 2, result: "yesno", hint: "둘이 같은 소속인가", showcase: { heading: "두 사람이 같은 진영인가: {yn}", tokens: ["name", "name2"] } },
+  seamstress: { targets: 2, result: "yesno", oncePerGame: true, hint: "둘이 같은 소속인가", showcase: { heading: "두 사람이 같은 진영인가: {yn}", tokens: ["name", "name2"] } },
   sweetheart: { targets: 1, result: "none", marker: "drunk" },
   sage: { targets: 2, result: "none", hint: "둘 중 1명이 악마" },
   mathematician: { targets: 0, result: "number", hint: "비정상 작동 능력 수" },
@@ -197,7 +197,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 기타/실험 직업 ──
   princess: { targets: 0, result: "none" },
   noble: { targets: 3, result: "none", hint: "3명 중 1명만 악", showcase: { heading: "이 세 명 중 정확히 한 명이 악입니다", tokens: ["names"] } },
-  engineer: { targets: 0, result: "text", hint: "지정한 악역 구성" },
+  engineer: { targets: 0, result: "text", oncePerGame: true, hint: "지정한 악역 구성" },
   knight: { targets: 2, result: "none", hint: "악마 아닌 2명" },
   amnesiac: { targets: 0, result: "text" },
   acrobat: { targets: 1, result: "none" },
@@ -210,11 +210,11 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   villageidiot: { targets: 1, result: "team", hint: "대상의 팀" },
   banshee: { targets: 0, result: "none" },
   cultleader: { targets: 0, result: "team", hint: "현재 내 팀" },
-  huntsman: { targets: 1, result: "none" },
+  huntsman: { targets: 1, result: "none", oncePerGame: true },
   choirboy: { targets: 0, result: "none" },
   shugenja: { targets: 0, result: "text", hint: "시계/반시계 방향" },
   steward: { targets: 1, result: "none", hint: "선한 플레이어" },
-  nightwatchman: { targets: 1, result: "none" },
+  nightwatchman: { targets: 1, result: "none", oncePerGame: true },
   poppygrower: { targets: 0, result: "none" },
   alchemist: { targets: 0, result: "text", hint: "가진 하수인 능력" },
   balloonist: { targets: 1, result: "role", hint: "알게 된 플레이어 직업" },
@@ -288,7 +288,7 @@ export const DAY_ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 종파의 제비꽃 ──
   juggler: { targets: 0, result: "text", hint: "추측 (최대 5)" },
   savant: { targets: 0, result: "text", hint: "정보 2 (1참 1거짓)" },
-  artist: { targets: 0, result: "yesno", hint: "예/아니오 질문 답" },
+  artist: { targets: 0, result: "yesno", oncePerGame: true, hint: "예/아니오 질문 답" },
   klutz: { targets: 1, result: "none", hint: "악이면 팀 패배" },
 
   // ── 기타/실험 직업 ──
@@ -314,6 +314,7 @@ export const OTHER_NIGHT_SPECS: Record<string, ActionSpec> = {
       recipient: "target",
       heading: "당신은 메제펠레스에 의해 변절되었습니다",
       subheading: "지금부터 당신은 악 진영입니다",
+      tokens: ["actor"],
     },
   },
 };

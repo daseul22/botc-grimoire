@@ -243,12 +243,12 @@ export async function recordActionAction(
   // 직업별 자동 사이드 이펙트.
   if (!bluff) applyAutoSideEffects(gameId, characterId, actorSeat, result);
   // 일회성 능력은 사용 즉시 '능력 없음' 영구 마커 부여 → 캔버스 토큰 + 다음 페이즈에도 '능력 사용함' 유지.
-  // 어떤 직업 능력이 소진됐는지 roleParam(noability:직업)으로 달아 토큰에 직업까지 표시(기존 처형자식 호환).
-  // 철학자는 능력을 *획득*하므로(gained 마커) 제외.
-  if (!bluff && isOncePerGame(characterId) && characterId !== "philosopher") {
+  // 어떤 직업 능력이 소진됐는지 roleParam(noability:직업)으로 달아 직업별로 정확히 판정(철학자 능력획득 등
+  // 한 좌석에 여러 일회성 능력이 있어도 서로 간섭 안 함).
+  if (!bluff && isOncePerGame(characterId)) {
     const g = getGame(gameId);
     const actor = g?.players.find((p) => p.seat === actorSeat);
-    if (actor && !actor.markers.some((m) => m === "noability" || m.startsWith("noability:"))) {
+    if (actor && !actor.markers.includes(`noability:${characterId}`)) {
       toggleMarker(gameId, actorSeat, `noability:${characterId}`);
     }
   }
@@ -302,8 +302,8 @@ export async function clearActionAction(
     const cid = characterId || g0?.actions.find((a) => a.actorSeat === actorSeat && !a.bluff)?.characterId || "";
     if (isOncePerGame(cid)) {
       const actor = g0?.players.find((p) => p.seat === actorSeat);
-      // roleParam이 붙어(noability:직업) 있을 수 있으니 실제 문자열을 찾아 정확히 토글 해제.
-      const existing = actor?.markers.find((m) => m === "noability" || m.startsWith("noability:"));
+      // 해당 직업의 noability 마커만 정확히 회수(같은 좌석 다른 일회성 능력 마커는 보존). 구버전 bare도 처리.
+      const existing = actor?.markers.find((m) => m === `noability:${cid}` || m === "noability");
       if (existing) toggleMarker(gameId, actorSeat, existing);
     }
   }

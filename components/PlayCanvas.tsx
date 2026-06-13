@@ -113,7 +113,13 @@ export function PlayCanvas({
     if (selected == null) return;
     const onDocDown = (e: PointerEvent) => {
       const t = e.target as HTMLElement | null;
-      if (t?.closest("[data-token]") || t?.closest("[data-selection-panel]")) return;
+      // 토큰·패널·모달(직업 선택 등, body로 portal됨) 안을 누르면 닫지 않는다.
+      if (
+        t?.closest("[data-token]") ||
+        t?.closest("[data-selection-panel]") ||
+        t?.closest("[data-modal]")
+      )
+        return;
       setSelected(null);
     };
     document.addEventListener("pointerdown", onDocDown);
