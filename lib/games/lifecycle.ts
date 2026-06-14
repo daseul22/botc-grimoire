@@ -134,6 +134,83 @@ export function createGame(input: {
   return id;
 }
 
+/**
+ * 게임 복제 — 같은 사람들로 다음 판을 빠르게 시작하기 위함.
+ * 정체성(좌석·닉네임·직업·진영·배치·고정)과 셋업(시트·구성·블러핑·위장·미치광이)은 그대로 가져오되,
+ * 진행 상태(행동·투표·마커·사망·메모·유령표·되돌리기·직업배포 점유)는 모두 비운
+ * "1일차 밤 셋업" 상태의 새 게임을 만든다. 직업은 그대로 유지 — 새 직업이 필요하면 새 게임에서 재추첨.
+ * 새 게임 id 반환.
+ */
+export function cloneGame(srcId: string): string {
+  const src = db
+    .prepare(
+      "SELECT sheet_id, sheet_name, config, bluffs, lunatic_bluffs, lunatic_minions, disguises, label FROM games WHERE id = ?",
+    )
+    .get(srcId) as
+    | {
+        sheet_id: string;
+        sheet_name: string;
+        config: string | null;
+        bluffs: string | null;
+        lunatic_bluffs: string | null;
+        lunatic_minions: string | null;
+        disguises: string | null;
+        label: string | null;
+      }
+    | undefined;
+  if (!src) throw new Error("원본 게임을 찾을 수 없습니다.");
+  const players = db
+    .prepare(
+      "SELECT seat,nickname,character_id,alignment,x,y,locked FROM game_players WHERE game_id = ? ORDER BY seat",
+    )
+    .all(srcId) as {
+    seat: number;
+    nickname: string;
+    character_id: string;
+    alignment: string;
+    x: number;
+    y: number;
+    locked: number;
+  }[];
+
+  const id = "g-" + crypto.randomUUID().slice(0, 8);
+  const t = now();
+  const baseName = src.label && src.label.trim() ? src.label.trim() : src.sheet_name;
+  const label = `${baseName} (사본)`;
+
+  db.transaction(() => {
+    db.prepare(
+      `INSERT INTO games (id,sheet_id,sheet_name,status,phase,day,result,config,current_idx,created_at,updated_at,bluffs,claimed,global_markers,lunatic_bluffs,lunatic_minions,disguises,label)
+       VALUES (?,?,?,'playing','night',1,NULL,?,0,?,?,?,'[]','[]',?,?,?,?)`,
+    ).run(
+      id,
+      src.sheet_id,
+      src.sheet_name,
+      src.config ?? null,
+      t,
+      t,
+      src.bluffs ?? "[]",
+      src.lunatic_bluffs ?? "[]",
+      src.lunatic_minions ?? "[]",
+      src.disguises ?? "{}",
+      label,
+    );
+    const ins = db.prepare(
+      `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y,locked,status,markers,memo,ghost_vote_used)
+       VALUES (?,?,?,?,?,?,?,?,'alive','[]','',0)`,
+    );
+    const state: StateMap = {};
+    for (const p of players) {
+      ins.run(id, p.seat, p.nickname, p.character_id, p.alignment, p.x, p.y, p.locked);
+      state[p.seat] = { status: "alive", markers: [] };
+    }
+    db.prepare(
+      "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,0,1,'night',?)",
+    ).run(id, JSON.stringify(state));
+  })();
+  return id;
+}
+
 /** 재추첨: 좌석/닉네임/위치는 유지하고 직업·진영만 교체 + 진행상태 전체 초기화 */
 export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
   db.transaction(() => {

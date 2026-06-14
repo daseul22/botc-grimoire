@@ -11,6 +11,7 @@ import {
   captureUndo,
   claimSeat,
   clearAction,
+  cloneGame,
   createGame,
   deleteGame,
   finishGame,
@@ -473,6 +474,13 @@ export async function savePositionsAction(
 export async function deleteGameAction(gameId: string): Promise<void> {
   deleteGame(gameId);
   revalidatePath("/games");
+}
+
+/** 게임 복제 — 같은 셋업(좌석·닉네임·직업·배치)으로 새 1일차 밤 게임을 만들고 진행 화면으로 이동. */
+export async function cloneGameAction(srcId: string): Promise<void> {
+  const id = cloneGame(srcId);
+  revalidatePath("/games");
+  redirect(`/play/${id}`);
 }
 
 /** 게임 표시 이름 변경(내역 구분용). 빈 문자열이면 sheetName으로 폴백 표시. */

@@ -50,6 +50,7 @@ export {
 } from "./seats";
 export {
   advancePhase,
+  cloneGame,
   createGame,
   deleteGame,
   finishGame,

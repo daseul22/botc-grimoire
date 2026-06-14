@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import type { GameSummary } from "@/lib/games";
-import { renameGameAction } from "@/app/play/actions";
+import { cloneGameAction, renameGameAction } from "@/app/play/actions";
 import { DeleteGameButton } from "./DeleteGameButton";
 
 type StatusFilter = "all" | "playing" | "finished";
@@ -60,17 +60,21 @@ function GameCard({
   displayName,
   editing,
   pending,
+  cloning,
   onStartEdit,
   onCancel,
   onSave,
+  onClone,
 }: {
   g: GameSummary;
   displayName: string;
   editing: boolean;
   pending: boolean;
+  cloning: boolean;
   onStartEdit: () => void;
   onCancel: () => void;
   onSave: (label: string) => void;
+  onClone: () => void;
 }) {
   const finished = g.status === "finished";
   const chip = statusChip(g);
@@ -142,6 +146,16 @@ function GameCard({
               </h3>
               <button
                 type="button"
+                onClick={onClone}
+                disabled={cloning}
+                title="이 게임의 셋업(좌석·닉네임·직업)을 그대로 복제해 새 게임 시작"
+                aria-label="복제"
+                className="pointer-events-auto shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+              >
+                {cloning ? "복제 중…" : "⧉ 복제"}
+              </button>
+              <button
+                type="button"
                 onClick={onStartEdit}
                 title="이름 지정"
                 aria-label="이름 지정"
@@ -180,6 +194,7 @@ export function GamesBrowser({ games }: { games: GameSummary[] }) {
   const [date, setDate] = useState<string>("all");
   const [sort, setSort] = useState<"new" | "old">("new");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [cloningId, setCloningId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
@@ -228,6 +243,12 @@ export function GamesBrowser({ games }: { games: GameSummary[] }) {
     });
   }
 
+  function clone(id: string) {
+    setCloningId(id);
+    // cloneGameAction은 새 게임 진행 화면으로 redirect → 성공 시 이 페이지를 떠난다.
+    startTransition(() => cloneGameAction(id));
+  }
+
   const renderCard = (g: GameSummary) => (
     <GameCard
       key={`${g.id}:${editingId === g.id}`}
@@ -235,9 +256,11 @@ export function GamesBrowser({ games }: { games: GameSummary[] }) {
       displayName={nameOf(g)}
       editing={editingId === g.id}
       pending={pending && editingId === g.id}
+      cloning={cloningId === g.id}
       onStartEdit={() => setEditingId(g.id)}
       onCancel={() => setEditingId(null)}
       onSave={(label) => save(g.id, label)}
+      onClone={() => clone(g.id)}
     />
   );
 
