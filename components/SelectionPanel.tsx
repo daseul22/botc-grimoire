@@ -258,8 +258,8 @@ export function SelectionPanel({
             );
           })}
 
-          {/* 대상 직업 선택 마커: 집착 / 직업 변경 / 능력 획득 — 토큰 모달로 선택 */}
-          {MARKERS.filter((m) => m.needsTarget).map((mk) => {
+          {/* 대상 직업 선택(단일) 마커: 집착 / 직업 변경 — 토큰 모달로 1개 선택·교체 */}
+          {MARKERS.filter((m) => m.needsTarget && !m.multi).map((mk) => {
             const cur = sel.markers.find((x) => parseMarker(x).base === mk.id);
             const curParam = cur ? parseMarker(cur).param ?? "" : "";
             const picked = curParam ? charMap[curParam] : undefined;
@@ -298,8 +298,79 @@ export function SelectionPanel({
             );
           })}
         </div>
-        {/* needsTarget 마커 모달 */}
-        {MARKERS.filter((m) => m.needsTarget).map((mk) => {
+
+        {/* 다중 대상 마커: 능력 획득 / 능력 없음 — 여러 개 동시 적용·개별 제거.
+            식인종이 철학자를 먹고 또 다른 능력을 얻는 식으로 누적되는 경우를 직접 손볼 수 있게. */}
+        {MARKERS.filter((m) => m.needsTarget && m.multi).map((mk) => {
+          const instances = sel.markers.filter((x) => parseMarker(x).base === mk.id);
+          return (
+            <div key={`multi-${mk.id}`} className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium" style={{ color: mk.color }}>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full text-[11px]" style={{ background: `${mk.color}33` }}>
+                  {mk.letter ?? "●"}
+                </span>
+                {mk.label}
+              </span>
+              {instances.length === 0 && <span className="text-xs text-muted">없음</span>}
+              {instances.map((m) => {
+                const param = parseMarker(m).param;
+                const pc = param ? charMap[param] : undefined;
+                return (
+                  <span
+                    key={m}
+                    className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
+                    style={{ background: `${mk.color}18`, borderColor: `${mk.color}66`, color: mk.color }}
+                  >
+                    {pc?.image && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={pc.image} alt="" className="h-4 w-4 rounded-full object-cover" />
+                    )}
+                    {pc ? pc.name.ko : param ?? "대상 없음"}
+                    <button
+                      type="button"
+                      onClick={() => run(() => toggleMarkerAction(game.id, sel.seat, m))}
+                      className="ml-0.5 rounded px-0.5 opacity-70 hover:bg-black/20 hover:opacity-100"
+                      title="이 항목 제거"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setMarkerPicker(mk.id)}
+                className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted hover:border-gold/60 hover:text-text"
+                title={`${mk.label} 추가`}
+              >
+                ＋ 추가
+              </button>
+            </div>
+          );
+        })}
+
+        {/* 다중 대상 마커 추가 모달 (능력획득·능력없음) — 항상 새 인스턴스 추가(교체 아님) */}
+        {MARKERS.filter((m) => m.needsTarget && m.multi).map((mk) => (
+          <RolePickerModal
+            key={`mpk-${mk.id}`}
+            open={markerPicker === mk.id}
+            title={`${mk.label} 추가 — 대상 직업`}
+            candidates={sheetChars}
+            selected=""
+            clearLabel={mk.id === "noability" ? "대상 없이 추가" : "선택 안 함"}
+            onPick={(v) => {
+              // 능력없음은 대상 없이도 단독 추가 가능(처형자·재봉사 등). 능력획득은 직업 필요 → 빈 값이면 무시.
+              if (!v && mk.id !== "noability") return;
+              const marker = v ? `${mk.id}:${v}` : mk.id;
+              if (!sel.markers.includes(marker))
+                run(() => toggleMarkerAction(game.id, sel.seat, marker));
+            }}
+            onClose={() => setMarkerPicker(null)}
+          />
+        ))}
+
+        {/* 단일 needsTarget 마커 모달 (집착·직업변경) */}
+        {MARKERS.filter((m) => m.needsTarget && !m.multi).map((mk) => {
           const cur = sel.markers.find((x) => parseMarker(x).base === mk.id);
           const curParam = cur ? parseMarker(cur).param ?? "" : "";
           return (

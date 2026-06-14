@@ -216,10 +216,13 @@ export function advancePhase(gameId: string): void {
       next[cannibal.seat].status !== "dead"
     ) {
       const st = next[cannibal.seat];
-      // 직전 처형으로 얻은 gained/취함은 걷어내고 이번 처형 기준으로 재적용.
-      st.markers = st.markers.filter(
-        (m) => parseMarker(m).base !== "gained" && m !== "drunk",
-      );
+      // 직전 처형으로 얻은 능력획득/능력없음/취함을 모두 걷어내고 이번 처형 기준으로 재적용.
+      // (예: 철학자를 먹어 gained:philosopher + 철학자 능력으로 또 얻어 gained:X,
+      //  둘 다 일회성이라 noability:philosopher/noability:X까지 쌓인 경우 → 싹 비우고 새 능력만.)
+      st.markers = st.markers.filter((m) => {
+        const b = parseMarker(m).base;
+        return b !== "gained" && b !== "noability" && m !== "drunk";
+      });
       st.markers.push(`gained:${executed.character_id}`);
       if (executed.alignment === "evil") st.markers.push("drunk");
     }

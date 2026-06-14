@@ -1,6 +1,6 @@
 // 좌석 단위 조작: 위치/고정/직업/메모/진영/닉네임/자리교환(전역 컬럼),
 // 생사·마커(현재 페이즈 스냅샷), 유령표.
-import { parseMarker } from "../markers";
+import { MARKER_MAP, parseMarker } from "../markers";
 import { currentIdx, db, now, readState, writeState } from "./schema";
 
 export function savePositions(
@@ -106,10 +106,14 @@ export function toggleMarker(gameId: string, seat: number, markerId: string): vo
   const s = readState(gameId, idx);
   const cur = s[seat]?.markers ?? [];
   const base = parseMarker(markerId).base;
-  // 같은 마커면 해제, 아니면 동일 base 제거 후 추가(집착 대상 교체 등)
+  // multi 마커(능력획득·능력없음)는 한 좌석에 여러 인스턴스 공존(식인종이 철학자 먹고 또 능력 얻는 식).
+  // 단일 마커는 동일 base 제거 후 추가(집착 대상 교체 등). 어느 쪽이든 정확히 같은 문자열이면 해제.
+  const isMulti = !!MARKER_MAP[base]?.multi;
   const markers = cur.includes(markerId)
     ? cur.filter((m) => m !== markerId)
-    : [...cur.filter((m) => parseMarker(m).base !== base), markerId];
+    : isMulti
+      ? [...cur, markerId]
+      : [...cur.filter((m) => parseMarker(m).base !== base), markerId];
   s[seat] = { status: s[seat]?.status ?? "alive", markers };
   writeState(gameId, idx, s);
 }

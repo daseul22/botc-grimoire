@@ -22,6 +22,10 @@ export type Marker = {
   duration: MarkerDuration;
   /** 대상 역할을 선택하는 마커인가 (집착·직업변경·능력획득) */
   needsTarget?: boolean;
+  /** 한 좌석에 여러 인스턴스를 동시에 가질 수 있는가 (능력획득·능력없음).
+   *  식인종이 철학자를 먹고 → 철학자 능력으로 또 다른 직업을 얻는 식으로 능력획득/없음이 누적될 수 있다.
+   *  기본은 단일(교체). multi면 SelectionPanel에서 인스턴스별 칩 + 개별 제거 + 추가 UI로 다룬다. */
+  multi?: boolean;
   /** param이 직업 id이고, 토큰을 해당 직업 심볼로 표시하는가 */
   roleParam?: boolean;
   /** icon이 없을 때 토큰 자리에 표시할 글자/기호(1~2자). 색깔 원만 보이는 가독성 문제 회피용. */
@@ -41,11 +45,11 @@ export const MARKERS: Marker[] = [
   { id: "dying", label: "사망예정", icon: "/icons/imp.webp", color: "#e08a3c", duration: "phase" },
   { id: "herring", label: "레드헤링", icon: "/icons/fortuneteller.webp", color: "#d23b3b", duration: "permanent" },
   { id: "became", label: "직업 변경", icon: "", color: "#c0653a", duration: "permanent", needsTarget: true, roleParam: true, letter: "↺" },
-  { id: "gained", label: "능력 획득", icon: "", color: "#5aa86a", duration: "permanent", needsTarget: true, roleParam: true, letter: "✦" },
+  { id: "gained", label: "능력 획득", icon: "", color: "#5aa86a", duration: "permanent", needsTarget: true, multi: true, roleParam: true, letter: "✦" },
   // 처형자(Executioner)·성결자 같은 일회성 능력 소진 후 표시. 영구.
   // needsTarget/roleParam — 대상 있는 케이스(처형자가 가졌던 좋은 직업) 토큰도 함께 보일 수 있게.
-  // 대상 없이도 마커 단독 적용 가능(아래 PlayCanvas의 onPick 로직 참고).
-  { id: "noability", label: "능력 없음", icon: "", color: "#7a7a7a", duration: "permanent", needsTarget: true, roleParam: true, letter: "✕" },
+  // 대상 없이도 마커 단독 적용 가능(아래 SelectionPanel의 onPick 로직 참고).
+  { id: "noability", label: "능력 없음", icon: "", color: "#7a7a7a", duration: "permanent", needsTarget: true, multi: true, roleParam: true, letter: "✕" },
   // 변절 예정(메제펠리스 단어 발화 후 다음 밤에 악으로 변절). dusk로 만료될 때
   // advancePhase 내부에서 자동으로 alignment를 evil로 바꾼다.
   { id: "turning", label: "변절 예정", icon: "", color: "#d23b3b", duration: "dusk", letter: "⇄" },
