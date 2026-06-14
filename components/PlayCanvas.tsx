@@ -79,7 +79,7 @@ export function PlayCanvas({
     setSidebar(game.phase === "night" ? "night" : "day");
   }, [phaseKey, game.phase]);
 
-  // 전체화면(첩자용 그리모어): 보드만 네이티브 풀스크린으로 띄우고 토큰을 1.5배. Esc로 원복.
+  // 전체화면(첩자용 그리모어): 보드만 네이티브 풀스크린으로 띄우고 토큰을 1.8배. Esc로 원복.
   const [fs, setFs] = useState(false);
   const [spyView, setSpyView] = useState(false); // 전체화면 전용: 첩자 좌석을 아래로 회전
   useEffect(() => {
@@ -102,7 +102,7 @@ export function PlayCanvas({
     if (doc.fullscreenElement || doc.webkitFullscreenElement) (doc.exitFullscreen ?? doc.webkitExitFullscreen)?.call(doc);
     else (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el);
   };
-  const tokenScale = fs ? 1.5 : 1;
+  const tokenScale = fs ? 1.8 : 1;
   // 첩자 시점: 좌석 순서(이웃 관계)를 유지한 채 첩자를 6시 방향(아래)에 두고 원형 재배치. 전체화면에서만.
   const orderedSeats = useMemo(() => [...game.players].sort((a, b) => a.seat - b.seat), [game.players]);
   const spyIdx = orderedSeats.findIndex((p) => p.characterId === "spy");
@@ -415,7 +415,7 @@ export function PlayCanvas({
             const deathTitle = p.deathCause === "execution" ? "처형됨" : p.deathCause === "night" ? "밤에 사망" : "사망";
             return (
               <div key={p.seat} data-token onPointerDown={(e) => onDown(e, p.seat)} onPointerMove={(e) => onMove(e, p.locked)} onPointerUp={onUp} className={`absolute flex touch-none select-none ${fs ? "cursor-default" : p.locked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${selected === p.seat ? "z-10" : ""}`} style={{ left: `${px * 100}%`, top: `${py * 100}%`, transform: "translate(-50%, -50%)", transition: fs ? "left 0.45s ease, top 0.45s ease" : undefined }}>
-                {/* 전체화면 시 1.5배 — 위치(translate)는 바깥, 크기(scale)는 안쪽에 둬 드래그가 안 끊기게 분리 */}
+                {/* 전체화면 시 1.8배 — 위치(translate)는 바깥, 크기(scale)는 안쪽에 둬 드래그가 안 끊기게 분리 */}
                 <div className="flex flex-col items-center gap-1" style={{ transform: `scale(${tokenScale})`, transformOrigin: "center", transition: "transform 0.18s ease" }}>
                 {/* relative 래퍼: 코너 뱃지가 원의 overflow-hidden에 잘리지 않도록 원과 형제로 배치 */}
                 <div className="relative">
