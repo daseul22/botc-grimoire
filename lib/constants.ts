@@ -1,4 +1,4 @@
-import type { EditionId, Localized, Team } from "./types";
+import type { Alignment, EditionId, Localized, Team } from "./types";
 
 export const TEAMS: { id: Team; label: Localized; color: string }[] = [
   { id: "townsfolk", label: { ko: "마을주민", en: "Townsfolk" }, color: "#4a90d9" },
@@ -13,6 +13,12 @@ export const TEAMS: { id: Team; label: Localized; color: string }[] = [
 export const TEAM_MAP: Record<Team, (typeof TEAMS)[number]> = Object.fromEntries(
   TEAMS.map((t) => [t.id, t]),
 ) as Record<Team, (typeof TEAMS)[number]>;
+
+/** 진영 색 — 선=마을주민 파랑, 악=악마 빨강. 팀 색과 단일 출처를 공유한다. */
+export const ALIGN_COLOR: Record<Alignment, string> = {
+  good: TEAM_MAP.townsfolk.color,
+  evil: TEAM_MAP.demon.color,
+};
 
 export const EDITIONS: { id: EditionId; label: Localized }[] = [
   { id: "trouble-brewing", label: { ko: "트러블 브루잉", en: "Trouble Brewing" } },

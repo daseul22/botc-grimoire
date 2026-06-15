@@ -386,6 +386,19 @@ export function isOncePerGame(characterId: string): boolean {
   return !!(ACTION_SPECS[characterId]?.oncePerGame || DAY_ACTION_SPECS[characterId]?.oncePerGame);
 }
 
+/**
+ * 일회성 능력이 이미 소진됐는지 — 'noability:<직업>' 영구 마커로 판정(구버전 bare 'noability' 호환).
+ * 한 좌석에 여러 일회성 능력(철학자+획득직업 등)이 있어도 해당 직업 마커만 본다.
+ * NightSidebar/DaySidebar가 같은 규칙을 쓰도록 단일화.
+ */
+export function isAbilityUsedUp(
+  oncePerGame: boolean | undefined,
+  characterId: string,
+  markers: string[],
+): boolean {
+  return !!oncePerGame && markers.some((m) => m === "noability" || m === `noability:${characterId}`);
+}
+
 /** 페이즈에 맞는 스펙. 복기 등에서 기록을 해석할 때 사용. day 생략 시 첫밤 기준. */
 export function specForPhase(characterId: string, phase: string, day?: number): ActionSpec {
   if (phase === "day") return DAY_ACTION_SPECS[characterId] ?? actionSpec(characterId);

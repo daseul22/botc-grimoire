@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TEAM_MAP } from "@/lib/constants";
+import { seatsShownAsMinions } from "@/lib/roles";
 import type { Character, Game } from "@/lib/types";
 import { RolePickerModal } from "./RolePickerModal";
 
@@ -50,16 +51,13 @@ export function LunaticActionRow({
     onSetMinions(minions.includes(seat) ? minions.filter((s) => s !== seat) : [...minions, seat]);
   };
 
-  // 실제 악마가 받는 화면(블러핑 3 + team=minion 좌석[꼭두각시 제외] + 마술사)을 그대로 복사.
-  // show 페이지의 ?mode=bluffs/?mode=minions 계산과 1:1로 맞춰 미치광이가 진짜 악마와 같은 화면을 보게 한다.
-  const realMinionSeats = game.players
-    .filter((p) => charMap[p.characterId]?.team === "minion" && p.characterId !== "marionette")
-    .map((p) => p.seat);
-  const magicianSeat = game.players.find((p) => p.characterId === "magician")?.seat;
-  const demonMinionSeats = [
-    ...realMinionSeats,
-    ...(magicianSeat != null ? [magicianSeat] : []),
-  ].filter((s) => s !== actorSeat);
+  // 실제 악마가 받는 화면(블러핑 3 + 하수인 좌석)을 그대로 복사. show ?mode=minions와
+  // 동일 규칙(lib/roles.seatsShownAsMinions)을 써 미치광이가 진짜 악마와 같은 화면을 보게 한다.
+  const demonMinionSeats = seatsShownAsMinions(
+    game.players,
+    (id) => charMap[id]?.team,
+    { excludeSeat: actorSeat },
+  );
   const canPreset = game.bluffs.length > 0 || demonMinionSeats.length > 0;
   const applyDemonPreset = () => {
     onSetBluffs(game.bluffs.slice(0, 3));

@@ -8,6 +8,17 @@ export type RectSides = { top: number; right: number; bottom: number; left: numb
 export const sidesTotal = (s: RectSides) => s.top + s.right + s.bottom + s.left;
 
 /**
+ * 원형 배치 정규화 좌표(0~1). 12시 방향에서 시작해 시계방향. 가로 반경 0.4·세로 0.42.
+ * 게임 시작 시 초기 배치(startGameAction)와 '원형 정렬' 버튼(PlayCanvas)이 동일한 좌표를 쓰도록 단일화.
+ */
+export function circlePositions(n: number): { x: number; y: number }[] {
+  return Array.from({ length: n }, (_, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    return { x: 0.5 + 0.4 * Math.cos(angle), y: 0.5 + 0.42 * Math.sin(angle) };
+  });
+}
+
+/**
  * 인원 N을 사각 테이블 4면에 자동 배분. 실제 테이블처럼 상·하(가로)를 좌·우(세로)보다 많게.
  * 합은 항상 N.
  */

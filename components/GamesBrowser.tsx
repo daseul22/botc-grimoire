@@ -5,35 +5,9 @@ import Link from "next/link";
 import type { GameSummary } from "@/lib/games";
 import { cloneGameAction, renameGameAction } from "@/app/play/actions";
 import { DeleteGameButton } from "./DeleteGameButton";
+import { Pill } from "./Pill";
 
 type StatusFilter = "all" | "playing" | "finished";
-
-function Pill({
-  active,
-  onClick,
-  children,
-  color,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  color?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-        active
-          ? "border-transparent bg-surface-2 text-text"
-          : "border-border text-muted hover:text-text"
-      }`}
-      style={active && color ? { color, borderColor: `${color}88` } : undefined}
-    >
-      {children}
-    </button>
-  );
-}
 
 function statusText(g: GameSummary): string {
   if (g.status === "finished")

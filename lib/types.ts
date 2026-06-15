@@ -66,6 +66,18 @@ export interface RulesSection {
 // ── 그리모어 게임 운영 (Phase 2) ──
 export type Alignment = "good" | "evil";
 
+/** 페이즈 — 밤/낮. (직렬화는 string이나 도메인 경계에서 좁힌다.) */
+export type Phase = "night" | "day";
+/** 좌석 생사 상태. */
+export type SeatStatus = "alive" | "dead";
+/** 사망 원인 — 처형/밤 살해/기타/미사망. 사망 글리프·복기에 사용. */
+export type DeathCause = "execution" | "night" | "other" | "";
+
+/** 서버 액션 공통 반환형 — 성공 값(T) 또는 에러. */
+export type ServerActionResult<T> = T | { error: string };
+/** PlayCanvas가 자식에 내려보내는 액션 디스패처(설계결정3: Game 반환→setGame). */
+export type GameActionRun = (fn: () => Promise<ServerActionResult<Game>>) => void;
+
 /** 한 페이즈(스냅샷)에 기록되는 직업의 야간 행동. 행동 직업(actor) 좌석 기준. */
 export interface NightActionRecord {
   /** 행동한 좌석 */
@@ -90,14 +102,13 @@ export interface GamePlayer {
   y: number;
   /** 위치 고정 (향후) */
   locked: boolean;
-  /** 'alive' | 'dead' 등 (향후 확장) */
-  status: string;
+  status: SeatStatus;
   /** 효과 마커 ("base" 또는 "base:param") */
   markers: string[];
   /** 게임 내내 누적되는 이야기꾼 메모 (스냅샷 무관, 전역) */
   memo: string;
-  /** 사망 원인 (현재 스냅샷): "execution" | "night" | "other" | "" */
-  deathCause: string;
+  /** 사망 원인 (현재 스냅샷). */
+  deathCause: DeathCause;
   /** 유령표(데드 보트) 사용 여부 (전역) */
   ghostVoteUsed: boolean;
 }
@@ -123,8 +134,8 @@ export interface Game {
   label: string;
   /** 'playing' | 'finished' */
   status: string;
-  /** 현재 페이즈 'night' | 'dusk' | 'day' (향후) */
-  phase: string | null;
+  /** 현재 페이즈 — 밤/낮. */
+  phase: Phase;
   /** N일차 (향후) */
   day: number;
   /** 'good' | 'evil' | null (향후) */

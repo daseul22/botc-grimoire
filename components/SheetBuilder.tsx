@@ -6,6 +6,7 @@ import { groupByTeam } from "@/lib/grouping";
 import { EDITIONS, TEAM_MAP, TEAMS } from "@/lib/constants";
 import type { Character, EditionId, Team } from "@/lib/types";
 import { CharacterIcon } from "./CharacterIcon";
+import { Pill } from "./Pill";
 import { createSheetAction, updateSheetAction } from "@/app/sheets/actions";
 
 type EditionFilter = EditionId | "all";
@@ -17,33 +18,6 @@ export type SheetBuilderExisting = {
   description: string;
   characterIds: string[];
 };
-
-function Pill({
-  active,
-  onClick,
-  children,
-  color,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  color?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-        active
-          ? "border-transparent bg-surface-2 text-text"
-          : "border-border text-muted hover:text-text"
-      }`}
-      style={active && color ? { color, borderColor: `${color}88` } : undefined}
-    >
-      {children}
-    </button>
-  );
-}
 
 export function SheetBuilder({
   characters,

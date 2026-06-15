@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { TEAM_MAP } from "@/lib/constants";
+import { ALIGN_COLOR, TEAM_MAP } from "@/lib/constants";
 import { DURATION_LABEL, MARKERS, parseMarker } from "@/lib/markers";
-import type { Character, Game, GamePlayer } from "@/lib/types";
+import type { Character, Game, GameActionRun, GamePlayer } from "@/lib/types";
 import { PlayerPicker } from "./PlayerPicker";
 import { RolePickerModal } from "./RolePickerModal";
 import {
@@ -19,9 +19,7 @@ import {
   toggleMarkerAction,
 } from "@/app/play/actions";
 
-const ALIGN_COLOR: Record<"good" | "evil", string> = { good: "#4a90d9", evil: "#d23b3b" };
-
-type Run = (fn: () => Promise<Game | { error: string }>) => void;
+type Run = GameActionRun;
 
 /**
  * 좌석 하단 고정 패널 — 닉네임/자리 교환(1일차 밤), 직업 변경, 사망·고정·진영, 마커, 메모.

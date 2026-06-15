@@ -5,36 +5,10 @@ import { groupByTeam } from "@/lib/grouping";
 import { EDITIONS, TEAM_MAP, TEAMS } from "@/lib/constants";
 import type { Character, EditionId, Team } from "@/lib/types";
 import { CharacterCard } from "./CharacterCard";
+import { Pill } from "./Pill";
 
 type EditionFilter = EditionId | "all";
 type TeamFilter = Team | "all";
-
-function Pill({
-  active,
-  onClick,
-  children,
-  color,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  color?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-        active
-          ? "border-transparent bg-surface-2 text-text"
-          : "border-border text-muted hover:text-text"
-      }`}
-      style={active && color ? { color, borderColor: `${color}88` } : undefined}
-    >
-      {children}
-    </button>
-  );
-}
 
 export function CharacterBrowser({ characters }: { characters: Character[] }) {
   const [edition, setEdition] = useState<EditionFilter>("all");

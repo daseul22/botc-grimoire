@@ -1,11 +1,9 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { getGame, getClaims } from "@/lib/games";
-import { charactersForSheet, getCharacter, getSheet } from "@/lib/data";
-import { getCustomSheet } from "@/lib/custom-sheets";
+import { characterMapForGame } from "@/lib/game-characters";
 import { claimSeatAction } from "@/app/play/actions";
 import { ClaimCard, Expired } from "@/components/ClaimCard";
-import type { Character } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -36,14 +34,7 @@ export default async function ClaimPage({
       : undefined;
   const remainingMs = mineClaimedAt != null ? CLAIM_TTL_MS - (Date.now() - mineClaimedAt) : 0;
 
-  const sheet = getSheet(game.sheetId) ?? getCustomSheet(game.sheetId);
-  const map = new Map<string, Character>();
-  if (sheet) for (const c of charactersForSheet(sheet)) map.set(c.id, c);
-  for (const p of game.players)
-    if (!map.has(p.characterId)) {
-      const c = getCharacter(p.characterId);
-      if (c) map.set(c.id, c);
-    }
+  const map = characterMapForGame(game);
 
   // 헤더 없는 전체화면(다른 페이지로 못 빠져나가게 오버레이로 덮는다)
   return (

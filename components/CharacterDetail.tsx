@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Character, Lang, Localized } from "@/lib/types";
 import { EDITION_MAP, TEAM_MAP } from "@/lib/constants";
+import { parseJinxEntry } from "@/lib/jinx";
 import { CharacterIcon } from "./CharacterIcon";
 import { Badge } from "./Badge";
 
@@ -154,9 +155,7 @@ export function CharacterDetail({ character: c }: { character: Character }) {
         <Section title={ko ? "징크스 (직업 상호작용)" : "Jinxes"}>
           <ul className="space-y-2 text-sm">
             {jinxes.map((s, i) => {
-              const idx = s.indexOf(" : ");
-              const head = idx > 0 ? s.slice(0, idx) : "";
-              const body = idx > 0 ? s.slice(idx + 3) : s;
+              const { partner: head, rule: body } = parseJinxEntry(s);
               return (
                 <li
                   key={i}

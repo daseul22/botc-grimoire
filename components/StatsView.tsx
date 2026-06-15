@@ -5,32 +5,9 @@ import Link from "next/link";
 import type { Character } from "@/lib/types";
 import type { FinishedGame, NicknameStat } from "@/lib/games";
 import { CharacterIcon } from "./CharacterIcon";
+import { Pill } from "./Pill";
 
 const fmtDate = (iso: string) => iso.slice(0, 10);
-
-function Pill({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-        active
-          ? "border-transparent bg-surface-2 text-text"
-          : "border-border text-muted hover:text-text"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 function resultChip(result: string | null): { label: string; cls: string } {
   if (result === "good")

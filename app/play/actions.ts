@@ -11,6 +11,7 @@ import {
   captureUndo,
   claimSeat,
   clearAction,
+  clearUndo,
   cloneGame,
   createGame,
   deleteGame,
@@ -52,7 +53,8 @@ import {
 import { TEAM_MAP } from "@/lib/constants";
 import { isOncePerGame } from "@/lib/night-actions";
 import { alignmentOf, CORE_TEAMS, ratioTotal, type Ratio } from "@/lib/ratio";
-import type { Character, Game, Sheet } from "@/lib/types";
+import { circlePositions } from "@/lib/seat-layout";
+import type { Character, DeathCause, Game, SeatStatus, Sheet } from "@/lib/types";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();
@@ -115,18 +117,15 @@ export async function startGameAction(input: {
   const res = assignRoles(sheet, input.excludedIds, input.counts);
   if ("error" in res) return res;
 
-  const n = nicknames.length;
-  const players = res.roles.map((r) => {
-    const angle = (r.seat / n) * Math.PI * 2 - Math.PI / 2;
-    return {
-      seat: r.seat,
-      nickname: nicknames[r.seat],
-      characterId: r.characterId,
-      alignment: r.alignment as "good" | "evil",
-      x: 0.5 + 0.4 * Math.cos(angle),
-      y: 0.5 + 0.42 * Math.sin(angle),
-    };
-  });
+  const pts = circlePositions(nicknames.length);
+  const players = res.roles.map((r) => ({
+    seat: r.seat,
+    nickname: nicknames[r.seat],
+    characterId: r.characterId,
+    alignment: r.alignment as "good" | "evil",
+    x: pts[r.seat].x,
+    y: pts[r.seat].y,
+  }));
 
   const id = createGame({
     sheetId: input.sheetId,
@@ -154,6 +153,9 @@ export async function redrawAction(gameId: string): Promise<Game | { error: stri
 
   const res = assignRoles(sheet, cfg.excludedIds, counts);
   if ("error" in res) return res;
+  // 재추첨은 사실상 게임 리셋 — 이전 진행 스냅샷이 undo로 되살아나지 않도록 스택을 비우고,
+  // 재추첨 자체만 1스텝 되돌릴 수 있게 직전 상태를 캡처한다.
+  clearUndo(gameId);
   captureUndo(gameId, "재추첨");
   redrawRoles(gameId, res.roles);
   return getGame(gameId)!;
@@ -173,8 +175,8 @@ export async function prevPhaseAction(gameId: string): Promise<Game> {
 export async function setStatusAction(
   gameId: string,
   seat: number,
-  status: string,
-  cause = "",
+  status: SeatStatus,
+  cause: DeathCause = "",
 ): Promise<Game> {
   captureUndo(gameId, "생사 변경");
   setStatus(gameId, seat, status, cause);

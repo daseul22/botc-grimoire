@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getGame } from "@/lib/games";
-import { charactersForSheet, getCharacter, getSheet } from "@/lib/data";
-import { getCustomSheet } from "@/lib/custom-sheets";
+import { characterMapForGame } from "@/lib/game-characters";
 import { specForPhase, type ShowcaseSpec, type ShowcaseToken } from "@/lib/night-actions";
+import { seatsShownAsDemons, seatsShownAsMinions } from "@/lib/roles";
 import { TEAM_MAP } from "@/lib/constants";
 import type { Character } from "@/lib/types";
 
@@ -64,14 +64,7 @@ export default async function ShowPage({
   const actor = game.players.find((p) => p.seat === seat);
   if (!actor) notFound();
 
-  const sheet = getSheet(game.sheetId) ?? getCustomSheet(game.sheetId);
-  const map = new Map<string, Character>();
-  if (sheet) for (const c of charactersForSheet(sheet)) map.set(c.id, c);
-  for (const p of game.players)
-    if (!map.has(p.characterId)) {
-      const c = getCharacter(p.characterId);
-      if (c) map.set(c.id, c);
-    }
+  const map = characterMapForGame(game);
 
   // 어떤 직업의 행동카드로 보여줄지 결정.
   // 한 좌석이 실제 직업과 가짜 직업(disguise) 두 행동 노드를 동시에 갖는 경우(꼭두각시 등)가
@@ -123,11 +116,9 @@ export default async function ShowPage({
   // 하수인은 모두 함께 깨어나 서로 확인하므로 특정 "님께" 없는 단체 화면.
   // 마술사 인플레이 시 마술사도 (가짜) 악마로 함께 노출(룰: 하수인은 마술사를 데몬으로 본다).
   if (mode === "demon") {
-    const magicianSeat = game.players.find((p) => p.characterId === "magician");
-    const demons = [
-      ...game.players.filter((p) => map.get(p.characterId)?.team === "demon"),
-      ...(magicianSeat ? [magicianSeat] : []),
-    ];
+    const demons = seatsShownAsDemons(game.players, (id) => map.get(id)?.team)
+      .map((s) => game.players.find((p) => p.seat === s))
+      .filter((p): p is NonNullable<typeof p> => !!p);
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-bg px-6 py-8">
         <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
@@ -157,11 +148,8 @@ export default async function ShowPage({
   const isMinions = mode === "minions" || mode === "lunatic-minions";
   const isLunaticMode = mode === "lunatic-bluffs" || mode === "lunatic-minions";
   if (isBluffs || isMinions) {
-    // 데몬 모드만 마술사 닉네임 자동 추가(룰: 데몬에게 마술사 좌석을 가짜 하수인으로 노출).
-    // 미치광이 모드는 ST가 지정한 가짜 데이터 그대로 — 마술사 처리 X.
-    const magicianSeat = !isLunaticMode
-      ? game.players.find((p) => p.characterId === "magician")
-      : undefined;
+    // 데몬 모드는 lib/roles.seatsShownAsMinions로 하수인 좌석 계산(마술사 포함, 꼭두각시 제외).
+    // 미치광이 모드는 ST가 지정한 가짜 데이터 그대로.
     const bluffsIds = isLunaticMode ? game.lunaticBluffs : game.bluffs;
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-bg px-6 py-8">
@@ -189,18 +177,12 @@ export default async function ShowPage({
                 {(() => {
                   // 데몬 모드: 하수인은 team === "minion"만. 꼭두각시(outsider, marionette)는 별도 보여주기.
                   // 미치광이 모드: ST 지정 좌석(lunaticMinions) 그대로.
-                  const all = isLunaticMode
-                    ? (game.lunaticMinions
-                        .map((s) => game.players.find((p) => p.seat === s))
-                        .filter(Boolean) as typeof game.players)
-                    : [
-                        ...game.players.filter(
-                          (p) =>
-                            map.get(p.characterId)?.team === "minion" &&
-                            p.characterId !== "marionette",
-                        ),
-                        ...(magicianSeat ? [magicianSeat] : []),
-                      ];
+                  const minionSeats = isLunaticMode
+                    ? game.lunaticMinions
+                    : seatsShownAsMinions(game.players, (id) => map.get(id)?.team);
+                  const all = minionSeats
+                    .map((s) => game.players.find((p) => p.seat === s))
+                    .filter((p): p is NonNullable<typeof p> => !!p);
                   return (
                     <>
                       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -247,6 +229,7 @@ export default async function ShowPage({
     return tpl
       .replace(/\{role\}/g, resultChar?.name.ko ?? "—")
       .replace(/\{actor\}/g, actor.nickname)
+      .replace(/\{targets\}/g, targetPlayers.map((p) => p?.nickname).filter(Boolean).join(", ") || "—")
       .replace(/\{target2\}/g, targetPlayers[1]?.nickname ?? "—")
       .replace(/\{target\}/g, targetPlayers[0]?.nickname ?? "—")
       .replace(/\{count\}/g, resultStr || "—")

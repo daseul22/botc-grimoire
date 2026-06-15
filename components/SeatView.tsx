@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import type { Character, Game } from "@/lib/types";
 import { RoleCard } from "./RoleCard";
 
+// 폴링 주기 — interval과 안내 문구가 같은 값을 참조해 드리프트를 막는다.
+const POLL_MS = 15000;
+
 /** 폰용 플레이어 뷰 — 자기 자리 직업만 본다(LAN, 신뢰 기반). 주기적 새로고침. */
 export function SeatView({ game, sheetChars }: { game: Game; sheetChars: Character[] }) {
   const router = useRouter();
@@ -25,7 +28,7 @@ export function SeatView({ game, sheetChars }: { game: Game; sheetChars: Charact
     const tick = () => {
       if (document.visibilityState === "visible") router.refresh();
     };
-    const t = setInterval(tick, 15000);
+    const t = setInterval(tick, POLL_MS);
     document.addEventListener("visibilitychange", tick);
     return () => {
       clearInterval(t);
@@ -84,7 +87,7 @@ export function SeatView({ game, sheetChars }: { game: Game; sheetChars: Charact
         disguised={!!game.disguises?.[me.seat] && game.disguises[me.seat] !== me.characterId}
       />
 
-      <p className="mt-4 text-center text-[11px] text-muted">5초마다 자동 갱신 · 이야기꾼 화면이 아닌 내 정보만 표시됩니다</p>
+      <p className="mt-4 text-center text-[11px] text-muted">{POLL_MS / 1000}초마다 자동 갱신 · 이야기꾼 화면이 아닌 내 정보만 표시됩니다</p>
     </div>
   );
 }

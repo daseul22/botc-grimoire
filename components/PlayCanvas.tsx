@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { TEAM_MAP } from "@/lib/constants";
+import { ALIGN_COLOR, TEAM_MAP } from "@/lib/constants";
 import { MARKERS } from "@/lib/markers";
 import { dayActionSpec } from "@/lib/night-actions";
-import { autoRectSides, rectPositions, sidesTotal, type RectSides } from "@/lib/seat-layout";
-import type { Alignment, Character, Game } from "@/lib/types";
+import { autoRectSides, circlePositions, rectPositions, sidesTotal, type RectSides } from "@/lib/seat-layout";
+import type { Character, Game, GameActionRun } from "@/lib/types";
 import { AbilityModal } from "./AbilityModal";
 import { MarkerToken } from "./MarkerToken";
 import { TimerPanel } from "./TimerPanel";
@@ -19,6 +19,7 @@ import { FirstNightSetup } from "./FirstNightSetup";
 import { VotesSidebar } from "./VotesSidebar";
 import { GrimoireLegend } from "./GrimoireLegend";
 import { StatusBar } from "./StatusBar";
+import { SidebarTabs, type SidebarKey } from "./SidebarTabs";
 import {
   clearActionAction,
   clearVoteAction,
@@ -32,21 +33,11 @@ import {
   stopTimerAction,
   clearTimerAction,
   setDisguiseAction,
-  setNoteAction,
   toggleGhostVoteAction,
   toggleMarkerAction,
 } from "@/app/play/actions";
 
-const ALIGN_COLOR: Record<Alignment, string> = { good: "#4a90d9", evil: "#d23b3b" };
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-
-function Chevron({ dir }: { dir: "left" | "right" }) {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {dir === "left" ? <path d="m15 18-6-6 6-6" /> : <path d="m9 18 6-6-6-6" />}
-    </svg>
-  );
-}
 
 export function PlayCanvas({
   game: initial,
@@ -59,11 +50,11 @@ export function PlayCanvas({
 }) {
   const [game, setGame] = useState(initial);
   const [selected, setSelected] = useState<number | null>(null);
-  const [showEnd, setShowEnd] = useState(false);
   const [modalChar, setModalChar] = useState<Character | null>(null);
-  const [sidebar, setSidebar] = useState<"night" | "day" | "abilities" | "claims" | "votes" | null>(
+  const [sidebar, setSidebar] = useState<SidebarKey | null>(
     initial.phase === "night" ? "night" : "day",
   );
+  const toggleSidebar = (key: SidebarKey) => setSidebar((s) => (s === key ? null : key));
   const [pending, startTransition] = useTransition();
   const boardRef = useRef<HTMLDivElement>(null);
   const press = useRef<{ seat: number; sx: number; sy: number; moved: boolean } | null>(null);
@@ -171,7 +162,7 @@ export function PlayCanvas({
       ),
     ]);
 
-  const run = (fn: () => Promise<Game | { error: string }>) =>
+  const run: GameActionRun = (fn) =>
     startTransition(async () => {
       try {
         const r = await withTimeout(fn());
@@ -199,6 +190,12 @@ export function PlayCanvas({
       }
     });
 
+  // 좌표 저장은 낙관적(서버 재조정 없음, 잦은 드래그라 Game 왕복 없음). fire-and-forget이지만
+  // 실패를 .catch로 잡아 unhandled rejection을 막고 콘솔에 남긴다(저장 실패 시 새로고침하면 이전 위치).
+  const persistPositions = (positions: { seat: number; x: number; y: number }[]) => {
+    void savePositionsAction(game.id, positions).catch((e) => console.error("좌표 저장 실패", e));
+  };
+
   // 좌표 일괄 적용 + 저장 (원형/사각 공용)
   const applyPositions = (positions: { seat: number; x: number; y: number }[]) => {
     setGame((g) => ({
@@ -208,17 +205,13 @@ export function PlayCanvas({
         return pos ? { ...p, x: pos.x, y: pos.y } : p;
       }),
     }));
-    savePositionsAction(game.id, positions);
+    persistPositions(positions);
   };
 
   // 토큰을 원형으로 자동 배치
   const arrangeCircle = () => {
-    const n = game.players.length;
-    const positions = game.players.map((p, i) => {
-      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
-      return { seat: p.seat, x: 0.5 + 0.4 * Math.cos(angle), y: 0.5 + 0.42 * Math.sin(angle) };
-    });
-    applyPositions(positions);
+    const pts = circlePositions(game.players.length);
+    applyPositions(game.players.map((p, i) => ({ seat: p.seat, x: pts[i].x, y: pts[i].y })));
   };
 
   // 토큰을 사각 둘레로 배치. sides 미지정이면 인원수 기준 자동 배분.
@@ -250,7 +243,7 @@ export function PlayCanvas({
     if (!p) return;
     if (p.moved) {
       const pl = game.players.find((x) => x.seat === p.seat);
-      if (pl) savePositionsAction(game.id, [{ seat: p.seat, x: pl.x, y: pl.y }]);
+      if (pl) persistPositions([{ seat: p.seat, x: pl.x, y: pl.y }]);
     } else {
       setSelected((s) => (s === p.seat ? null : p.seat));
     }
@@ -344,51 +337,29 @@ export function PlayCanvas({
       </div>
 
 
-      {/* 사이드바 토글 — 모바일 전용. 데스크탑은 보드 내부 absolute에 동일하게 다시 렌더된다. */}
-      <div className="mb-2 flex flex-wrap gap-1 md:hidden">
-        {night ? (
-          <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>행동 순서</button>
-        ) : (
-          hasDayRoles && (
-            <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>낮 능력</button>
-          )
-        )}
-        <button type="button" onClick={() => setSidebar((s) => (s === "abilities" ? null : "abilities"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "abilities" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>상세 능력</button>
-        <button type="button" onClick={() => setSidebar((s) => (s === "claims" ? null : "claims"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "claims" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}</button>
-        {!night && (
-          <button type="button" onClick={() => setSidebar((s) => (s === "votes" ? null : "votes"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "votes" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>투표{game.votes.length > 0 ? ` · ${game.votes.length}` : ""}</button>
-        )}
-      </div>
+      {/* 사이드바 토글 — 모바일 전용. 데스크탑은 보드 내부 absolute에 동일 정의로 다시 렌더된다. */}
+      <SidebarTabs
+        game={game}
+        night={night}
+        hasDayRoles={hasDayRoles}
+        active={sidebar}
+        onToggle={toggleSidebar}
+        className="mb-2 flex flex-wrap gap-1 md:hidden"
+      />
 
       <div className="flex flex-col gap-3 md:flex-row">
         {/* 좌석 캔버스: 모바일 뷰포트에선 숨김(사용자가 폰에서 운영할 때 행동 순서/주장/투표 UI에 집중) */}
         <div ref={boardRef} className="relative hidden h-[70vh] min-w-0 flex-1 touch-none overflow-hidden rounded-xl border border-border bg-surface md:block" style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)", ...(fs ? { height: "100vh", width: "100vw" } : null) }}>
           {/* 사이드바 토글 툴바 (데스크탑) — 전체화면(첩자 뷰)에선 숨겨 깔끔하게 */}
           {!fs && (
-          <div className="absolute right-2 top-2 z-10 flex gap-1">
-            {night ? (
-              <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-                행동 순서
-              </button>
-            ) : (
-              hasDayRoles && (
-                <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-                  낮 능력
-                </button>
-              )
-            )}
-            <button type="button" onClick={() => setSidebar((s) => (s === "abilities" ? null : "abilities"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "abilities" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-              상세 능력
-            </button>
-            <button type="button" onClick={() => setSidebar((s) => (s === "claims" ? null : "claims"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "claims" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-              주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}
-            </button>
-            {!night && (
-              <button type="button" onClick={() => setSidebar((s) => (s === "votes" ? null : "votes"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "votes" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-                투표{game.votes.length > 0 ? ` · ${game.votes.length}` : ""}
-              </button>
-            )}
-          </div>
+            <SidebarTabs
+              game={game}
+              night={night}
+              hasDayRoles={hasDayRoles}
+              active={sidebar}
+              onToggle={toggleSidebar}
+              className="absolute right-2 top-2 z-10 flex gap-1"
+            />
           )}
 
           {/* 첩자 시점 토글 — 전체화면 + 첩자가 있을 때만 우상단. 첩자 좌석을 아래로 회전해 오프라인에서 보여주기 쉽게. */}

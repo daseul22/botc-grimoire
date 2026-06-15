@@ -3,6 +3,8 @@
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { domToPng } from "modern-screenshot";
 import { TEAMS } from "@/lib/constants";
+import { nightInfoNode } from "@/lib/night-info";
+import { parseJinxEntry } from "@/lib/jinx";
 import type { Character, Localized, Team } from "@/lib/types";
 
 // 팔레트(앱 테마와 동일, hex 고정 — 캡처 충실도용)
@@ -42,20 +44,12 @@ function buildNightItems(list: Character[], phase: "firstNight" | "otherNight"):
     .filter((r): r is { c: Character; n: NonNullable<Character["firstNight"]> } => Boolean(r.n))
     .map((r) => ({ kind: "role" as const, c: r.c, reminder: r.n.reminder?.ko ?? null, order: r.n.order }));
   if (phase === "firstNight") {
-    if (list.some((c) => c.team === "minion"))
-      items.push({
-        kind: "info",
-        label: "하수인 정보",
-        reminder: "하수인들에게 서로 누구인지, 악마가 누구인지 알려줍니다.",
-        order: 19,
-      });
-    if (list.some((c) => c.team === "demon"))
-      items.push({
-        kind: "info",
-        label: "악마 정보",
-        reminder: "악마에게 자기 직업·블러핑 3개·하수인 좌석을 알려줍니다.",
-        order: 22,
-      });
+    for (const kind of ["minion", "demon"] as const) {
+      if (list.some((c) => c.team === kind)) {
+        const n = nightInfoNode(kind);
+        items.push({ kind: "info", label: n.label, reminder: n.reminder, order: n.order });
+      }
+    }
   }
   return items.sort((a, b) => a.order - b.order);
 }
@@ -67,10 +61,8 @@ function jinxPairs(list: Character[]) {
   const out: { a: Character; b: Character; rule: string }[] = [];
   for (const c of list) {
     for (const entry of c.jinxes?.ko ?? []) {
-      const i = entry.indexOf(":");
-      if (i < 0) continue;
-      const partnerName = entry.slice(0, i).trim();
-      const rule = entry.slice(i + 1).trim();
+      const { partner: partnerName, rule } = parseJinxEntry(entry);
+      if (!partnerName) continue;
       const partner = byName.get(partnerName);
       if (!partner || partner.id === c.id) continue;
       const key = [c.id, partner.id].sort().join("|") + "::" + rule;

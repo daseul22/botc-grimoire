@@ -1,4 +1,5 @@
 import { getDb } from "../db";
+import type { DeathCause, SeatStatus } from "../types";
 
 // 서버 전용. 게임 상태는 가변 데이터 → seed가 건드리지 않는 별도 테이블.
 //
@@ -92,16 +93,25 @@ for (const sql of [
 
 export const now = () => new Date().toISOString();
 
-export type SeatState = { status: string; markers: string[]; cause?: string };
+export type SeatState = { status: SeatStatus; markers: string[]; cause?: DeathCause };
 export type StateMap = Record<number, SeatState>;
 
 export function stateFromList(
-  players: { seat: number; status?: string; markers?: string[] }[],
+  players: { seat: number; status?: SeatStatus; markers?: string[] }[],
 ): StateMap {
   const s: StateMap = {};
   for (const p of players)
     s[p.seat] = { status: p.status ?? "alive", markers: p.markers ?? [] };
   return s;
+}
+
+/**
+ * 한 좌석의 스냅샷 상태를 부분 갱신 — patch에 없는 필드(특히 cause)는 보존한다.
+ * 마커만 토글하면서 사망 원인(cause)을 실수로 지우는 버그를 구조적으로 막는다.
+ */
+export function mutateSeat(state: StateMap, seat: number, patch: Partial<SeatState>): void {
+  const cur = state[seat] ?? { status: "alive" as SeatStatus, markers: [] };
+  state[seat] = { ...cur, ...patch };
 }
 
 // 구버전 게임(game_log 기반)을 스냅샷 모델로 1회 이관
@@ -122,12 +132,15 @@ export function stateFromList(
       .all(g.id) as { phase: string | null; day: number; data: string }[];
     const cur = db
       .prepare("SELECT seat,status,markers FROM game_players WHERE game_id = ?")
-      .all(g.id) as { seat: number; status: string; markers: string }[];
+      .all(g.id) as { seat: number; status: SeatStatus; markers: string }[];
     db.transaction(() => {
       let idx = 0;
       for (const lg of logs) {
-        const players = (JSON.parse(lg.data).players ?? []) as SeatState[] &
-          { seat: number }[];
+        const players = (JSON.parse(lg.data).players ?? []) as {
+          seat: number;
+          status?: SeatStatus;
+          markers?: string[];
+        }[];
         insPhase.run(g.id, idx++, lg.day ?? 1, lg.phase ?? "night", JSON.stringify(stateFromList(players)));
       }
       const curState: StateMap = {};

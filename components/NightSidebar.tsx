@@ -1,9 +1,11 @@
 "use client";
 
 import { TEAM_MAP } from "@/lib/constants";
-import { effectiveCharacterId, isTainted, parseMarker } from "@/lib/markers";
-import { ACTION_CRITERIA, actionSpec, INFO_KINDS, nightActionSpec } from "@/lib/night-actions";
-import type { Character, Game, NightAction } from "@/lib/types";
+import { effectiveCharacterId, parseMarker } from "@/lib/markers";
+import { ACTION_CRITERIA, actionSpec, isAbilityUsedUp, nightActionSpec } from "@/lib/night-actions";
+import { nightInfoNode } from "@/lib/night-info";
+import { TaintWarning } from "./TaintWarning";
+import type { Character, Game, GameActionRun, NightAction } from "@/lib/types";
 import { NightActionRow } from "./NightActionRow";
 import { LunaticActionRow } from "./LunaticActionRow";
 import {
@@ -15,7 +17,7 @@ import {
   toggleMarkerAction,
 } from "@/app/play/actions";
 
-type Run = (fn: () => Promise<Game | { error: string }>) => void;
+type Run = GameActionRun;
 
 type RoleItem = {
   kind: "role";
@@ -83,8 +85,8 @@ export function NightSidebar({
     // 정보 노드는 *실제* 게임 구성에 따라 노출 (effective char 무관).
     const hasMinion = game.players.some((p) => charMap[p.characterId]?.team === "minion");
     const hasDemon = game.players.some((p) => charMap[p.characterId]?.team === "demon");
-    if (hasMinion) items.push({ kind: "info", order: 19, infoKind: "minion" });
-    if (hasDemon) items.push({ kind: "info", order: 22, infoKind: "demon" });
+    if (hasMinion) items.push({ kind: "info", order: nightInfoNode("minion").order, infoKind: "minion" });
+    if (hasDemon) items.push({ kind: "info", order: nightInfoNode("demon").order, infoKind: "demon" });
   }
   items.sort((a, b) => a.order - b.order);
 
@@ -108,6 +110,7 @@ export function NightSidebar({
           {items.map((item, i) => {
             if (item.kind === "info") {
               const isMinion = item.infoKind === "minion";
+              const node = nightInfoNode(item.infoKind);
               // 하수인 정보: 단체 화면 한 번 — 하수인 전원이 함께 깨어나 받으므로 링크 1개.
               //   carrier 좌석은 라우트용일 뿐(화면은 데몬을 전역에서 계산). 아무 하수인 좌석.
               const minionInfoSeat = game.players.find(
@@ -120,17 +123,13 @@ export function NightSidebar({
                   <div className="flex items-center gap-2 text-sm">
                     <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={isMinion ? "/icons/minion-info.png" : "/icons/demon-info.png"} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+                    <img src={node.icon} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
                     <span className="font-semibold" style={{ color: "#d23b3b" }}>
-                      {isMinion ? "하수인 정보" : "악마 정보"}
+                      {node.label}
                     </span>
                     <span className="text-xs text-muted">단계</span>
                   </div>
-                  <p className="mt-1 break-words pl-6 text-xs text-muted">
-                    {isMinion
-                      ? "하수인들에게 서로 누구인지, 데몬이 누구인지 알려줍니다. (꼭두각시·마술사 인플레이 시 변형 적용)"
-                      : "데몬에게 자기 직업·블러핑 3개·하수인 좌석을 알려줍니다."}
-                  </p>
+                  <p className="mt-1 break-words pl-6 text-xs text-muted">{node.reminder}</p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5 pl-6">
                     {isMinion
                       ? minionInfoSeat != null && (
@@ -166,7 +165,7 @@ export function NightSidebar({
             const rowSpec = nightActionSpec(effId, isFirstNight);
             // 일회성 사용 여부는 'noability:<직업>' 영구 마커로 판정(직업별) → 다음 페이즈에도 "능력 사용함" 유지.
             // 한 좌석에 여러 일회성 능력(철학자+획득직업 등)이 있어도 해당 직업 마커만 본다. 구버전 bare 'noability'도 호환.
-            const usedOnce = !!rowSpec.oncePerGame && p.markers.some((m) => m === "noability" || m === `noability:${effId}`);
+            const usedOnce = isAbilityUsedUp(rowSpec.oncePerGame, effId, p.markers);
             // 사망 시 발동(까마귀지기): 죽었고 아직 미사용이면 "발동 대기"라 흐리지 않는다.
             const armed = !!rowSpec.deathTriggered && dead && !usedOnce;
             // 능력 사용함 = 사망처럼 흐리게 + 자동 ✓. 사망 자체는 흐리지 않는다(사망 시 발동 능력 때문).
@@ -194,7 +193,7 @@ export function NightSidebar({
                   <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? effId}</span>
                   {realCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`실제 직업: ${realCh.name.ko}`}>←{realCh.name.ko}</span>}
                   {fakeCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`가짜 직업: ${fakeCh.name.ko}`}>→{fakeCh.name.ko}</span>}
-                  {isTainted(p.markers, game.globalMarkers) && INFO_KINDS.has(nightActionSpec(effId, isFirstNight).result) && <span className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400" title="취함/중독 — 거짓 정보를 줘야 합니다">⚠ 거짓</span>}
+                  <TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={nightActionSpec(effId, isFirstNight).result} />
                   {dead &&
                     (armed ? (
                       <span className="rounded bg-amber-500/20 px-1.5 text-[10px] font-medium text-amber-300" title="사망 시 발동하는 능력 — 지금 처리하세요">사망 · 능력 발동</span>

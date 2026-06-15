@@ -1,7 +1,8 @@
 // 좌석 단위 조작: 위치/고정/직업/메모/진영/닉네임/자리교환(전역 컬럼),
 // 생사·마커(현재 페이즈 스냅샷), 유령표.
 import { MARKER_MAP, parseMarker } from "../markers";
-import { currentIdx, db, now, readState, writeState } from "./schema";
+import type { DeathCause, SeatStatus } from "../types";
+import { currentIdx, db, mutateSeat, now, readState, writeState } from "./schema";
 
 export function savePositions(
   gameId: string,
@@ -87,16 +88,12 @@ export function swapSeats(gameId: string, a: number, b: number): void {
 export function setStatus(
   gameId: string,
   seat: number,
-  status: string,
-  cause = "",
+  status: SeatStatus,
+  cause: DeathCause = "",
 ): void {
   const idx = currentIdx(gameId);
   const s = readState(gameId, idx);
-  s[seat] = {
-    status,
-    markers: s[seat]?.markers ?? [],
-    cause: status === "dead" ? cause : "",
-  };
+  mutateSeat(s, seat, { status, cause: status === "dead" ? cause : "" });
   writeState(gameId, idx, s);
 }
 
@@ -114,7 +111,8 @@ export function toggleMarker(gameId: string, seat: number, markerId: string): vo
     : isMulti
       ? [...cur, markerId]
       : [...cur.filter((m) => parseMarker(m).base !== base), markerId];
-  s[seat] = { status: s[seat]?.status ?? "alive", markers };
+  // status·cause는 보존하고 markers만 갱신 — 죽은 좌석에 마커를 달아도 사망 원인이 사라지지 않게.
+  mutateSeat(s, seat, { markers });
   writeState(gameId, idx, s);
 }
 

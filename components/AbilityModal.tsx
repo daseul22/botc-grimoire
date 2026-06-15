@@ -1,6 +1,7 @@
 "use client";
 
 import { EDITION_MAP, TEAM_MAP } from "@/lib/constants";
+import { parseJinxEntry } from "@/lib/jinx";
 import type { Character } from "@/lib/types";
 import { useBackClose } from "./useBackClose";
 
@@ -100,9 +101,7 @@ export function AbilityModal({
           <Section title="징크스">
             <ul className="space-y-1.5 text-sm">
               {c.jinxes.ko.map((s, i) => {
-                const idx = s.indexOf(" : ");
-                const head = idx > 0 ? s.slice(0, idx) : "";
-                const body = idx > 0 ? s.slice(idx + 3) : s;
+                const { partner: head, rule: body } = parseJinxEntry(s);
                 return (
                   <li key={i} className="rounded-lg border border-jinx/30 bg-jinx/10 px-3 py-2 leading-relaxed">
                     {head && <span className="font-semibold text-jinx">{head}</span>}

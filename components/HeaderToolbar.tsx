@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { autoRectSides, sidesTotal, type RectSides } from "@/lib/seat-layout";
-import type { Game } from "@/lib/types";
+import type { Game, GameActionRun } from "@/lib/types";
 import {
   advancePhaseAction,
   finishGameAction,
@@ -86,7 +86,7 @@ export function HeaderToolbar({
   game: Game;
   night: boolean;
   busy: boolean;
-  run: (fn: () => Promise<Game | { error: string }>) => void;
+  run: GameActionRun;
   onArrangeCircle: () => void;
   onArrangeRect: (sides: RectSides) => void;
 }) {

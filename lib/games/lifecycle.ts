@@ -4,6 +4,7 @@ import type {
   Game,
   GamePlayer,
   NightActionRecord,
+  Phase,
   PhaseTimers,
   VoteRecord,
 } from "../types";
@@ -66,7 +67,7 @@ export function getGame(id: string): Game | undefined {
   const idx = g.current_idx ?? 0;
   const ph = db
     .prepare("SELECT day,phase FROM game_phases WHERE game_id = ? AND idx = ?")
-    .get(id, idx) as { day: number; phase: string } | undefined;
+    .get(id, idx) as { day: number; phase: Phase } | undefined;
   return {
     id: g.id,
     sheetId: g.sheet_id,
@@ -236,6 +237,69 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
 }
 
 /**
+ * 다음 스냅샷의 좌석 상태 계산(순수): 일시 마커 만료 + dying 자동 사망(밤→낮) + 사망원인 이월.
+ * turningSeats(낮→밤 자동 변절 대상)도 함께 돌려준다.
+ */
+function computeNextState(
+  state: StateMap,
+  leavingDay: boolean,
+): { next: StateMap; turningSeats: number[] } {
+  const next: StateMap = {};
+  const turningSeats: number[] = [];
+  for (const seat of Object.keys(state)) {
+    const k = Number(seat);
+    const seatMarkers = state[k].markers;
+    // 자동 변절(메제펠리스 단어 발화): 낮→밤 전환 시 turning 마커가 있는 좌석은 alignment=evil로.
+    if (leavingDay && seatMarkers.some((m) => parseMarker(m).base === "turning")) {
+      turningSeats.push(k);
+    }
+    // 사망예정(dying): 밤→낮 전환 시 자동 사망(원인=밤 살해). ST가 보호 판단까지 끝내고 단 마커이므로
+    // 여기서 죽인다(보호되면 애초에 안 단다). 낮에 다는 dying(슬레이어·처녀)은 ST가 직접 처리.
+    const wasAlive = state[k].status !== "dead";
+    const willDie =
+      !leavingDay && wasAlive && seatMarkers.some((m) => parseMarker(m).base === "dying");
+    next[k] = {
+      status: willDie ? "dead" : state[k].status,
+      // 사망 사유(처형/밤 등)도 다음 페이즈로 이어진다 — 빠뜨리면 사망 글리프가 초기화됨.
+      cause: willDie ? "night" : state[k].status === "dead" ? state[k].cause ?? "" : "",
+      markers: seatMarkers.filter((m) => keepMarkerOnAdvance(m, leavingDay)),
+    };
+  }
+  return { next, turningSeats };
+}
+
+/**
+ * 식인종(cannibal): 낮 종료 시 그 낮 *처형* 대상의 능력을 다음 밤부터 얻는다(next를 in-place 갱신).
+ *   처형 대상이 악이면 취함(영구) 적용(거짓 정보), 선이면 취함 해제. 처형이 있을 때마다 재적용.
+ *   처형이 없으면 직전 능력/취함을 그대로 유지(permanent 마커가 복사됨).
+ */
+function applyCannibalOnExecution(gameId: string, idx: number, next: StateMap): void {
+  const players = db
+    .prepare("SELECT seat, character_id, alignment FROM game_players WHERE game_id = ?")
+    .all(gameId) as { seat: number; character_id: string; alignment: string }[];
+  const cannibal = players.find((p) => p.character_id === "cannibal");
+  const execVote = readVotes(gameId, idx).find((v) => v.executed);
+  const executed = execVote ? players.find((p) => p.seat === execVote.nominee) : undefined;
+  if (
+    !cannibal ||
+    !executed ||
+    executed.seat === cannibal.seat ||
+    !next[cannibal.seat] ||
+    next[cannibal.seat].status === "dead"
+  )
+    return;
+  const st = next[cannibal.seat];
+  // 직전 처형으로 얻은 능력획득/능력없음/취함을 모두 걷어내고 이번 처형 기준으로 재적용.
+  // (예: 철학자를 먹어 gained:philosopher + 그 능력으로 또 얻어 gained:X, noability까지 쌓인 경우 → 싹 비우고 새 능력만.)
+  st.markers = st.markers.filter((m) => {
+    const b = parseMarker(m).base;
+    return b !== "gained" && b !== "noability" && m !== "drunk";
+  });
+  st.markers.push(`gained:${executed.character_id}`);
+  if (executed.alignment === "evil") st.markers.push("drunk");
+}
+
+/**
  * 다음 페이즈로. 이미 뒤에 스냅샷이 있으면(과거로 갔다가 진행) 포인터만 이동,
  * 최신이면 현재를 복사해 새 스냅샷 생성(일시 마커 제거 + 밤↔낮/일차 계산).
  */
@@ -256,61 +320,8 @@ export function advancePhase(gameId: string): void {
   const leavingDay = cur.phase === "day"; // 낮 종료 = 황혼 통과
   const nextPhase = cur.phase === "night" ? "day" : "night";
   const nextDay = leavingDay ? cur.day + 1 : cur.day;
-  const state = JSON.parse(cur.state) as StateMap;
-  const next: StateMap = {};
-  // 자동 변절(메제펠리스 단어 발화): 낮→밤 전환 시 turning 마커가 있는 좌석은 alignment=evil로 변경.
-  const turningSeats: number[] = [];
-  for (const seat of Object.keys(state)) {
-    const k = Number(seat);
-    const seatMarkers = state[k].markers;
-    if (leavingDay && seatMarkers.some((m) => parseMarker(m).base === "turning")) {
-      turningSeats.push(k);
-    }
-    // 사망예정(dying, 임프 밤 공격 등): 밤→낮 전환 시 자동으로 사망 처리(원인=밤 살해).
-    // dying 마커는 ST가 보호 판단까지 끝내고 '죽음 확정'으로 단 것이므로 여기서 죽인다.
-    // (보호되면 애초에 dying을 달지 않는다.) dying 자체는 phase 지속이라 다음 스냅샷에선 사라진다.
-    // 밤→낮(!leavingDay)에서만 — 낮에 다는 dying(슬레이어·처녀 즉시 처리)은 ST가 직접 사망 처리한다.
-    const wasAlive = state[k].status !== "dead";
-    const willDie =
-      !leavingDay && wasAlive && seatMarkers.some((m) => parseMarker(m).base === "dying");
-    next[k] = {
-      status: willDie ? "dead" : state[k].status,
-      // 사망 사유(처형/밤 등)도 다음 페이즈로 이어진다 — 빠뜨리면 다음 날·밤에 사망 글리프가 초기화됨.
-      cause: willDie ? "night" : state[k].status === "dead" ? state[k].cause ?? "" : "",
-      markers: seatMarkers.filter((m) => keepMarkerOnAdvance(m, leavingDay)),
-    };
-  }
-  // 식인종(cannibal): 낮 종료 시, 이 낮에 *처형*된 플레이어의 능력을 다음 밤부터 얻는다.
-  //   처형 대상이 악이면 취함(영구)도 적용(거짓 정보), 선이면 취함 해제. 처형이 있을 때마다 갱신.
-  //   처형이 없는 날은 직전 능력/취함을 그대로 유지(permanent 마커가 복사됨).
-  if (leavingDay) {
-    const players = db
-      .prepare("SELECT seat, character_id, alignment FROM game_players WHERE game_id = ?")
-      .all(gameId) as { seat: number; character_id: string; alignment: string }[];
-    const cannibal = players.find((p) => p.character_id === "cannibal");
-    const execVote = readVotes(gameId, idx).find((v) => v.executed);
-    const executed = execVote
-      ? players.find((p) => p.seat === execVote.nominee)
-      : undefined;
-    if (
-      cannibal &&
-      executed &&
-      executed.seat !== cannibal.seat &&
-      next[cannibal.seat] &&
-      next[cannibal.seat].status !== "dead"
-    ) {
-      const st = next[cannibal.seat];
-      // 직전 처형으로 얻은 능력획득/능력없음/취함을 모두 걷어내고 이번 처형 기준으로 재적용.
-      // (예: 철학자를 먹어 gained:philosopher + 철학자 능력으로 또 얻어 gained:X,
-      //  둘 다 일회성이라 noability:philosopher/noability:X까지 쌓인 경우 → 싹 비우고 새 능력만.)
-      st.markers = st.markers.filter((m) => {
-        const b = parseMarker(m).base;
-        return b !== "gained" && b !== "noability" && m !== "drunk";
-      });
-      st.markers.push(`gained:${executed.character_id}`);
-      if (executed.alignment === "evil") st.markers.push("drunk");
-    }
-  }
+  const { next, turningSeats } = computeNextState(JSON.parse(cur.state) as StateMap, leavingDay);
+  if (leavingDay) applyCannibalOnExecution(gameId, idx, next);
   db.transaction(() => {
     db.prepare(
       "INSERT INTO game_phases (game_id,idx,day,phase,state) VALUES (?,?,?,?,?)",
