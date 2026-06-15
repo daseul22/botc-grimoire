@@ -106,10 +106,33 @@ export function PlayCanvas({
     else (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el);
   };
   const tokenScale = fs ? 1.8 : 1;
-  // 첩자 시점: 좌석 순서(이웃 관계)를 유지한 채 첩자를 6시 방향(아래)에 두고 원형 재배치. 전체화면에서만.
+  // 첩자 시점: 좌석 순서(이웃 관계)를 유지한 채 첩자를 6시 방향(아래)에 둔다. 전체화면에서만.
   const orderedSeats = useMemo(() => [...game.players].sort((a, b) => a.seat - b.seat), [game.players]);
   const spyIdx = orderedSeats.findIndex((p) => p.characterId === "spy");
   const spyActive = fs && spyView && spyIdx >= 0;
+  // 저장된 좌표(슬롯)는 그대로 두고 좌석→슬롯 배정만 회전해 첩자를 하단 중앙 슬롯으로 보낸다.
+  // 원형/사각/수동 어떤 배치든 모양을 유지한 채 회전(예전엔 무조건 원형으로 재배치해 사각이 깨졌음).
+  const spyPos = useMemo(() => {
+    if (!spyActive) return null;
+    const slots = orderedSeats.map((o) => ({ x: o.x, y: o.y }));
+    const n = slots.length;
+    if (n === 0) return null;
+    // 하단 중앙에 가장 가까운 슬롯(아래일수록 +, 중앙에서 벗어날수록 −).
+    let b = 0;
+    let best = -Infinity;
+    slots.forEach((s, i) => {
+      const score = s.y - Math.abs(s.x - 0.5) * 0.5;
+      if (score > best) {
+        best = score;
+        b = i;
+      }
+    });
+    const m: Record<number, { x: number; y: number }> = {};
+    orderedSeats.forEach((o, i) => {
+      m[o.seat] = slots[(((i - spyIdx + b) % n) + n) % n];
+    });
+    return m;
+  }, [spyActive, orderedSeats, spyIdx]);
 
   // 선택 패널이 떠 있을 때 패널·토큰 바깥을 누르면 선택 해제(자동 닫기). 토큰 클릭은 토큰 핸들러가 처리.
   useEffect(() => {
@@ -420,11 +443,9 @@ export function PlayCanvas({
             // 첩자 시점이면 좌석 순서대로 첩자를 6시(아래)에 두고 원형 재배치, 아니면 저장된 좌표.
             let px = p.x;
             let py = p.y;
-            if (spyActive) {
-              const i = orderedSeats.findIndex((o) => o.seat === p.seat);
-              const ang = Math.PI / 2 + ((i - spyIdx) * 2 * Math.PI) / orderedSeats.length;
-              px = 0.5 + 0.4 * Math.cos(ang);
-              py = 0.5 + 0.42 * Math.sin(ang);
+            if (spyActive && spyPos?.[p.seat]) {
+              px = spyPos[p.seat].x;
+              py = spyPos[p.seat].y;
             }
             // 위장(미치광이·주정뱅이·꼭두각시): 본인이 믿는 가짜 직업. 메인 토큰엔 진짜 직업,
             // 우상단 작은 토큰에 가짜 직업을 보여줘 ST가 한눈에 파악.
