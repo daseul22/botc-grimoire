@@ -266,10 +266,17 @@ export function advancePhase(gameId: string): void {
     if (leavingDay && seatMarkers.some((m) => parseMarker(m).base === "turning")) {
       turningSeats.push(k);
     }
+    // 사망예정(dying, 임프 밤 공격 등): 밤→낮 전환 시 자동으로 사망 처리(원인=밤 살해).
+    // dying 마커는 ST가 보호 판단까지 끝내고 '죽음 확정'으로 단 것이므로 여기서 죽인다.
+    // (보호되면 애초에 dying을 달지 않는다.) dying 자체는 phase 지속이라 다음 스냅샷에선 사라진다.
+    // 밤→낮(!leavingDay)에서만 — 낮에 다는 dying(슬레이어·처녀 즉시 처리)은 ST가 직접 사망 처리한다.
+    const wasAlive = state[k].status !== "dead";
+    const willDie =
+      !leavingDay && wasAlive && seatMarkers.some((m) => parseMarker(m).base === "dying");
     next[k] = {
-      status: state[k].status,
+      status: willDie ? "dead" : state[k].status,
       // 사망 사유(처형/밤 등)도 다음 페이즈로 이어진다 — 빠뜨리면 다음 날·밤에 사망 글리프가 초기화됨.
-      cause: state[k].status === "dead" ? state[k].cause ?? "" : "",
+      cause: willDie ? "night" : state[k].status === "dead" ? state[k].cause ?? "" : "",
       markers: seatMarkers.filter((m) => keepMarkerOnAdvance(m, leavingDay)),
     };
   }
