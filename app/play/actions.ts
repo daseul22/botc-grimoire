@@ -418,6 +418,13 @@ export async function setDisguiseAction(
   characterId: string,
 ): Promise<Game> {
   setDisguise(gameId, seat, characterId);
+  // 위장 직업으로 지정된 직업이 악마 블러핑에 들어가 있으면 제거(가짜직업은 인플레이처럼 취급).
+  if (characterId) {
+    const g = getGame(gameId);
+    if (g?.bluffs.includes(characterId)) {
+      setBluffs(gameId, g.bluffs.filter((b) => b !== characterId));
+    }
+  }
   return getGame(gameId)!;
 }
 

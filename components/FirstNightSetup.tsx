@@ -27,6 +27,9 @@ export function FirstNightSetup({
   const [pickerSeat, setPickerSeat] = useState<number | null>(null);
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;
   const inPlay = new Set(game.players.map((p) => p.characterId));
+  // 위장(가짜직업)으로 쓰인 직업 = 누군가 자기 직업이라 믿는 직업 → 악마 블러핑 후보에서 제외.
+  // (단 각 좌석의 가짜직업 picker에는 영향 주면 안 됨 — 자기 현재 위장이 사라지므로 bluff에만 한정.)
+  const disguiseIds = new Set(Object.values(game.disguises ?? {}).filter(Boolean));
 
   // 셋업에 영향을 주는 인플레이 직업(중복 제거)
   const setupRoles: Character[] = [];
@@ -39,9 +42,14 @@ export function FirstNightSetup({
     }
   }
 
-  // 블러핑 후보: 인플레이 제외 마을주민/외지인
+  // 블러핑 후보: 인플레이·위장 제외 마을주민/외지인
   const bluffCandidates = sheetChars
-    .filter((c) => (c.team === "townsfolk" || c.team === "outsider") && !inPlay.has(c.id))
+    .filter(
+      (c) =>
+        (c.team === "townsfolk" || c.team === "outsider") &&
+        !inPlay.has(c.id) &&
+        !disguiseIds.has(c.id),
+    )
     .sort((a, b) => a.name.ko.localeCompare(b.name.ko, "ko"));
 
   const toggleBluff = (id: string) => {
