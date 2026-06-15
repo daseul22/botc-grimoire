@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { autoRectSides, sidesTotal, type RectSides } from "@/lib/seat-layout";
 import type { Game } from "@/lib/types";
 import {
   advancePhaseAction,
@@ -39,6 +40,29 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
+function SideInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="flex flex-col items-center gap-0.5">
+      <span className="text-[10px] text-muted">{label}</span>
+      <input
+        type="number"
+        min={0}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-11 rounded border border-border bg-surface px-1 py-1 text-center text-sm tabular-nums outline-none focus:border-gold/60"
+      />
+    </label>
+  );
+}
+
 function Chevron({ dir }: { dir: "left" | "right" }) {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -57,16 +81,25 @@ export function HeaderToolbar({
   busy,
   run,
   onArrangeCircle,
+  onArrangeRect,
 }: {
   game: Game;
   night: boolean;
   busy: boolean;
   run: (fn: () => Promise<Game | { error: string }>) => void;
   onArrangeCircle: () => void;
+  onArrangeRect: (sides: RectSides) => void;
 }) {
   const [showEnd, setShowEnd] = useState(false);
   const [share, setShare] = useState<{ url: string; copied: boolean; label: string } | null>(null);
+  const [arrangeOpen, setArrangeOpen] = useState(false);
+  const [sides, setSides] = useState<RectSides>(() => autoRectSides(game.players.length));
   const [, startFinish] = useTransition();
+
+  const n = game.players.length;
+  const sum = sidesTotal(sides);
+  const setSide = (k: keyof RectSides, v: string) =>
+    setSides((s) => ({ ...s, [k]: Math.max(0, Math.min(n, Math.floor(Number(v) || 0))) }));
 
   const shareLink = async (path: string, label: string) => {
     const r = await lanUrlAction(path);
@@ -152,14 +185,78 @@ export function HeaderToolbar({
           >
             ↩ 취소
           </button>
-          <button
-            type="button"
-            onClick={onArrangeCircle}
-            title="토큰을 원형으로 정렬"
-            className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text"
-          >
-            ◯ 정렬
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setSides(autoRectSides(n)); // 열 때마다 현재 인원 기준 자동값으로 초기화
+                setArrangeOpen((v) => !v);
+              }}
+              title="토큰 정렬 — 원형 / 사각"
+              className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text"
+            >
+              ▦ 정렬
+            </button>
+            {arrangeOpen && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setArrangeOpen(false)} />
+                <div className="absolute right-0 top-full z-30 mt-1 w-60 rounded-lg border border-border bg-surface p-3 shadow-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onArrangeCircle();
+                      setArrangeOpen(false);
+                    }}
+                    className="w-full rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-surface-2"
+                  >
+                    ◯ 원형 정렬
+                  </button>
+
+                  <div className="my-2 border-t border-border" />
+
+                  <p className="mb-1.5 text-xs font-medium text-muted">▭ 사각 정렬 · 면별 인원</p>
+                  {/* 상 / 좌·우 / 하 십자 배치 입력 */}
+                  <div className="mx-auto grid w-40 grid-cols-3 items-center gap-1 text-center text-xs">
+                    <span />
+                    <SideInput label="상" value={sides.top} onChange={(v) => setSide("top", v)} />
+                    <span />
+                    <SideInput label="좌" value={sides.left} onChange={(v) => setSide("left", v)} />
+                    <span className="text-[10px] text-muted">테이블</span>
+                    <SideInput label="우" value={sides.right} onChange={(v) => setSide("right", v)} />
+                    <span />
+                    <SideInput label="하" value={sides.bottom} onChange={(v) => setSide("bottom", v)} />
+                    <span />
+                  </div>
+
+                  <p className={`mt-2 text-center text-xs ${sum === n ? "text-muted" : "text-amber-400"}`}>
+                    합계 {sum} / 인원 {n}
+                    {sum !== n && " · 같아야 적용"}
+                  </p>
+
+                  <div className="mt-2 flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSides(autoRectSides(n))}
+                      className="flex-1 rounded-md border border-border px-2 py-1.5 text-xs text-muted hover:text-text"
+                    >
+                      자동
+                    </button>
+                    <button
+                      type="button"
+                      disabled={sum !== n}
+                      onClick={() => {
+                        onArrangeRect(sides);
+                        setArrangeOpen(false);
+                      }}
+                      className="flex-1 rounded-md bg-gold px-2 py-1.5 text-xs font-semibold text-bg disabled:opacity-40"
+                    >
+                      ▭ 사각 적용
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <button
             type="button"
             disabled={busy}

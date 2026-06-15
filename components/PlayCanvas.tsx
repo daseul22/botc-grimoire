@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { TEAM_MAP } from "@/lib/constants";
 import { MARKERS } from "@/lib/markers";
 import { dayActionSpec } from "@/lib/night-actions";
+import { autoRectSides, rectPositions, sidesTotal, type RectSides } from "@/lib/seat-layout";
 import type { Alignment, Character, Game } from "@/lib/types";
 import { AbilityModal } from "./AbilityModal";
 import { MarkerToken } from "./MarkerToken";
@@ -175,6 +176,18 @@ export function PlayCanvas({
       }
     });
 
+  // 좌표 일괄 적용 + 저장 (원형/사각 공용)
+  const applyPositions = (positions: { seat: number; x: number; y: number }[]) => {
+    setGame((g) => ({
+      ...g,
+      players: g.players.map((p) => {
+        const pos = positions.find((x) => x.seat === p.seat);
+        return pos ? { ...p, x: pos.x, y: pos.y } : p;
+      }),
+    }));
+    savePositionsAction(game.id, positions);
+  };
+
   // 토큰을 원형으로 자동 배치
   const arrangeCircle = () => {
     const n = game.players.length;
@@ -182,14 +195,16 @@ export function PlayCanvas({
       const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
       return { seat: p.seat, x: 0.5 + 0.4 * Math.cos(angle), y: 0.5 + 0.42 * Math.sin(angle) };
     });
-    setGame((g) => ({
-      ...g,
-      players: g.players.map((p) => {
-        const pos = positions.find((x) => x.seat === p.seat)!;
-        return { ...p, x: pos.x, y: pos.y };
-      }),
-    }));
-    savePositionsAction(game.id, positions);
+    applyPositions(positions);
+  };
+
+  // 토큰을 사각 둘레로 배치. sides 미지정이면 인원수 기준 자동 배분.
+  const arrangeRect = (sides?: RectSides) => {
+    const ordered = [...game.players].sort((a, b) => a.seat - b.seat);
+    const s = sides ?? autoRectSides(ordered.length);
+    if (sidesTotal(s) !== ordered.length) return; // 면별 합 ≠ 인원이면 무시(UI에서 막음)
+    const pts = rectPositions(s);
+    applyPositions(ordered.map((p, i) => ({ seat: p.seat, x: pts[i].x, y: pts[i].y })));
   };
 
   function onDown(e: React.PointerEvent, seat: number) {
@@ -226,6 +241,7 @@ export function PlayCanvas({
         busy={pending}
         run={run}
         onArrangeCircle={arrangeCircle}
+        onArrangeRect={arrangeRect}
       />
 
       <div className="mb-2 text-xs text-muted">
