@@ -50,10 +50,44 @@ export function LunaticActionRow({
     onSetMinions(minions.includes(seat) ? minions.filter((s) => s !== seat) : [...minions, seat]);
   };
 
+  // 실제 악마가 받는 화면(블러핑 3 + team=minion 좌석[꼭두각시 제외] + 마술사)을 그대로 복사.
+  // show 페이지의 ?mode=bluffs/?mode=minions 계산과 1:1로 맞춰 미치광이가 진짜 악마와 같은 화면을 보게 한다.
+  const realMinionSeats = game.players
+    .filter((p) => charMap[p.characterId]?.team === "minion" && p.characterId !== "marionette")
+    .map((p) => p.seat);
+  const magicianSeat = game.players.find((p) => p.characterId === "magician")?.seat;
+  const demonMinionSeats = [
+    ...realMinionSeats,
+    ...(magicianSeat != null ? [magicianSeat] : []),
+  ].filter((s) => s !== actorSeat);
+  const canPreset = game.bluffs.length > 0 || demonMinionSeats.length > 0;
+  const applyDemonPreset = () => {
+    onSetBluffs(game.bluffs.slice(0, 3));
+    onSetMinions(demonMinionSeats);
+  };
+
   const pickerCurrent = pickerSlot != null ? bluffs[pickerSlot] ?? "" : "";
 
   return (
     <div className="mt-1.5 ml-6 space-y-2 rounded-md border border-gold/30 bg-gold/5 p-2 text-xs">
+      {/* 실제 악마와 동일하게 채우기 — 첫밤 편집 시에만. 완전 자유 선택은 이후에도 가능. */}
+      {!readOnly && (
+        <div className="rounded border border-red-500/30 bg-red-500/5 p-1.5">
+          <button
+            type="button"
+            disabled={busy || !canPreset}
+            onClick={applyDemonPreset}
+            title="진짜 악마가 받는 블러핑·하수인 화면을 그대로 복사 (마술사 포함). 이후 자유 수정 가능."
+            className="inline-flex items-center gap-1 rounded bg-red-500/15 px-2 py-1 font-medium text-red-300 hover:bg-red-500/25 disabled:opacity-40"
+          >
+            🎭 실제 악마와 동일하게 채우기
+          </button>
+          <p className="mt-1 text-[11px] text-muted">
+            진짜 악마의 블러핑 3개 + 하수인(마술사 포함)을 그대로 복사합니다 — 이후 슬롯·좌석을 자유롭게 수정할 수 있습니다.
+            {!canPreset && " (먼저 위 셋업에서 악마 블러핑·하수인을 지정하세요.)"}
+          </p>
+        </div>
+      )}
       <div>
         <p className="mb-1 text-muted">
           가짜 블러핑 직업 <span className="opacity-60">{readOnly ? "(첫밤에 알려줌)" : "(3개 자유 선택)"}</span>
