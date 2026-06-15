@@ -32,6 +32,7 @@ import {
   clearTimerAction,
   setDisguiseAction,
   setNoteAction,
+  toggleGhostVoteAction,
   toggleMarkerAction,
 } from "@/app/play/actions";
 
@@ -545,6 +546,7 @@ export function PlayCanvas({
             busy={pending}
             onRecordVote={(nom, nee, votes, ex) => run(() => recordVoteAction(game.id, nom, nee, votes, ex))}
             onClearVote={(nee) => run(() => clearVoteAction(game.id, nee))}
+            onToggleGhostVote={(seat, used) => run(() => toggleGhostVoteAction(game.id, seat, used))}
             onClose={() => setSidebar(null)}
           />
         )}

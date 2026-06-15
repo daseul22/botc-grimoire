@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TEAM_MAP } from "@/lib/constants";
 import { DURATION_LABEL, MARKERS, parseMarker } from "@/lib/markers";
 import type { Character, Game, GamePlayer } from "@/lib/types";
+import { PlayerPicker } from "./PlayerPicker";
 import { RolePickerModal } from "./RolePickerModal";
 import {
   releaseSeatAction,
@@ -87,23 +88,17 @@ export function SelectionPanel({
               className="w-44 rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-gold/60"
             />
             <span className="ml-2 text-xs text-muted">자리 교환</span>
-            <select
-              value=""
-              onChange={(e) => {
-                const other = Number(e.target.value);
-                if (Number.isFinite(other)) run(() => swapSeatsAction(game.id, sel.seat, other));
-                e.currentTarget.value = "";
+            <PlayerPicker
+              players={game.players}
+              value={null}
+              actionMode
+              exclude={sel.seat}
+              placeholder="선택…"
+              title="자리 교환 대상 (닉네임만 교환, 직업은 좌석 그대로)"
+              onChange={(other) => {
+                if (other != null) run(() => swapSeatsAction(game.id, sel.seat, other));
               }}
-              className="rounded border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-gold/60"
-              title="이 자리의 닉네임과 다른 자리의 닉네임을 교환 (직업은 좌석 그대로)"
-            >
-              <option value="">선택…</option>
-              {game.players.filter((p) => p.seat !== sel.seat).map((p) => (
-                <option key={p.seat} value={p.seat}>
-                  {p.nickname}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         )}
 
@@ -171,17 +166,25 @@ export function SelectionPanel({
           </button>
           {sel.status === "dead" && (
             <>
-              <select
-                value={sel.deathCause}
-                onChange={(e) => run(() => setStatusAction(game.id, sel.seat, "dead", e.target.value))}
-                className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-gold/60"
-                title="사망 원인"
-              >
-                <option value="">원인 미지정</option>
-                <option value="night">밤 살해</option>
-                <option value="execution">처형</option>
-                <option value="other">기타</option>
-              </select>
+              <span className="inline-flex items-center gap-1 rounded-lg border border-border p-0.5" title="사망 원인">
+                {([
+                  ["", "미지정"],
+                  ["night", "🌙 밤"],
+                  ["execution", "☠️ 처형"],
+                  ["other", "기타"],
+                ] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => run(() => setStatusAction(game.id, sel.seat, "dead", v))}
+                    className={`rounded-md px-2 py-1 text-xs transition-colors ${
+                      sel.deathCause === v ? "bg-gold/20 text-gold" : "text-muted hover:text-text"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </span>
               <button
                 type="button"
                 onClick={() => run(() => toggleGhostVoteAction(game.id, sel.seat, !sel.ghostVoteUsed))}

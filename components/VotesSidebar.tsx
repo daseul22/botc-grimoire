@@ -2,6 +2,15 @@
 
 import { useState } from "react";
 import type { Game, VoteRecord } from "@/lib/types";
+import { PlayerPicker } from "./PlayerPicker";
+
+const DEATH_GLYPH: Record<string, string> = { execution: "☠️", night: "🌙", other: "✕", "": "✕" };
+const DEATH_TITLE: Record<string, string> = {
+  execution: "처형됨",
+  night: "밤에 사망",
+  other: "기타 사망",
+  "": "사망",
+};
 
 function Chevron() {
   return (
@@ -33,20 +42,14 @@ function VoteForm({
   return (
     <div className="space-y-2 rounded-md border border-border bg-surface-2 p-2 text-xs">
       <div className="flex flex-col gap-1.5">
-        <label className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <span className="w-12 shrink-0 text-muted">지목자</span>
-          <select value={nominator} onChange={(e) => setNominator(e.target.value === "" ? "" : Number(e.target.value))} className="flex-1 rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60">
-            <option value="">선택…</option>
-            {game.players.map((p) => <option key={p.seat} value={p.seat}>{p.nickname}</option>)}
-          </select>
-        </label>
-        <label className="flex items-center gap-2">
+          <PlayerPicker className="flex-1" players={game.players} value={nominator === "" ? null : nominator} onChange={(s) => setNominator(s ?? "")} placeholder="선택…" title="지목자" />
+        </div>
+        <div className="flex items-center gap-2">
           <span className="w-12 shrink-0 text-muted">대상</span>
-          <select value={nominee} disabled={lockNominee} onChange={(e) => setNominee(e.target.value === "" ? "" : Number(e.target.value))} className="flex-1 rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60 disabled:opacity-60">
-            <option value="">선택…</option>
-            {game.players.map((p) => <option key={p.seat} value={p.seat}>{p.nickname}</option>)}
-          </select>
-        </label>
+          <PlayerPicker className="flex-1" players={game.players} value={nominee === "" ? null : nominee} onChange={(s) => setNominee(s ?? "")} disabled={lockNominee} placeholder="선택…" title="지목 대상" />
+        </div>
         <label className="flex items-center gap-2">
           <span className="w-12 shrink-0 text-muted">찬성표</span>
           <input type="number" min={0} value={votes} onChange={(e) => setVotes(e.target.value)} className="w-20 rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60" />
@@ -69,17 +72,21 @@ export function VotesSidebar({
   busy,
   onRecordVote,
   onClearVote,
+  onToggleGhostVote,
   onClose,
 }: {
   game: Game;
   busy: boolean;
   onRecordVote: (nominator: number, nominee: number, votes: number, executed: boolean) => void;
   onClearVote: (nominee: number) => void;
+  onToggleGhostVote: (seat: number, used: boolean) => void;
   onClose: () => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [editNominee, setEditNominee] = useState<number | null>(null);
   const nameOf = (seat: number) => game.players.find((p) => p.seat === seat)?.nickname ?? `${seat}`;
+  const dead = game.players.filter((p) => p.status === "dead");
+  const ghostLeft = dead.filter((p) => !p.ghostVoteUsed).length;
 
   return (
     <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
@@ -89,6 +96,33 @@ export function VotesSidebar({
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        {/* 사망자 · 유령표 — 투표 정산 시 누가 죽었고 데드보트가 몇 개 남았는지 한눈에. 탭으로 유령표 토글. */}
+        {dead.length > 0 && (
+          <div className="space-y-1 rounded-md border border-border bg-surface-2/40 p-2">
+            <p className="text-[11px] font-semibold text-muted">
+              사망자 · 유령표 <span className="font-normal text-gold">{ghostLeft}/{dead.length} 남음</span>
+            </p>
+            {dead.map((p) => (
+              <button
+                key={p.seat}
+                type="button"
+                disabled={busy}
+                onClick={() => onToggleGhostVote(p.seat, !p.ghostVoteUsed)}
+                title={p.ghostVoteUsed ? "유령표 사용함 — 탭해서 복구" : "유령표 사용 가능 — 탭해서 사용 처리"}
+                className="flex w-full items-center justify-between gap-2 rounded border border-border bg-surface px-2 py-1 text-xs disabled:opacity-50"
+              >
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span title={DEATH_TITLE[p.deathCause] ?? "사망"}>{DEATH_GLYPH[p.deathCause] ?? "✕"}</span>
+                  <span className="truncate font-medium">{p.nickname}</span>
+                </span>
+                <span className="shrink-0 tabular-nums" style={p.ghostVoteUsed ? { opacity: 0.45 } : { color: "#d4a23a" }}>
+                  🗳️ {p.ghostVoteUsed ? "사용함" : "사용 가능"}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {game.votes.length === 0 && !adding && (
           <p className="py-2 text-xs text-muted">이 낮의 지목 기록이 없습니다.</p>
         )}

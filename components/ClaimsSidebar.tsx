@@ -5,6 +5,8 @@ import { TEAM_MAP } from "@/lib/constants";
 import { formatResult, specForPhase } from "@/lib/night-actions";
 import type { Character, Game, NightActionRecord } from "@/lib/types";
 import { ActionFields } from "./ActionFields";
+import { PlayerPicker } from "./PlayerPicker";
+import { RolePickerModal } from "./RolePickerModal";
 
 function Chevron() {
   return (
@@ -35,35 +37,50 @@ function ClaimForm({
   const [role, setRole] = useState<string>(init?.role ?? "");
   const [targets, setTargets] = useState<number[]>(init?.targets ?? []);
   const [result, setResult] = useState<string>(init?.result ?? "");
+  const [roleOpen, setRoleOpen] = useState(false);
   const ready = seat !== "" && !!role;
   const spec = role ? specForPhase(role, phase) : undefined;
   const roleOpts = Object.values(charMap).sort((a, b) => a.name.ko.localeCompare(b.name.ko, "ko"));
+  const roleCh = role ? charMap[role] : undefined;
 
   return (
     <div className="space-y-2 rounded-md border border-border bg-surface-2 p-2 text-xs">
       <div className="flex flex-col gap-1.5">
-        <select
-          value={seat}
+        <PlayerPicker
+          players={game.players}
+          value={seat === "" ? null : seat}
+          onChange={(s) => setSeat(s ?? "")}
           disabled={lockIdentity}
-          onChange={(e) => setSeat(e.target.value === "" ? "" : Number(e.target.value))}
-          className="rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60 disabled:opacity-60"
-        >
-          <option value="">주장한 플레이어…</option>
-          {game.players.map((p) => (
-            <option key={p.seat} value={p.seat}>{p.nickname}</option>
-          ))}
-        </select>
-        <select
-          value={role}
+          placeholder="주장한 플레이어…"
+          title="주장한 플레이어"
+        />
+        <button
+          type="button"
           disabled={lockIdentity}
-          onChange={(e) => { setRole(e.target.value); setTargets([]); setResult(""); }}
-          className="rounded border border-border bg-surface px-2 py-1 outline-none focus:border-gold/60 disabled:opacity-60"
+          onClick={() => setRoleOpen(true)}
+          className="inline-flex items-center gap-1 rounded border border-border bg-surface px-2 py-1 text-left outline-none hover:border-gold/60 disabled:opacity-60"
         >
-          <option value="">주장한 직업…</option>
-          {roleOpts.map((c) => (
-            <option key={c.id} value={c.id} style={{ color: TEAM_MAP[c.team]?.color }}>{c.name.ko}</option>
-          ))}
-        </select>
+          {roleCh ? (
+            <>
+              {roleCh.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={roleCh.image} alt="" className="h-4 w-4 rounded-full object-cover" />
+              )}
+              <span style={{ color: TEAM_MAP[roleCh.team]?.color }}>{roleCh.name.ko}</span>
+            </>
+          ) : (
+            <span className="text-muted">주장한 직업…</span>
+          )}
+          <span className="ml-auto text-muted">▾</span>
+        </button>
+        <RolePickerModal
+          open={roleOpen}
+          title="주장한 직업"
+          candidates={roleOpts}
+          selected={role}
+          onPick={(id) => { setRole(id); setTargets([]); setResult(""); }}
+          onClose={() => setRoleOpen(false)}
+        />
       </div>
 
       {ready && spec && (
