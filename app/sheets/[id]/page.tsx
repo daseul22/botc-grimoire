@@ -66,6 +66,12 @@ export default async function SheetPage({
             >
               ▶ 시작하기
             </Link>
+            <Link
+              href={`/sheets/${sheet.id}/export`}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-text"
+            >
+              PNG 내보내기
+            </Link>
             {sheet.custom && (
               <div className="flex gap-2">
                 <Link
