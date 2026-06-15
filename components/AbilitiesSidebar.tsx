@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { TEAM_MAP, TEAMS } from "@/lib/constants";
-import type { Character, Game } from "@/lib/types";
+import type { Character, Game, GamePlayer } from "@/lib/types";
 
 const TEAM_ORDER = TEAMS.map((t) => t.id);
 
@@ -38,26 +38,57 @@ export function AbilitiesSidebar({
     return { inPlayRoles: inPlay.sort(sortFn), otherRoles: others.sort(sortFn) };
   }, [game.players, charMap, sheetChars]);
 
-  const roleItem = (c: Character, dim: boolean) => (
-    <li key={c.id} className={dim ? "opacity-50" : ""}>
-      <button
-        type="button"
-        onClick={() => onShowChar(c)}
-        className="flex w-full items-start gap-2.5 px-3 py-2 text-left hover:bg-surface-2"
-      >
-        {c.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.image} alt="" className="mt-0.5 h-7 w-7 shrink-0 rounded-full object-cover" />
-        )}
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium" style={{ color: TEAM_MAP[c.team]?.color }}>
-            {c.name.ko}
+  // 직업 id → 그 직업을 (진짜로) 가진 플레이어들. 모바일 진행 중 "누가 이 직업인지" 바로 확인용.
+  // 위장/획득은 의도적으로 무시 — ST 입장에선 진짜 직업 추적이 더 유용.
+  const playersByChar = useMemo(() => {
+    const m = new Map<string, GamePlayer[]>();
+    for (const p of game.players) {
+      const arr = m.get(p.characterId) ?? [];
+      arr.push(p);
+      m.set(p.characterId, arr);
+    }
+    return m;
+  }, [game.players]);
+
+  const roleItem = (c: Character, dim: boolean) => {
+    const owners = playersByChar.get(c.id) ?? [];
+    return (
+      <li key={c.id} className={dim ? "opacity-50" : ""}>
+        <button
+          type="button"
+          onClick={() => onShowChar(c)}
+          className="flex w-full items-start gap-2.5 px-3 py-2 text-left hover:bg-surface-2"
+        >
+          {c.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={c.image} alt="" className="mt-0.5 h-7 w-7 shrink-0 rounded-full object-cover" />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium" style={{ color: TEAM_MAP[c.team]?.color }}>
+              {c.name.ko}
+            </span>
+            {owners.length > 0 && (
+              <span className="mt-1 flex flex-wrap gap-1">
+                {owners.map((o) => (
+                  <span
+                    key={o.seat}
+                    className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                      o.status === "dead"
+                        ? "bg-surface-2 text-muted line-through"
+                        : "bg-gold/15 text-gold"
+                    }`}
+                  >
+                    {o.nickname}
+                  </span>
+                ))}
+              </span>
+            )}
+            <span className="mt-0.5 block break-words text-xs text-muted">{c.ability.ko}</span>
           </span>
-          <span className="block break-words text-xs text-muted">{c.ability.ko}</span>
-        </span>
-      </button>
-    </li>
-  );
+        </button>
+      </li>
+    );
+  };
 
   return (
     <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
