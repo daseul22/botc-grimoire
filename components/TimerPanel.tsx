@@ -26,7 +26,7 @@ function beep() {
 }
 
 /**
- * 낮 페이즈 타이머 — 밀담(생존*25초) / 공개토론(생존*15초) 기본값.
+ * 낮 페이즈 타이머 — 밀담(생존*30초) / 공개토론(생존*15초) 기본값.
  * 실제 시간은 ST가 수동 조정 가능, 시작/정지 가능. 페이즈별 기록(game_phases.timers)으로 복기에 남는다.
  */
 export function TimerPanel({
@@ -53,7 +53,7 @@ export function TimerPanel({
 
   const aliveCount = game.players.filter((p) => p.status !== "dead").length;
   const defaultFor = (kind: "whisper" | "open") =>
-    aliveCount * (kind === "whisper" ? 25 : 15);
+    aliveCount * (kind === "whisper" ? 30 : 15);
 
   return (
     <div className="mb-3 flex flex-wrap items-stretch gap-2">
