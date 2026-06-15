@@ -16,6 +16,7 @@ import { AbilitiesSidebar } from "./AbilitiesSidebar";
 import { ClaimsSidebar } from "./ClaimsSidebar";
 import { FirstNightSetup } from "./FirstNightSetup";
 import { VotesSidebar } from "./VotesSidebar";
+import { GrimoireLegend } from "./GrimoireLegend";
 import { StatusBar } from "./StatusBar";
 import {
   clearActionAction,
@@ -392,6 +393,9 @@ export function PlayCanvas({
             </svg>
           </button>
 
+          {/* 전체화면 첩자 그리모어 — 기호 의미 범례(좌하단). 비숙련 관전자 이해 보조. */}
+          {fs && <GrimoireLegend game={game} charMap={charMap} />}
+
           {game.players.map((p) => {
             const ch = charMap[p.characterId];
             const dead = p.status === "dead";
@@ -459,12 +463,22 @@ export function PlayCanvas({
                     </span>
                   )}
                 </div>
-                <span className="max-w-24 truncate text-sm font-medium">{p.nickname}</span>
-                <span className="max-w-24 truncate text-xs" style={{ color: teamColor }}>{ch?.name.ko ?? p.characterId}</span>
+                <span className={`truncate font-medium ${fs ? "max-w-32 text-base font-semibold" : "max-w-24 text-sm"}`}>{p.nickname}</span>
+                {/* 전체화면: 진영명+직업명을 진영색 칩으로 — 비숙련 관전자가 마을/외지/하수인/악마를 색+글자로 구분 */}
+                {fs && ch ? (
+                  <span
+                    className="max-w-40 truncate rounded-full border px-2 py-0.5 text-xs font-semibold"
+                    style={{ color: teamColor, borderColor: `${teamColor}88`, background: `${teamColor}1f` }}
+                  >
+                    {TEAM_MAP[ch.team]?.label.ko} · {ch.name.ko}
+                  </span>
+                ) : (
+                  <span className="max-w-24 truncate text-xs" style={{ color: teamColor }}>{ch?.name.ko ?? p.characterId}</span>
+                )}
                 {p.markers.length > 0 && (
-                  <span className="flex max-w-32 flex-wrap justify-center gap-1">
+                  <span className={`flex flex-wrap justify-center gap-1 ${fs ? "max-w-44" : "max-w-32"}`}>
                     {p.markers.map((m) => (
-                      <MarkerToken key={m} m={m} charMap={charMap} px={36} />
+                      <MarkerToken key={m} m={m} charMap={charMap} px={fs ? 40 : 36} showLabel={fs} />
                     ))}
                   </span>
                 )}

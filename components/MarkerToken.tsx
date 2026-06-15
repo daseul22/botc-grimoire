@@ -12,16 +12,28 @@ export function MarkerToken({
   m,
   charMap,
   px = 36,
+  showLabel = false,
 }: {
   m: string;
   charMap: Record<string, Character>;
   px?: number;
+  /** 토큰 아래 한글 라벨 캡션을 함께 표시(전체화면 첩자 그리모어 — 토큰 의미 전달용). */
+  showLabel?: boolean;
 }) {
   const info = markerInfo(m);
   const { base, param } = parseMarker(m);
   const title = markerLabel(m, charMap);
   const dim = { width: px, height: px };
   const imgCls = "rounded-full border bg-bg object-cover shadow";
+  const withLabel = (node: React.ReactNode) =>
+    showLabel ? (
+      <span className="flex flex-col items-center gap-0.5">
+        {node}
+        <span className="max-w-20 text-center text-[10px] font-medium leading-tight text-text">{title}</span>
+      </span>
+    ) : (
+      node
+    );
 
   // 색배경 + 글자/기호 뱃지. 색 점만으로 구분 안 되던 마커들 대체.
   const letterBadge = info && (
@@ -46,32 +58,32 @@ export function MarkerToken({
 
     // 집착처럼 원인 토큰(icon) 있는 마커: icon + 대상 직업 토큰
     if (info.icon) {
-      return (
+      return withLabel(
         <span className="inline-flex items-center -space-x-2" title={title}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={info.icon} alt="" draggable={false} className={imgCls} style={{ ...dim, borderColor: info.color }} />
           {roleNode}
-        </span>
+        </span>,
       );
     }
 
     // icon 없는 roleParam 마커: 글자 뱃지 + 대상 직업 토큰을 나란히
-    return (
+    return withLabel(
       <span className="inline-flex items-center -space-x-2" title={title}>
         {letterBadge}
         {roleNode}
-      </span>
+      </span>,
     );
   }
 
   // 아이콘 있고 대상 없는 일반 마커
   if (info?.icon) {
-    return (
+    return withLabel(
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={info.icon} alt={info.label} title={title} draggable={false} className={imgCls} style={{ ...dim, borderColor: info.color }} />
+      <img src={info.icon} alt={info.label} title={title} draggable={false} className={imgCls} style={{ ...dim, borderColor: info.color }} />,
     );
   }
 
   // icon 없고 대상도 없음 — 색배경 글자 뱃지
-  return <span title={title}>{letterBadge}</span>;
+  return withLabel(<span title={title}>{letterBadge}</span>);
 }
