@@ -128,13 +128,13 @@ export function ClaimsSidebar({
   const key = (a: NightActionRecord) => `${a.actorSeat}:${a.characterId}`;
 
   return (
-    <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
+    <aside className="flex w-full shrink-0 flex-col md:h-[70vh] md:w-72 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-surface">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <span className="text-sm font-semibold">주장 기록<span className="ml-1 font-normal text-muted">· {claims.length}</span></span>
         <button type="button" onClick={onClose} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron /></button>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+      <div className="space-y-2 p-3 md:flex-1 md:overflow-y-auto">
         <p className="text-[11px] text-muted">누구나 임의 직업을 공개적으로 주장(블러핑)할 수 있습니다. 실제 직업과 무관하게 기록됩니다.</p>
 
         {claims.length === 0 && !adding && (

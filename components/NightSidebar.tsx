@@ -91,7 +91,7 @@ export function NightSidebar({
   items.sort((a, b) => a.order - b.order);
 
   return (
-    <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
+    <aside className="flex w-full shrink-0 flex-col md:h-[70vh] md:w-72 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-surface">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <span className="text-sm font-semibold">
           {isFirstNight ? "첫째 밤" : "그 외 밤"} 행동 순서
@@ -106,7 +106,7 @@ export function NightSidebar({
       {items.length === 0 ? (
         <p className="px-3 py-3 text-sm text-muted">이 밤에 행동하는 직업이 없습니다.</p>
       ) : (
-        <ol className="flex-1 divide-y divide-border overflow-y-auto">
+        <ol className="divide-y divide-border md:flex-1 md:overflow-y-auto">
           {items.map((item, i) => {
             if (item.kind === "info") {
               const isMinion = item.infoKind === "minion";

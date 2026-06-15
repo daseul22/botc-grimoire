@@ -44,7 +44,7 @@ export function DaySidebar({
     );
 
   return (
-    <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
+    <aside className="flex w-full shrink-0 flex-col md:h-[70vh] md:w-72 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-surface">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <span className="text-sm font-semibold">
           낮 능력<span className="ml-1 font-normal text-muted">· {dayRoles.length}</span>
@@ -58,7 +58,7 @@ export function DaySidebar({
       {dayRoles.length === 0 ? (
         <p className="px-3 py-3 text-sm text-muted">낮에 쓰는 능력을 가진 직업이 없습니다.</p>
       ) : (
-        <ol className="flex-1 divide-y divide-border overflow-y-auto">
+        <ol className="divide-y divide-border md:flex-1 md:overflow-y-auto">
           {dayRoles.map(({ p, ch, spec }) => {
             const dead = p.status === "dead";
             const done = game.doneSeats.includes(p.seat);

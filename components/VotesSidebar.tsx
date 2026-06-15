@@ -89,13 +89,13 @@ export function VotesSidebar({
   const ghostLeft = dead.filter((p) => !p.ghostVoteUsed).length;
 
   return (
-    <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
+    <aside className="flex w-full shrink-0 flex-col md:h-[70vh] md:w-72 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-surface">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <span className="text-sm font-semibold">지목·투표<span className="ml-1 font-normal text-muted">· {game.votes.length}</span></span>
         <button type="button" onClick={onClose} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron /></button>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+      <div className="space-y-2 p-3 md:flex-1 md:overflow-y-auto">
         {/* 사망자 · 유령표 — 투표 정산 시 누가 죽었고 데드보트가 몇 개 남았는지 한눈에. 탭으로 유령표 토글. */}
         {dead.length > 0 && (
           <div className="space-y-1 rounded-md border border-border bg-surface-2/40 p-2">
