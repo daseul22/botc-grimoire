@@ -13,6 +13,7 @@ flowchart TD
     RA[ratio.ts]
     TY[types.ts]
     NA[night-actions.ts]
+    SL[seat-layout.ts]
   end
   subgraph server["서버 전용 (better-sqlite3)"]
     DBm[db.ts]
@@ -48,7 +49,8 @@ flowchart TD
 그래서 클라에서 쓰는 로직은 전부 **순수 모듈**로 분리:
 [constants](../../lib/constants.ts)(팀·에디션) · [grouping](../../lib/grouping.ts)(팀 그룹핑) ·
 [markers](../../lib/markers.ts)(상태이상·직업토큰 마커) · [ratio](../../lib/ratio.ts)(인원 비율) ·
-[night-actions](../../lib/night-actions.ts)(직업별 야간/낮 행동 스펙) · [types](../../lib/types.ts).
+[night-actions](../../lib/night-actions.ts)(직업별 야간/낮 행동 스펙·정보 능력 오인 경고) ·
+[seat-layout](../../lib/seat-layout.ts)(사각 좌석 자동 배분·둘레 좌표) · [types](../../lib/types.ts).
 
 [db.ts](../../lib/db.ts)는 `process.cwd()/db/grimoire.db`를 `fileMustExist`로 연다(시드 안 됐으면
 명확히 실패 → `npm run db:seed`). WAL 모드.
@@ -60,7 +62,8 @@ flowchart TD
 | `/` | 정적 | 직업 목록 + 필터/검색 |
 | `/characters/[id]` | SSG (183) | 직업 상세 + 한/영 토글 |
 | `/sheets` | 동적 | 공식 + 커스텀 시트 목록 |
-| `/sheets/[id]` | SSG+동적 | 시트 상세 + 야간순서표 + `시작하기` |
+| `/sheets/[id]` | SSG+동적 | 시트 상세 + 야간순서표 + `시작하기` + `PNG 내보내기` |
+| `/sheets/[id]/export` | SSG+동적 | 직업 설명 + 밤 순서·징크스 A4 PNG 내보내기 ([09](09-storyteller-tools.md)) |
 | `/sheets/new`, `/sheets/[id]/edit` | 정적/동적 | 커스텀 시트 생성·수정 |
 | `/rules` | 정적 | 규칙 + 목차 |
 | `/games` | 동적 | 게임 목록(내역) — 검색·필터·게임별 이름 지정 |

@@ -65,6 +65,12 @@ type ActionSpec = {
 UI: 순서 사이드바 각 행의 인라인 편집기([NightActionRow](../../components/NightActionRow.tsx)),
 지목 칩+결과 위젯은 [ActionFields](../../components/ActionFields.tsx) 공용.
 
+**오인 경고(은둔자·첩자)**: `INFO_KINDS`(number/yesno/role/team)에 해당하는 정보 능력일 때만,
+대상 버튼에 `MISREGISTER_ROLES`(`recluse`=선을 악으로, `spy`=악을 선으로) 경고를 단다 —
+`⚠` 표시·amber ring·툴팁(`misregisterWarn`). 선택된 대상이 트랩 직업이면 하단에 설명 줄을 띄운다.
+폰으로 운영하는 ST가 대상의 진짜 직업을 못 봐 점쟁이가 은둔자를 선으로 알려주는 식의 실수를 막는다.
+별도 데이터 플래그가 없어 명시 목록으로 관리(능력문 자동검출은 군단병 등 오탐이 많음).
+
 ## 밤 행동 순서 사이드바 — [NightSidebar](../../components/NightSidebar.tsx)
 
 좌석마다 `effectiveCharacterId()`([markers.ts](../../lib/markers.ts))로 **운영상 다루는 직업**을
@@ -72,7 +78,7 @@ UI: 순서 사이드바 각 행의 인라인 편집기([NightActionRow](../../co
 
 - **정보 노드**: 첫밤에 하수인 정보(order 19)·악마 정보(order 22)를 가상 노드로 삽입
   (공식 순서: 마술사 18 < 하수인 정보 < 미치광이 21 < 악마 정보 < 꼭두각시 26).
-  - **하수인 정보**: 하수인 전원에게 *악마가 누구인지* 보여준다 — 단일 `🎴 보여주기` 링크
+  - **하수인 정보**: 하수인 전원에게 *악마가 누구인지* 보여준다 — 단일 `보여주기` 링크
     (`?mode=demon`). 마술사 인플레이 시 마술사 닉네임도 (가짜) 악마로 함께 노출.
   - **악마 정보**: 데몬마다 블러핑 3개(`?mode=bluffs`) + 하수인(`?mode=minions`) 보여주기.
 - **본체 노드가 2개로 갈라지는 좌석**: disguise(주정뱅이·꼭두각시) 또는 `gained` 마커(철학자) 좌석은
@@ -82,6 +88,9 @@ UI: 순서 사이드바 각 행의 인라인 편집기([NightActionRow](../../co
   먼저). 노드는 1개로 병합 — 첫밤엔 가짜 블러핑 3개·가짜 하수인 좌석 지정
   ([LunaticActionRow](../../components/LunaticActionRow.tsx)), 그 외 밤엔 같은 정보를 읽기
   전용으로 보여주고 + 가짜 악마 스펙으로 공격 흉내를 기록(킬 마커 없음).
+  - **'실제 악마와 동일하게 채우기'** 프리셋: 첫밤 편집 시 진짜 악마가 받는 블러핑 3개(`game.bluffs`)와
+    하수인 좌석(`team='minion'` 중 꼭두각시 제외 + 마술사, 본인 제외)을 그대로 `lunaticBluffs`/`lunaticMinions`에
+    복사해 미치광이가 진짜 악마와 같은 화면을 보게 한다(show 페이지 `?mode=bluffs/minions` 계산과 1:1). 복사 후 수정 가능.
 - 취함/중독(전역 마커 포함) 좌석의 정보 직업엔 `⚠ 거짓` 경고.
 - **페이즈가 바뀌면 해당 페이즈의 순서 사이드바가 자동으로 열린다**([PlayCanvas](../../components/PlayCanvas.tsx)).
 
@@ -124,21 +133,21 @@ heading/subheading에 placeholder(`{role}{actor}{target}{count}{yn}{team}{result
 | 직업배포 | `/play/[gameId]/claim` | **잠금 배포**: 닉네임 선택 시 좌석 점유(쿠키)→30초만 표시→영구 숨김 |
 | 직업 목록 | `/play/[gameId]/pick/[seat]` | 플레이어가 직접 직업을 고르는 화면 — 시각 피드백만. 직업 누르면 가운데 큰 모달(진한 배경) |
 
-`직업 목록` 버튼은 **플레이어가 직접 직업을 고르는 능력**(`spec.playerPicks`: 철학자·도박꾼·핏쥐·
-세레노버스·폭풍포착자)에만 뜬다. 세탁부·까마귀지기처럼 정보로 *알게만* 되는 직업엔 안 뜸(ST가 보여줌).
+`직업 목록` 버튼은 **플레이어가 직접 직업을 고르는 능력**(`spec.playerPicks`: 철학자·도박사·마귀할멈·
+세레노버스·폭풍 부르미)에만 뜬다. 세탁부·까마귀지기처럼 정보로 *알게만* 되는 직업엔 안 뜸(ST가 보여줌).
 
 직업배포([ClaimCard](../../components/ClaimCard.tsx))의 안전장치:
 
 - **서버가 만료를 강제**(점유시각+30초) — 새로고침해도 안 보임. 클라 타이머는 표시용.
 - **proxy 가둠**([proxy.ts](../../proxy.ts)): claim 쿠키 보유자는 다른 페이지(직업/시트/내역)로
   못 빠져나감. 게임 간 격리 — A게임 점유자도 B게임 claim은 접근 가능.
-- **재열람 허용**: 좌석 패널의 "🔓 직업 재열람 허용"(`releaseSeat`)으로 점유 해제 → 그
+- **재열람 허용**: 좌석 패널의 "직업 재열람 허용"(`releaseSeat`)으로 점유 해제 → 그
   플레이어가 다시 30초 열람.
-- 헤더의 "📱 직업공유"/"🔒 직업배포" 버튼이 현재 WiFi의 LAN 주소 기준 링크를 클립보드에 복사.
+- 헤더의 "직업공유"/"직업배포" 버튼이 현재 WiFi의 LAN 주소 기준 링크를 클립보드에 복사.
 
 ## 낮 타이머 — [TimerPanel](../../components/TimerPanel.tsx)
 
-밀담(생존×25초)·공개토론(생존×15초) 기본값, 수동 조정 가능. 시작/정지/리셋,
+밀담(생존×30초)·공개토론(생존×15초) 기본값, 수동 조정 가능. 시작/정지/리셋,
 페이즈별 `game_phases.timers`에 기록돼 복기에 남는다. 0초 도달 시 **비프 3회 + 진동(폰) +
 빨강 플래시**(같은 시작에 대해 1회), 이후 초과 시간 표시.
 
@@ -157,14 +166,24 @@ heading/subheading에 placeholder(`{role}{actor}{target}{count}{yn}{team}{result
 |---|---|---|
 | `mad:<role>` | 집착 | 세레노버스 토큰 + 대상 직업 토큰 |
 | `became:<role>` | 직업 변경(임프 별넘김 등) | 대상 직업 토큰 + ↺ |
-| `gained:<role>` | 능력 획득(픽시·철학자 등) | 대상 직업 토큰 + ✦ |
-| `noability:<role>` | 일회성 능력 소진(`능력 사용함`) | 대상 직업 토큰 + ✕ |
+| `gained:<role>` | 능력 획득(픽시·철학자 등) — **`multi`(누적 가능)** | 대상 직업 토큰 + ✦ |
+| `noability:<role>` | 일회성 능력 소진(`능력 사용함`) — **`multi`** | 대상 직업 토큰 + ✕ |
 | `turning` | 변절 예정(메제펠레스) | ⇄ (dusk에 소멸) |
 | `herring` | 레드헤링 | 점쟁이 토큰 |
 | `vortox` 등 | **전역 마커**(`scope:"global"`) | 좌석이 아닌 게임 전체 — 모든 정보 직업 거짓 |
 
 아이콘 없는 마커는 `letter` 글리프 뱃지로 렌더(`<img src="">` 금지). `Marker.taints`면
 좌석/전역 어디에 있든 정보 직업에 `⚠ 거짓` 경고를 띄운다.
+
+- **`multi` 마커**(능력획득·능력없음): 한 좌석에 여러 인스턴스가 공존한다(식인종이 철학자를 먹고
+  → 철학자 능력으로 또 다른 직업을 얻는 식). 단일 마커는 동일 base를 교체하지만, multi는 누적된다.
+  [SelectionPanel](../../components/SelectionPanel.tsx)이 단일(집착·직업변경: 1개 교체)과
+  다중(능력획득·능력없음: 칩별 개별 제거 + 추가 UI)을 분리 렌더.
+- **`dying`(사망예정) 자동 사망**: 밤→낮 전환 시([advancePhase](../../lib/games/lifecycle.ts)),
+  살아있던 좌석에 `dying` 마커(임프 밤 공격 등)가 있으면 자동으로 `status=dead`·`cause=night`로 처리한다.
+  ST가 보호 판단까지 끝내고 '죽음 확정'으로 단 마커이며(보호되면 애초에 안 단다), `dying`은 phase 지속이라
+  다음 스냅샷에선 사라진다. 낮에 다는 `dying`(슬레이어·처녀 즉시 처리)은 ST가 직접 사망 처리하므로 제외.
+- **식인종 재획득**: 처형으로 다시 능력을 얻을 때 기존 `gained`/`noability`/`drunk`를 싹 비우고 새 능력만 적용.
 
 ## 주장(블러핑) 기록 — [ClaimsSidebar](../../components/ClaimsSidebar.tsx)
 
@@ -179,12 +198,21 @@ heading/subheading에 placeholder(`{role}{actor}{target}{count}{yn}{team}{result
 낮의 핵심. `VoteRecord { nominator, nominee, votes, executed }`를 대상 기준 1건으로
 `game_phases.votes`에 저장. 복기에 페이즈별로 표시.
 
+- **사망자·유령표 블록**: 사이드바 상단에 사망자를 사망 원인 글리프(처형 ☠️ / 밤 🌙 / 기타 ✕)와 함께
+  나열하고, 남은 유령표 수(`ghostLeft/dead`)를 표시한다. 각 행을 탭하면 `onToggleGhostVote`로
+  유령표 사용/복구를 토글(금색 = 사용 가능, 흐림 = 사용함). 투표 정산 중 누가 죽었고 데드보트가
+  몇 개 남았는지 한눈에 본다.
+- **플레이어 선택**: 지목자·대상 선택은 native `<select>` 대신 [PlayerPicker](../../components/PlayerPicker.tsx)
+  (트리거 버튼 + 토큰 그리드 portal 모달 — 닉네임·좌석번호·사망 여부를 큰 칸으로). 모바일에서 고르기 쉽다.
+
 ## 첫밤 셋업 — [FirstNightSetup](../../components/FirstNightSetup.tsx)
 
 1일차 밤(idx 0)에만 편집 가능(이후 페이즈에선 읽기 전용으로 볼 수만 있음).
 
 - **셋업 직업 안내**: `setup === true` 직업의 setupNote + 팀 분포 보정 카운트 표시.
-- **악마 블러핑**: 인플레이에 없는 선 직업 3개 토큰 선택 → `games.bluffs`.
+- **악마 블러핑**: 인플레이에 없는 선 직업 3개 토큰 선택 → `games.bluffs`. 위장(disguise)으로 쓰인 직업은
+  *누군가 자기 직업이라 믿는* 직업이므로 인플레이처럼 취급해 블러핑 후보에서 제외한다. 새 가짜 직업을 지정할 때
+  그 직업이 이미 악마 블러핑에 들어가 있으면 `setDisguiseAction`이 자동으로 제거한다.
 - **가짜 직업 지정**: 미치광이/주정뱅이/꼭두각시 좌석의 disguise 선택(토큰 모달).
 - **닉네임 수정 + 자리(닉네임) 교환**: 직업은 좌석 고정, 사람만 이동.
 
@@ -193,7 +221,7 @@ heading/subheading에 placeholder(`{role}{actor}{target}{count}{yn}{team}{result
 - **처리 완료 체크**(`done`): 순서 행의 ✓ — 행동 기록 저장 시 자동, 수동 토글 가능.
 - **일회성 능력**(`spec.oncePerGame`): 기록 시 `noability:<직업>` 영구 마커 자동 부여(직업별 판정 →
   한 좌석 여러 일회성이 안 섞임). 다음 페이즈에도 `능력 사용함` 유지. 철학자는 능력획득(`gained`)과
-  **별개로** 소진 처리. (처단자·성결자·까마귀지기·암살자·교수·어부·철학자·재봉사·예술가·기술자·사냥꾼·야경꾼 등)
+  **별개로** 소진 처리. (처단자·성결자·까마귀지기·암살자·교수·낚시꾼·철학자·재봉사·화가·기계공·사냥꾼·야경꾼 등)
 - **행 흐림 규칙**: `능력 사용함` 행은 흐리게 + ✓ 자동. **사망 행은 흐리지 않는다**(까마귀지기처럼
   사망 시 발동하는 능력이 가려지지 않게). 사망은 배지로만 표시.
 - **식인종 자동 획득**: 낮→밤 전환 시 그 낮에 **처형**된 플레이어 능력을 식인종에게 `gained:<직업>`로
@@ -202,13 +230,51 @@ heading/subheading에 placeholder(`{role}{actor}{target}{count}{yn}{team}{result
 - **유령표**(`ghost_vote_used`): 사망자 1회 투표권 토글, 토큰 🗳️ 배지.
 - **진영 토글**: 좌석 패널에서 선↔악 전환(변절 등) — 직업배포/공유 화면 색도 따라감
   (disguise 좌석 제외).
+- **게임 복제**([cloneGame](../../lib/games/lifecycle.ts)): 같은 사람들로 다음 판을 빠르게 시작. 정체성
+  (좌석·닉네임·직업·진영·배치·고정)과 셋업(시트·구성·블러핑·위장·미치광이)은 그대로 가져오되 진행 상태
+  (행동·투표·마커·사망·메모·유령표·되돌리기·직업배포 점유)는 모두 비운 '1일차 밤' 새 게임을 만든다.
+  label에 '(사본)' 접미. [GamesBrowser](../../components/GamesBrowser.tsx) 각 게임 카드의 '복제' 버튼 →
+  `cloneGameAction`이 새 게임 진행 화면으로 redirect.
 - **생존·승리 상태바**([StatusBar](../../components/StatusBar.tsx)): 생존 선/악/악마 수 + 승리조건 힌트.
-- **원형 자동정렬**: 토큰을 원형으로 재배치 → `savePositions`.
+- **좌석 자동정렬**: 헤더 툴바([HeaderToolbar](../../components/HeaderToolbar.tsx))의 '정렬' 드롭다운으로
+  **원형 정렬**(`arrangeCircle`) 또는 **사각 정렬**(`arrangeRect`)을 선택. 사각은 상/좌·우/하 십자 입력
+  + 합계·인원 검증(합이 인원과 같아야 적용)을 거치며, '자동' 버튼이 [seat-layout.ts](../../lib/seat-layout.ts)의
+  `autoRectSides(n)`로 면별 인원을 채운다(상·하를 좌·우보다 많게). 좌표는 `applyPositions`로 일괄 저장.
+  - `rectPositions(sides)`: 시계방향(상L→R → 우 → 하R→L → 좌)으로 정규화 좌표를 균등 배치 → 원형과 동일하게
+    둘레 따라 이웃 관계가 보존된다. 실제 직사각 테이블이라 좌/우 이웃·마주보는 자리가 더 정확히 드러난다.
 - **서버 응답 타임아웃 가드**: 액션이 15초 내 응답 없으면 알림 + pending 해제(멈춤 방지).
 - **모달 뒤로가기 닫기**([useBackClose](../../components/useBackClose.ts)): 모바일 뒤로가기가 페이지를
   떠나는 대신 모달만 닫는다(RolePickerModal·AbilityModal·AbilityFocus·직업목록). StrictMode 안전 위해
   popstate-only. RolePickerModal은 `createPortal`로 body에 그려 완료(✓)행 `opacity` 상속을 피한다
   (PlayCanvas 바깥클릭 닫기 핸들러는 `[data-modal]`을 예외 처리).
+
+## 전체화면(첩자 시점) — [PlayCanvas](../../components/PlayCanvas.tsx) · [GrimoireLegend](../../components/GrimoireLegend.tsx)
+
+보드만 네이티브 풀스크린으로 띄워 첩자에게 그리모어를 보여주는 모드. 토큰 배율을 1.8배로 키우고
+([MarkerToken](../../components/MarkerToken.tsx)의 `showLabel`로 토큰 아래 한글 라벨 캡션 가능), Esc로 원복.
+
+- **배치 보존 회전**: 첩자 시점은 저장된 좌표(슬롯)는 그대로 두고 좌석→슬롯 배정만 회전시킨다. 하단 중앙에
+  가장 가까운 슬롯(score = `y - |x-0.5|*0.5` 최대)으로 첩자를 보내, 원형/사각/수동 어떤 배치든 보존된 채
+  첩자만 6시 방향으로 온다(예전엔 무조건 원형 재배치라 사각/수동 배치가 깨졌다).
+- **범례 오버레이**([GrimoireLegend](../../components/GrimoireLegend.tsx)): 보드(`boardRef`) 내부에 렌더돼
+  네이티브 풀스크린에서도 보인다. '이 게임에 실제 등장하는' 진영색·상태 마커(base별 대표 1개)·사망 글리프
+  (처형 ☠️ / 밤 🌙)·유령표(🗳️ 금색=남음 / 흐림=사용)의 의미만 골라 한국어로 설명한다. 보드 중앙 큰 패널이라
+  멀리서도 읽힌다.
+
+## 스크립트 PNG 내보내기 — [ScriptExporter](../../components/ScriptExporter.tsx)
+
+시트 상세에서 'PNG 내보내기' 링크로 진입하는 라우트 `/sheets/[id]/export`([page.tsx](../../app/sheets/[id]/export/page.tsx)).
+인쇄용 운영 자료를 A4 세로 2장으로 렌더한다(`modern-screenshot`의 `domToPng` 의존).
+
+- **직업 설명 시트**: 진영별로 그룹화한 직업 설명. 직업 28개 초과 시 3열.
+- **밤 순서 + 징크스 시트**: 첫날 밤/그 외 밤 2열 밤 순서 + 징크스. 첫날 밤에는 공식 운영 순서대로 하수인 정보
+  (order 19)·악마 정보(order 22) 정보 단계 노드를 직업 행 사이에 끼워 넣는다(NightSidebar의 order·문구와 동일).
+  징크스는 스크립트에 양쪽 직업이 모두 있는 쌍만 '파트너 : 규칙' 파싱으로 추출.
+- **A4 1장 자동 축소**: `A4Sheet`가 내용이 A4 높이를 넘으면 `scrollHeight` 기준으로 자동 축소(fit-to-page)해
+  항상 1장에 담고, 웹폰트 로드 후(`document.fonts.ready`) 재측정한다. 캡처는 width/height를 A4 원본(1240×1754)에
+  고정하고 `scale:2`(2480×3508 = 300DPI)로 PNG 다운로드.
+- **여행자 제외 옵션**: 시트에 여행자(`team='traveller'`)가 있을 때만 체크박스 노출. 체크 시 직업 설명·밤 순서·
+  징크스 모두에서 여행자를 제외한다(정식 게임 구성엔 여행자가 안 들어가므로 인쇄물에서 빼는 용도).
 
 ---
 [← 설계 결정·확장](08-decisions-and-extending.md) · [홈](README.md)
