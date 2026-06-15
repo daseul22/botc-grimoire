@@ -30,11 +30,34 @@ function groups(list: Character[]) {
   );
 }
 
-function nightRows(list: Character[], phase: "firstNight" | "otherNight") {
-  return list
+type NightItem =
+  | { kind: "role"; c: Character; reminder: string | null; order: number }
+  | { kind: "info"; label: string; reminder: string; order: number };
+
+// 첫밤엔 공식 운영 순서대로 하수인 정보(19)·악마 정보(22) 단계를 직업 사이에 끼워 넣는다.
+// (NightSidebar의 정보 노드 order·문구와 동일)
+function buildNightItems(list: Character[], phase: "firstNight" | "otherNight"): NightItem[] {
+  const items: NightItem[] = list
     .map((c) => ({ c, n: c[phase] }))
     .filter((r): r is { c: Character; n: NonNullable<Character["firstNight"]> } => Boolean(r.n))
-    .sort((a, b) => a.n.order - b.n.order);
+    .map((r) => ({ kind: "role" as const, c: r.c, reminder: r.n.reminder?.ko ?? null, order: r.n.order }));
+  if (phase === "firstNight") {
+    if (list.some((c) => c.team === "minion"))
+      items.push({
+        kind: "info",
+        label: "하수인 정보",
+        reminder: "하수인들에게 서로 누구인지, 악마가 누구인지 알려줍니다.",
+        order: 19,
+      });
+    if (list.some((c) => c.team === "demon"))
+      items.push({
+        kind: "info",
+        label: "악마 정보",
+        reminder: "악마에게 자기 직업·블러핑 3개·하수인 좌석을 알려줍니다.",
+        order: 22,
+      });
+  }
+  return items.sort((a, b) => a.order - b.order);
 }
 
 /** 스크립트에 양쪽 직업이 모두 있는 징크스 쌍만 추출 ("파트너 : 규칙" 파싱) */
@@ -161,6 +184,64 @@ function SheetHeader({ title, sub, count }: { title: string; sub?: string; count
   );
 }
 
+/** 밤 순서 한 줄 — 직업 행 또는 정보 단계(하수인/악마 정보) 노드 */
+function NightItemRow({ item, index }: { item: NightItem; index: number }) {
+  const badge = (
+    <span
+      style={{
+        width: 22,
+        height: 22,
+        flexShrink: 0,
+        marginTop: 3,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "50%",
+        background: C.surface2,
+        color: C.muted,
+        fontSize: 11,
+        fontWeight: 700,
+      }}
+    >
+      {index + 1}
+    </span>
+  );
+  if (item.kind === "info") {
+    const accent = item.label === "하수인 정보" ? teamColor("minion") : teamColor("demon");
+    return (
+      <div
+        style={{
+          display: "flex",
+          gap: 9,
+          alignItems: "flex-start",
+          background: C.card,
+          borderLeft: `3px solid ${accent}`,
+          borderRadius: 6,
+          padding: "6px 9px",
+        }}
+      >
+        {badge}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: accent }}>{item.label}</div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.4, color: C.muted, marginTop: 1 }}>{item.reminder}</div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+      {badge}
+      <Icon c={item.c} size={32} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 600, color: teamColor(item.c.team) }}>{item.c.name.ko}</div>
+        {item.reminder && (
+          <div style={{ fontSize: 12.5, lineHeight: 1.4, color: C.muted, marginTop: 1 }}>{item.reminder}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ScriptExporter({
   sheetName,
   characters,
@@ -171,11 +252,14 @@ export function ScriptExporter({
   const scriptRef = useRef<HTMLDivElement>(null);
   const nightRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [excludeTravellers, setExcludeTravellers] = useState(false);
 
-  const g = groups(characters);
-  const first = nightRows(characters, "firstNight");
-  const other = nightRows(characters, "otherNight");
-  const jinxes = jinxPairs(characters);
+  const hasTravellers = characters.some((c) => c.team === "traveller");
+  const list = excludeTravellers ? characters.filter((c) => c.team !== "traveller") : characters;
+  const g = groups(list);
+  const first = buildNightItems(list, "firstNight");
+  const other = buildNightItems(list, "otherNight");
+  const jinxes = jinxPairs(list);
 
   const fileBase = (sheetName.en || sheetName.ko || "script")
     .replace(/[^\w가-힣\- ]+/g, "")
@@ -207,7 +291,7 @@ export function ScriptExporter({
   }
 
   // 직업 수가 많으면 3열로 — 높이를 줄여 과한 자동축소를 막는다.
-  const scriptCols = characters.length > 28 ? 3 : 2;
+  const scriptCols = list.length > 28 ? 3 : 2;
 
   return (
     <div className="space-y-6">
@@ -230,6 +314,18 @@ export function ScriptExporter({
         </button>
       </div>
 
+      {hasTravellers && (
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={excludeTravellers}
+            onChange={(e) => setExcludeTravellers(e.target.checked)}
+            className="h-4 w-4 accent-gold"
+          />
+          여행자 제외하고 내보내기
+        </label>
+      )}
+
       <p className="text-xs text-muted">
         A4 세로 1장에 맞춘 고해상도(300DPI) PNG입니다. 직업이 많아 넘칠 경우 자동으로 축소해 1장에 담깁니다.
         인쇄 시 용지 A4·여백 없음(또는 페이지에 맞춤)으로 설정하세요. 미리보기는 {Math.round(PREVIEW_SCALE * 100)}% 축소 표시입니다.
@@ -244,7 +340,7 @@ export function ScriptExporter({
                 <SheetHeader
                   title={sheetName.ko}
                   sub={sheetName.en && sheetName.en !== sheetName.ko ? sheetName.en : undefined}
-                  count={characters.length}
+                  count={list.length}
                 />
                 {g.map((grp) => (
                   <div key={grp.team} style={{ marginBottom: 18 }}>
@@ -332,38 +428,12 @@ export function ScriptExporter({
                         <div style={{ fontSize: 13, color: C.muted }}>행동하는 직업이 없습니다.</div>
                       ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                          {col.rows.map(({ c, n }, i) => (
-                            <div key={c.id} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                              <span
-                                style={{
-                                  width: 22,
-                                  height: 22,
-                                  flexShrink: 0,
-                                  marginTop: 3,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  borderRadius: "50%",
-                                  background: C.surface2,
-                                  color: C.muted,
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {i + 1}
-                              </span>
-                              <Icon c={c} size={32} />
-                              <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: 14.5, fontWeight: 600, color: teamColor(c.team) }}>
-                                  {c.name.ko}
-                                </div>
-                                {n.reminder?.ko && (
-                                  <div style={{ fontSize: 12.5, lineHeight: 1.4, color: C.muted, marginTop: 1 }}>
-                                    {n.reminder.ko}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                          {col.rows.map((item, i) => (
+                            <NightItemRow
+                              key={item.kind === "role" ? item.c.id : item.label}
+                              item={item}
+                              index={i}
+                            />
                           ))}
                         </div>
                       )}
