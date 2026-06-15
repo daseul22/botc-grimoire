@@ -46,64 +46,70 @@ export function GrimoireLegend({
     );
   }
 
+  // 원형/사각/수동 어떤 배치든 토큰은 둘레에 있고 가운데는 항상 비므로,
+  // 범례를 보드 중앙에 크게 띄운다 — 멀리서도 글자가 읽히게(좌하단 구석은 작아서 안 보였음).
   return (
-    <div className="absolute bottom-2 left-2 z-10 max-h-[80vh] w-72 overflow-y-auto rounded-xl border border-border bg-surface/95 p-3 text-sm shadow-xl backdrop-blur">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="font-semibold">📖 범례</span>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"
-          title="닫기"
-        >
-          ✕
-        </button>
-      </div>
-
-      {/* 진영 */}
-      <div className="mb-3">
-        <p className="mb-1.5 text-[11px] font-semibold text-muted">진영 (토큰 테두리·이름 색)</p>
-        <div className="flex flex-wrap gap-1.5">
-          {teamsUsed.map((t) => (
-            <span
-              key={t.id}
-              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
-              style={{ color: t.color, borderColor: `${t.color}88`, background: `${t.color}1f` }}
-            >
-              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: t.color }} />
-              {t.label.ko}
-            </span>
-          ))}
+    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-6">
+      <div className="pointer-events-auto max-h-[62%] w-[min(54%,36rem)] overflow-y-auto rounded-2xl border border-border bg-surface/95 p-5 shadow-2xl backdrop-blur">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-xl font-bold">📖 범례</span>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-lg px-2 py-1 text-lg text-muted hover:bg-surface-2 hover:text-text"
+            title="닫기"
+          >
+            ✕
+          </button>
         </div>
-      </div>
 
-      {/* 마커 */}
-      {markerBases.length > 0 && (
-        <div className="mb-3">
-          <p className="mb-1.5 text-[11px] font-semibold text-muted">상태 마커 (이 게임에 등장)</p>
-          <div className="flex flex-col gap-1.5">
-            {markerBases.map((b) => (
-              <span key={b} className="inline-flex items-center gap-2">
-                <MarkerToken m={b} charMap={charMap} px={22} />
-                <span className="text-xs">{markerInfo(b)?.label}</span>
-              </span>
-            ))}
+        <div className="flex flex-wrap gap-x-10 gap-y-5">
+          {/* 진영 */}
+          <div>
+            <p className="mb-2 text-sm font-semibold text-muted">진영 (토큰 테두리·이름 색)</p>
+            <div className="flex flex-wrap gap-2">
+              {teamsUsed.map((t) => (
+                <span
+                  key={t.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-base font-medium"
+                  style={{ color: t.color, borderColor: `${t.color}88`, background: `${t.color}1f` }}
+                >
+                  <span className="inline-block h-3 w-3 rounded-full" style={{ background: t.color }} />
+                  {t.label.ko}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* 사망·유령표 */}
-      {deaths.length > 0 && (
-        <div>
-          <p className="mb-1.5 text-[11px] font-semibold text-muted">사망 · 유령표</p>
-          <div className="flex flex-col gap-1 text-xs">
-            {hasExecution && <span>☠️ 처형으로 사망</span>}
-            {hasNight && <span>🌙 밤에 사망</span>}
-            {hasGhostLeft && <span>🗳️ <span className="text-gold">금색</span> = 유령표 남음</span>}
-            {hasGhostUsed && <span>🗳️ 흐림 = 유령표 사용함</span>}
-          </div>
+          {/* 마커 */}
+          {markerBases.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm font-semibold text-muted">상태 마커 (이 게임에 등장)</p>
+              <div className="flex flex-col gap-2">
+                {markerBases.map((b) => (
+                  <span key={b} className="inline-flex items-center gap-2.5">
+                    <MarkerToken m={b} charMap={charMap} px={30} />
+                    <span className="text-base">{markerInfo(b)?.label}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 사망·유령표 */}
+          {deaths.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm font-semibold text-muted">사망 · 유령표</p>
+              <div className="flex flex-col gap-1.5 text-base">
+                {hasExecution && <span>☠️ 처형으로 사망</span>}
+                {hasNight && <span>🌙 밤에 사망</span>}
+                {hasGhostLeft && <span>🗳️ <span className="text-gold">금색</span> = 유령표 남음</span>}
+                {hasGhostUsed && <span>🗳️ 흐림 = 유령표 사용함</span>}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
