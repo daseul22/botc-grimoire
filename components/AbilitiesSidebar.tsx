@@ -6,7 +6,7 @@ import type { Character, Game, GamePlayer } from "@/lib/types";
 
 const TEAM_ORDER = TEAMS.map((t) => t.id);
 
-/** 📖 상세 능력 사이드바 — 인플레이 직업 + 시트의 나머지 직업(흐림). 클릭 → 능력 모달. */
+/** 상세 능력 사이드바 — 인플레이 직업 + 시트의 나머지 직업(흐림). 클릭 → 능력 모달. */
 export function AbilitiesSidebar({
   game,
   charMap,
@@ -94,7 +94,7 @@ export function AbilitiesSidebar({
     <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <span className="text-sm font-semibold">
-          📖 직업 능력<span className="ml-1 font-normal text-muted">· {inPlayRoles.length}</span>
+          직업 능력<span className="ml-1 font-normal text-muted">· {inPlayRoles.length}</span>
         </span>
         <button type="button" onClick={onClose} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

@@ -92,7 +92,7 @@ export function NightSidebar({
     <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <span className="text-sm font-semibold">
-          🌙 {isFirstNight ? "첫째 밤" : "그 외 밤"} 행동 순서
+          {isFirstNight ? "첫째 밤" : "그 외 밤"} 행동 순서
           <span className="ml-1 font-normal text-muted">· {items.length}</span>
         </span>
         <button type="button" onClick={onClose} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text">
@@ -140,7 +140,7 @@ export function NightSidebar({
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-xs text-gold hover:bg-gold/25"
                           >
-                            🎴 보여주기
+                            보여주기
                           </a>
                         )
                       : demonSeats.map((d) => (

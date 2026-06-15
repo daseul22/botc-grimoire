@@ -29,7 +29,7 @@ export function CharacterCard({ character }: { character: Character }) {
                   : "셋업에 영향"
               }
             >
-              ⚙ 셋업
+              셋업
             </span>
           )}
           {character.jinxes && (
@@ -37,7 +37,7 @@ export function CharacterCard({ character }: { character: Character }) {
               className="text-xs font-medium text-jinx"
               title="직업 상호작용(징크스) 있음"
             >
-              🔗 징크스
+              징크스
             </span>
           )}
         </div>

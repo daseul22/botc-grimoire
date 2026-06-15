@@ -73,7 +73,7 @@ export function NightActionRow({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25"
           >
-            🎴 보여주기{showcaseArr.length > 1 ? ` · ${showcaseLabels[i] ?? `#${i + 1}`}` : ""}
+            보여주기{showcaseArr.length > 1 ? ` · ${showcaseLabels[i] ?? `#${i + 1}`}` : ""}
           </a>
         ))}
       </div>
@@ -133,7 +133,7 @@ export function NightActionRow({
               title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
               className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 text-muted hover:text-text"
             >
-              📋 직업 목록
+              직업 목록
             </a>
           )}
           <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -146,7 +146,7 @@ export function NightActionRow({
                 title="결과를 새 창에 풀스크린으로 — 플레이어에게 보여주기"
                 className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25"
               >
-                🎴 보여주기
+                보여주기
               </a>
             )}
             {showcaseArr.length > 1 &&
@@ -158,7 +158,7 @@ export function NightActionRow({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25"
                 >
-                  🎴 {showcaseLabels[i] ?? `#${i + 1}`}
+                  {showcaseLabels[i] ?? `#${i + 1}`}
                 </a>
               ))}
             {canApplyMarker && (
@@ -204,7 +204,7 @@ export function NightActionRow({
             title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
             className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text"
           >
-            📋 직업 목록
+            직업 목록
           </a>
         )}
       </div>

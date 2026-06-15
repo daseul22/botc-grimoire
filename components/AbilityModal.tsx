@@ -51,7 +51,7 @@ export function AbilityModal({
               <span className="rounded border border-border bg-surface-2 px-1.5 py-0.5 text-muted">
                 {edition.label.ko}
               </span>
-              {c.setup && <span className="rounded px-1.5 py-0.5 text-gold">⚙ 셋업</span>}
+              {c.setup && <span className="rounded px-1.5 py-0.5 text-gold">셋업</span>}
             </div>
           </div>
           <button type="button" onClick={onClose} className="shrink-0 text-muted hover:text-text">
@@ -97,7 +97,7 @@ export function AbilityModal({
         )}
 
         {c.jinxes && c.jinxes.ko.length > 0 && (
-          <Section title="🔗 징크스">
+          <Section title="징크스">
             <ul className="space-y-1.5 text-sm">
               {c.jinxes.ko.map((s, i) => {
                 const idx = s.indexOf(" : ");

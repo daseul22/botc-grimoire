@@ -288,7 +288,7 @@ export function PlayCanvas({
       ) : (
         <details className="mb-3 rounded-lg border border-border bg-surface/40">
           <summary className="cursor-pointer select-none px-3 py-2 text-xs text-muted hover:text-text">
-            🌙 1일차 밤 셋업 (읽기 전용)
+            1일차 밤 셋업 (읽기 전용)
             {game.bluffs.length > 0 && <span className="ml-2 opacity-70">· 블러핑 {game.bluffs.length}/3</span>}
           </summary>
           <div className="border-t border-border px-1 pt-1">
@@ -319,7 +319,7 @@ export function PlayCanvas({
 
       {/* 글로벌 마커: Vortox(전체 정보 직업 거짓) 등 게임 전체에 걸치는 효과. 항상 노출(룰 참고용). */}
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="text-muted">🌐 전역:</span>
+        <span className="text-muted">전역:</span>
         {MARKERS.filter((m) => m.scope === "global").map((m) => {
           const on = game.globalMarkers.includes(m.id);
           return (
@@ -347,16 +347,16 @@ export function PlayCanvas({
       {/* 사이드바 토글 — 모바일 전용. 데스크탑은 보드 내부 absolute에 동일하게 다시 렌더된다. */}
       <div className="mb-2 flex flex-wrap gap-1 md:hidden">
         {night ? (
-          <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>🌙 행동 순서</button>
+          <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>행동 순서</button>
         ) : (
           hasDayRoles && (
-            <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>☀️ 낮 능력</button>
+            <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>낮 능력</button>
           )
         )}
-        <button type="button" onClick={() => setSidebar((s) => (s === "abilities" ? null : "abilities"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "abilities" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>📖 상세 능력</button>
-        <button type="button" onClick={() => setSidebar((s) => (s === "claims" ? null : "claims"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "claims" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>🗣️ 주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}</button>
+        <button type="button" onClick={() => setSidebar((s) => (s === "abilities" ? null : "abilities"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "abilities" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>상세 능력</button>
+        <button type="button" onClick={() => setSidebar((s) => (s === "claims" ? null : "claims"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "claims" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}</button>
         {!night && (
-          <button type="button" onClick={() => setSidebar((s) => (s === "votes" ? null : "votes"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "votes" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>🗳️ 투표{game.votes.length > 0 ? ` · ${game.votes.length}` : ""}</button>
+          <button type="button" onClick={() => setSidebar((s) => (s === "votes" ? null : "votes"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "votes" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>투표{game.votes.length > 0 ? ` · ${game.votes.length}` : ""}</button>
         )}
       </div>
 
@@ -368,24 +368,24 @@ export function PlayCanvas({
           <div className="absolute right-2 top-2 z-10 flex gap-1">
             {night ? (
               <button type="button" onClick={() => setSidebar((s) => (s === "night" ? null : "night"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "night" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-                🌙 행동 순서
+                행동 순서
               </button>
             ) : (
               hasDayRoles && (
                 <button type="button" onClick={() => setSidebar((s) => (s === "day" ? null : "day"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "day" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-                  ☀️ 낮 능력
+                  낮 능력
                 </button>
               )
             )}
             <button type="button" onClick={() => setSidebar((s) => (s === "abilities" ? null : "abilities"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "abilities" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-              📖 상세 능력
+              상세 능력
             </button>
             <button type="button" onClick={() => setSidebar((s) => (s === "claims" ? null : "claims"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "claims" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-              🗣️ 주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}
+              주장{game.actions.some((a) => a.bluff) ? ` · ${game.actions.filter((a) => a.bluff).length}` : ""}
             </button>
             {!night && (
               <button type="button" onClick={() => setSidebar((s) => (s === "votes" ? null : "votes"))} className={`rounded-lg border px-2.5 py-1.5 text-sm backdrop-blur ${sidebar === "votes" ? "border-gold/60 bg-gold/15 text-gold" : "border-border bg-surface/90 hover:bg-surface-2"}`}>
-                🗳️ 투표{game.votes.length > 0 ? ` · ${game.votes.length}` : ""}
+                투표{game.votes.length > 0 ? ` · ${game.votes.length}` : ""}
               </button>
             )}
           </div>

@@ -41,7 +41,7 @@ export function GrimoireLegend({
         className="absolute bottom-2 left-2 z-10 inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface/90 px-3 py-1.5 text-sm text-muted backdrop-blur transition-colors hover:bg-surface-2 hover:text-text"
         title="화면 기호 설명 범례 열기"
       >
-        📖 범례
+        범례
       </button>
     );
   }
@@ -52,7 +52,7 @@ export function GrimoireLegend({
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-6">
       <div className="pointer-events-auto max-h-[62%] w-[min(54%,36rem)] overflow-y-auto rounded-2xl border border-border bg-surface/95 p-5 shadow-2xl backdrop-blur">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xl font-bold">📖 범례</span>
+          <span className="text-xl font-bold">범례</span>
           <button
             type="button"
             onClick={() => setOpen(false)}

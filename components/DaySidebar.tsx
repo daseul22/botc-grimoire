@@ -15,7 +15,7 @@ type Run = (fn: () => Promise<Game | { error: string }>) => void;
 
 const TEAM_ORDER = TEAMS.map((t) => t.id);
 
-/** ☀️ 낮 능력 사이드바 — 낮에 쓰는 능력을 가진 인플레이 직업 목록 + 행동 기록. */
+/** 낮 능력 사이드바 — 낮에 쓰는 능력을 가진 인플레이 직업 목록 + 행동 기록. */
 export function DaySidebar({
   game,
   charMap,
@@ -47,7 +47,7 @@ export function DaySidebar({
     <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <span className="text-sm font-semibold">
-          ☀️ 낮 능력<span className="ml-1 font-normal text-muted">· {dayRoles.length}</span>
+          낮 능력<span className="ml-1 font-normal text-muted">· {dayRoles.length}</span>
         </span>
         <button type="button" onClick={onClose} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

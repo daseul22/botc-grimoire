@@ -68,7 +68,7 @@ export function FirstNightSetup({
   return (
     <div className={`mb-3 space-y-3 rounded-lg border px-4 py-3 ${readonly ? "border-border bg-surface/60" : "border-gold/30 bg-gold/5"}`}>
       <p className={`text-xs font-semibold ${readonly ? "text-muted" : "text-gold"}`}>
-        🌙 1일차 밤 셋업{readonly && <span className="ml-1 opacity-70">· 읽기 전용</span>}
+        1일차 밤 셋업{readonly && <span className="ml-1 opacity-70">· 읽기 전용</span>}
       </p>
 
       {/* 셋업 영향 직업 */}

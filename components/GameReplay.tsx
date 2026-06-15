@@ -48,7 +48,7 @@ export function GameReplay({
         className="mb-6 rounded-lg border px-4 py-3 text-lg font-bold"
         style={{ borderColor: `${resultColor}66`, background: `${resultColor}14`, color: resultColor }}
       >
-        🏁 {resultText}
+        {resultText}
       </div>
 
       {/* 최종 직업 공개 */}
@@ -165,7 +165,7 @@ export function GameReplay({
                     {(["whisper", "open"] as const).map((k) => {
                       const t = h.timers?.[k];
                       if (!t) return null;
-                      const label = k === "whisper" ? "🤫 밀담" : "📣 공개토론";
+                      const label = k === "whisper" ? "밀담" : "공개토론";
                       const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
                       const used =
                         t.startedAt != null

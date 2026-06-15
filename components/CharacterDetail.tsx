@@ -140,7 +140,7 @@ export function CharacterDetail({ character: c }: { character: Character }) {
       {c.setup && c.setupNote && t(c.setupNote) && (
         <Section title={ko ? "셋업 효과" : "Setup"}>
           <p className="inline-flex items-center gap-1.5 rounded-lg border border-gold/40 bg-gold/10 px-3 py-1.5 text-sm font-medium text-gold">
-            ⚙ {t(c.setupNote)}
+            {t(c.setupNote)}
           </p>
           <p className="mt-1.5 text-xs text-muted">
             {ko
@@ -151,7 +151,7 @@ export function CharacterDetail({ character: c }: { character: Character }) {
       )}
 
       {jinxes.length > 0 && (
-        <Section title={ko ? "🔗 징크스 (직업 상호작용)" : "🔗 Jinxes"}>
+        <Section title={ko ? "징크스 (직업 상호작용)" : "Jinxes"}>
           <ul className="space-y-2 text-sm">
             {jinxes.map((s, i) => {
               const idx = s.indexOf(" : ");

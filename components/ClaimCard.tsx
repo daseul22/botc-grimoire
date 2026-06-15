@@ -44,7 +44,7 @@ export function ClaimCard({
   return (
     <>
       <div className="mb-3 rounded-lg border px-3 py-2 text-center text-sm font-medium" style={{ borderColor: "#d4a23a66", color: "#d4a23a", background: "#d4a23a14" }}>
-        ⏳ {left}초 후 이 화면이 사라집니다 · 지금 본인 직업을 확인하세요
+        {left}초 후 이 화면이 사라집니다 · 지금 본인 직업을 확인하세요
       </div>
       <RoleCard me={me} ch={ch} disguised={disguised} />
     </>

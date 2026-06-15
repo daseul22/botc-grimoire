@@ -284,7 +284,7 @@ export function HeaderToolbar({
             }
             className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted"
           >
-            🔒 직업배포
+            직업배포
           </button>
           <button
             type="button"
@@ -293,7 +293,7 @@ export function HeaderToolbar({
             title={blockTitle ?? "자유 선택형 자리 보기 링크 복사 (헤더 있음, 재선택 가능)"}
             className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted"
           >
-            📱 직업공유
+            직업공유
           </button>
           <Link
             href="/games"
@@ -309,7 +309,7 @@ export function HeaderToolbar({
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm">
           <span className="rounded bg-surface-2 px-2 py-0.5 text-xs text-muted">{share.label}</span>
           <span className={share.copied ? "text-green-400" : "text-amber-400"}>
-            {share.copied ? "📋 주소 복사됨" : "복사 실패 — 아래 주소를 직접 복사하세요"}
+            {share.copied ? "주소 복사됨" : "복사 실패 — 아래 주소를 직접 복사하세요"}
           </span>
           <code className="select-all rounded bg-surface-2 px-2 py-1 text-xs text-text">{share.url}</code>
           <span className="text-xs text-muted">같은 WiFi 폰 브라우저에서 열어 자리(직업) 확인</span>

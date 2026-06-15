@@ -59,7 +59,7 @@ export function TimerPanel({
     <div className="mb-3 flex flex-wrap items-stretch gap-2">
       {(["whisper", "open"] as const).map((kind) => {
         const t = game.phaseTimers?.[kind];
-        const label = kind === "whisper" ? "🤫 밀담" : "📣 공개토론";
+        const label = kind === "whisper" ? "밀담" : "공개토론";
         const def = defaultFor(kind);
         const duration = t?.durationSec ?? def;
         return (

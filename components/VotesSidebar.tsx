@@ -91,7 +91,7 @@ export function VotesSidebar({
   return (
     <aside className="flex h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface md:w-72">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-        <span className="text-sm font-semibold">🗳️ 지목·투표<span className="ml-1 font-normal text-muted">· {game.votes.length}</span></span>
+        <span className="text-sm font-semibold">지목·투표<span className="ml-1 font-normal text-muted">· {game.votes.length}</span></span>
         <button type="button" onClick={onClose} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"><Chevron /></button>
       </div>
 

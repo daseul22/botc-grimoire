@@ -82,7 +82,7 @@ export default async function ClaimPage({
                       className="rounded-lg border border-border bg-surface/40 px-3 py-3 text-sm text-muted opacity-50"
                     >
                       {p.nickname}
-                      <span className="ml-1 text-[11px]">· 확인됨🔒</span>
+                      <span className="ml-1 text-[11px]">· 확인됨</span>
                     </div>
                   );
                 }

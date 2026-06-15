@@ -214,7 +214,7 @@ export function SelectionPanel({
               className="rounded-lg border px-3 py-1.5 text-sm"
               style={{ borderColor: "#d4a23a88", color: "#d4a23a", background: "#d4a23a14" }}
             >
-              🔓 직업 재열람 허용
+              직업 재열람 허용
             </button>
           )}
           <button

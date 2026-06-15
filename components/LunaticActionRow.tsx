@@ -80,7 +80,7 @@ export function LunaticActionRow({
             title="진짜 악마가 받는 블러핑·하수인 화면을 그대로 복사 (마술사 포함). 이후 자유 수정 가능."
             className="inline-flex items-center gap-1 rounded bg-red-500/15 px-2 py-1 font-medium text-red-300 hover:bg-red-500/25 disabled:opacity-40"
           >
-            🎭 실제 악마와 동일하게 채우기
+            실제 악마와 동일하게 채우기
           </button>
           <p className="mt-1 text-[11px] text-muted">
             진짜 악마의 블러핑 3개 + 하수인(마술사 포함)을 그대로 복사합니다 — 이후 슬롯·좌석을 자유롭게 수정할 수 있습니다.
@@ -168,7 +168,7 @@ export function LunaticActionRow({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25"
         >
-          🎴 보여주기 · 블러핑
+          보여주기 · 블러핑
         </a>
         <a
           href={`/play/${gameId}/show/${actorSeat}?mode=lunatic-minions`}
@@ -176,7 +176,7 @@ export function LunaticActionRow({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25"
         >
-          🎴 보여주기 · 하수인
+          보여주기 · 하수인
         </a>
       </div>
 
