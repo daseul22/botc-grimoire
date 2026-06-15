@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TEAM_MAP } from "@/lib/constants";
-import { RESULT_KIND_LABEL, type ActionSpec } from "@/lib/night-actions";
+import { INFO_KINDS, misregisterWarn, RESULT_KIND_LABEL, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer } from "@/lib/types";
 import { RolePickerModal } from "./RolePickerModal";
 
@@ -30,6 +30,10 @@ export function ActionFields({
 }) {
   // 본인 좌석도 지목 가능 — 임프 자결(스타패스), 핏해그·갬블러 자기 지정 등.
   const pickable = players;
+  // 정보 능력일 때만 은둔자/첩자 등 '반대 진영으로 보일 수 있는' 대상에 경고.
+  const infoAction = INFO_KINDS.has(spec.result);
+  const trapWarn = (seat: number) =>
+    infoAction ? misregisterWarn(players.find((p) => p.seat === seat)?.characterId ?? "") : undefined;
   const toggleTarget = (seat: number) =>
     setTargets((cur) =>
       cur.includes(seat)
@@ -48,26 +52,43 @@ export function ActionFields({
             {pickable.map((p) => {
               const on = targets.includes(p.seat);
               const full = targets.length >= spec.targets && !on;
+              const warn = infoAction ? misregisterWarn(p.characterId) : undefined;
               return (
                 <button
                   key={p.seat}
                   type="button"
                   disabled={full}
                   onClick={() => toggleTarget(p.seat)}
-                  title={p.nickname}
-                  className={`rounded px-1.5 py-0.5 ${
+                  title={warn ? `${p.nickname} · ${warn}` : p.nickname}
+                  className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 ${
                     on
                       ? "bg-gold/20 text-gold ring-1 ring-gold/50"
                       : full
                         ? "opacity-30"
                         : "bg-surface hover:bg-surface-2"
-                  } ${p.status === "dead" ? "line-through" : ""}`}
+                  } ${warn ? "ring-1 ring-amber-400/60" : ""} ${p.status === "dead" ? "line-through" : ""}`}
                 >
+                  {warn && <span className="text-amber-400">⚠</span>}
                   {short(p.nickname)}
                 </button>
               );
             })}
           </div>
+          {/* 선택된 대상 중 패시브 트랩(은둔자/첩자) 경고 — 폰에서 진짜 직업을 못 봐 실수 방지 */}
+          {targets.map((s) => trapWarn(s)).filter(Boolean).length > 0 && (
+            <div className="mt-1 space-y-0.5">
+              {targets.map((s) => {
+                const w = trapWarn(s);
+                if (!w) return null;
+                const nm = players.find((p) => p.seat === s)?.nickname ?? `${s}`;
+                return (
+                  <p key={s} className="rounded border-l-2 border-amber-400/50 bg-amber-500/5 px-2 py-0.5 text-[11px] text-amber-300/90">
+                    ⚠ <span className="font-medium">{nm}</span> — {w}
+                  </p>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

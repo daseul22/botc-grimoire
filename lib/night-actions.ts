@@ -116,6 +116,24 @@ export const INFO_KINDS: ReadonlySet<ResultKind> = new Set<ResultKind>([
   "team",
 ]);
 
+/**
+ * 정보 능력의 대상이 되면 진영/직업이 반대로 "등록"될 수 있는 패시브 트랩 직업.
+ * 폰으로 운영하는 ST가 대상의 진짜 직업을 못 봐서 점쟁이가 은둔자를 선으로 알려주는 식의 실수를 막는다.
+ *   recluse(은둔자, 선) → 악(하수인·악마)으로 보일 수 있음.
+ *   spy(첩자, 악) → 선(주민·외지인)으로 보일 수 있음.
+ * 별도 데이터 플래그가 없어 명시 목록으로 관리(능력문 자동검출은 legion 등 오탐이 많음).
+ */
+export const MISREGISTER_ROLES: Record<string, "good-as-evil" | "evil-as-good"> = {
+  recluse: "good-as-evil",
+  spy: "evil-as-good",
+};
+export function misregisterWarn(characterId: string): string | undefined {
+  const k = MISREGISTER_ROLES[characterId];
+  if (k === "good-as-evil") return "은둔자 — 악(하수인·악마)으로 보일 수 있음";
+  if (k === "evil-as-good") return "첩자 — 선(주민·외지인)으로 보일 수 있음";
+  return undefined;
+}
+
 // 직업별 스펙. 야간 행동이 있는 직업만 등재(없으면 기본값으로 처리).
 export const ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 트러블 브루잉 ──

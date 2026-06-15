@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MARKER_MAP } from "@/lib/markers";
-import { formatResult, markerForAction, type ActionSpec } from "@/lib/night-actions";
+import { formatResult, INFO_KINDS, markerForAction, misregisterWarn, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer, NightActionRecord } from "@/lib/types";
 import { ActionFields } from "./ActionFields";
 
@@ -113,6 +113,15 @@ export function NightActionRow({
           )}
           {resText && <span className="ml-1 font-semibold text-gold">＝ {resText}</span>}
         </div>
+        {INFO_KINDS.has(spec.result) &&
+          record.targets
+            .map((s) => ({ s, w: misregisterWarn(players.find((p) => p.seat === s)?.characterId ?? "") }))
+            .filter((x) => x.w)
+            .map(({ s, w }) => (
+              <p key={`w${s}`} className="mt-1 rounded border-l-2 border-amber-400/50 bg-amber-500/5 px-2 py-0.5 text-[11px] text-amber-300/90">
+                ⚠ <span className="font-medium">{nameOf(s)}</span> — {w}
+              </p>
+            ))}
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <button type="button" onClick={startEdit} className="text-muted hover:text-text">수정</button>
           <button type="button" disabled={busy} onClick={onClear} className="text-muted hover:text-red-400 disabled:opacity-50">지우기</button>
