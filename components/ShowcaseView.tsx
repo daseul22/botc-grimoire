@@ -159,6 +159,10 @@ export function ShowcaseView({
   const headingFilled = fill(showcase?.heading);
   const subFilled = fill(showcase?.subheading);
   const tokens = showcase?.tokens ?? [];
+  // heading/subheading이 이미 {result}를 표시하면(예: 장군) 별도 거대 텍스트 블록 중복을 피한다.
+  const headingUsesResult = !!(
+    showcase?.heading?.includes("{result}") || showcase?.subheading?.includes("{result}")
+  );
 
   if (!hasRecord && !emptyAllowed) {
     return <p className="text-base text-muted">아직 행동이 기록되지 않았습니다.</p>;
@@ -186,8 +190,8 @@ export function ShowcaseView({
           </h1>
         )}
 
-        {/* 텍스트 결과는 별도 거대 표시 (메제펠리스 비밀단어 등) */}
-        {spec.result === "text" && resultStr && (
+        {/* 텍스트 결과는 별도 거대 표시 (메제펠리스 비밀단어 등). heading이 {result}를 이미 쓰면 생략. */}
+        {spec.result === "text" && resultStr && !headingUsesResult && (
           <div className="break-words rounded-xl border-2 border-gold/40 bg-gold/5 px-6 py-4 text-center text-4xl font-black tracking-wide text-gold">
             {resultStr}
           </div>
