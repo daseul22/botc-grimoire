@@ -18,7 +18,7 @@ import {
   verifyCredentialsById,
   type AuthUser,
 } from "@/lib/auth";
-import { countGamesByNickname } from "@/lib/games";
+import { countGamesByNickname, type NicknameGameCount } from "@/lib/games";
 
 export type AuthResult = { error: string } | void;
 
@@ -89,7 +89,14 @@ export async function meAction(): Promise<Pick<
 
 export type ChangeNicknameResult =
   | { error: string }
-  | { needConfirm: true; newNickname: string; guestGames: number; oldGames: number }
+  | {
+      needConfirm: true;
+      newNickname: string;
+      /** 새 닉네임으로 기록된 게임(흡수됨) — 종료/진행 분리. */
+      incoming: NicknameGameCount;
+      /** 현재 닉네임으로 기록된 게임(분리됨) — 종료/진행 분리. */
+      outgoing: NicknameGameCount;
+    }
   | { ok: true; nickname: string };
 
 /**
@@ -117,10 +124,13 @@ export async function changeNicknameAction(input: {
   if (nicknameExists(next)) return { error: "이미 사용 중인 닉네임입니다." };
 
   // 안전장치: 새 닉네임으로 이미 기록된 게임(흡수될 게스트/내역) + 현재 닉네임에서 분리될 기록 확인.
-  const guestGames = countGamesByNickname(next);
-  const oldGames = countGamesByNickname(u.nickname);
-  if ((guestGames > 0 || oldGames > 0) && !input.confirm) {
-    return { needConfirm: true, newNickname: next, guestGames, oldGames };
+  // 종료 수는 통계 리더보드와 동일, 진행 중은 종료 시 연결됨을 별도 표기.
+  const incoming = countGamesByNickname(next);
+  const outgoing = countGamesByNickname(u.nickname);
+  const total =
+    incoming.finished + incoming.inProgress + outgoing.finished + outgoing.inProgress;
+  if (total > 0 && !input.confirm) {
+    return { needConfirm: true, newNickname: next, incoming, outgoing };
   }
 
   changeNickname(u.id, next);

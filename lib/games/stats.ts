@@ -131,19 +131,36 @@ export function nicknameLeaderboard(): NicknameStat[] {
   );
 }
 
+export type NicknameGameCount = {
+  /** 종료된 게임 수 — 통계 리더보드 집계 기준과 동일. */
+  finished: number;
+  /** 진행 중(미종료) 게임 수 — 종료되면 통계에 연결된다. */
+  inProgress: number;
+};
+
 /**
- * 특정 닉네임으로 기록된 게임 수(진행/종료 무관, distinct 게임). 닉네임 변경 시
- * '이 닉네임으로 연결될/분리될 기록'을 사용자에게 경고하는 안전장치용. NFC로 정규화 비교.
+ * 특정 닉네임으로 기록된 distinct 게임 수를 종료/진행으로 나눠 센다. 닉네임 변경 시
+ * '이 닉네임으로 연결될/분리될 기록'을 경고하는 안전장치용. 종료 수는 통계(리더보드)와
+ * 정확히 일치한다(listFinishedGames도 status='finished'만 집계). NFC로 정규화 비교.
  */
-export function countGamesByNickname(nickname: string): number {
+export function countGamesByNickname(nickname: string): NicknameGameCount {
   const key = nickKey(nickname);
-  if (!key) return 0;
+  if (!key) return { finished: 0, inProgress: 0 };
   const rows = db
-    .prepare("SELECT DISTINCT game_id, nickname FROM game_players WHERE TRIM(nickname) <> ''")
-    .all() as { game_id: string; nickname: string }[];
-  const games = new Set<string>();
-  for (const r of rows) if (nickKey(r.nickname) === key) games.add(r.game_id);
-  return games.size;
+    .prepare(
+      `SELECT DISTINCT p.game_id AS game_id, p.nickname AS nickname, g.status AS status
+       FROM game_players p JOIN games g ON g.id = p.game_id
+       WHERE TRIM(p.nickname) <> ''`,
+    )
+    .all() as { game_id: string; nickname: string; status: string }[];
+  const fin = new Set<string>();
+  const prog = new Set<string>();
+  for (const r of rows) {
+    if (nickKey(r.nickname) !== key) continue;
+    if (r.status === "finished") fin.add(r.game_id);
+    else prog.add(r.game_id);
+  }
+  return { finished: fin.size, inProgress: prog.size };
 }
 
 export type KnownNickname = {

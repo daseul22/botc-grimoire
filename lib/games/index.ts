@@ -76,6 +76,7 @@ export {
   listKnownNicknames,
   nicknameLeaderboard,
   type FinishedGame,
+  type NicknameGameCount,
   type GameStatPlayer,
   type KnownNickname,
   type NicknameStat,
