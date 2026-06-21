@@ -287,7 +287,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   toymaker: { targets: 0, result: "none" },
   angel: { targets: 0, result: "none" },
 
-  // ── 로릭 ──
+  // ── 설화(로릭) ──
   tor: { targets: 0, result: "none" },
   stormcatcher: { targets: 0, result: "role", playerPicks: true, hint: "이름 댄 선한 직업" },
 };

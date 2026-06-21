@@ -21,6 +21,7 @@ export function RolePickerModal({
   onPick,
   onClose,
   clearLabel = "선택 안 함",
+  highlight = [],
 }: {
   open: boolean;
   title: string;
@@ -29,6 +30,8 @@ export function RolePickerModal({
   onPick: (id: string) => void;
   onClose: () => void;
   clearLabel?: string;
+  /** 지목된 플레이어의 실제 직업 — 상단에 강조하고 그리드에서 링 표시(취함/중독 판단용). */
+  highlight?: { char: Character; note: string }[];
 }) {
   useEffect(() => {
     if (!open) return;
@@ -49,6 +52,7 @@ export function RolePickerModal({
       TEAM_ORDER.indexOf(a.team) - TEAM_ORDER.indexOf(b.team) ||
       a.name.ko.localeCompare(b.name.ko, "ko"),
   );
+  const highlightIds = new Set(highlight.map((h) => h.char.id));
 
   return createPortal(
     <div
@@ -64,6 +68,43 @@ export function RolePickerModal({
           <h2 className="text-base font-semibold">{title}</h2>
           <button type="button" onClick={onClose} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text" title="닫기">✕</button>
         </div>
+        {highlight.length > 0 && (
+          <div className="border-b border-border bg-amber-500/5 px-4 py-3">
+            <p className="mb-2 text-xs text-amber-300/90">
+              지목된 플레이어의 실제 직업 — 취함·중독이면 다른 직업을 줄 수 있습니다
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {highlight.map((h, i) => (
+                <button
+                  key={`${h.char.id}-${i}`}
+                  type="button"
+                  onClick={() => {
+                    onPick(h.char.id);
+                    onClose();
+                  }}
+                  className="flex items-center gap-2 rounded-lg border border-amber-400/50 bg-surface-2 px-2 py-1 text-xs hover:border-amber-400"
+                  title={h.char.ability.ko}
+                >
+                  <div
+                    className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border-2 bg-bg"
+                    style={{ borderColor: TEAM_MAP[h.char.team]?.color }}
+                  >
+                    {h.char.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={h.char.image} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span style={{ color: TEAM_MAP[h.char.team]?.color }}>{h.char.name.en.charAt(0)}</span>
+                    )}
+                  </div>
+                  <span className="font-medium" style={{ color: TEAM_MAP[h.char.team]?.color }}>
+                    {h.char.name.ko}
+                  </span>
+                  <span className="text-muted">· {h.note}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="grid flex-1 grid-cols-3 gap-2 overflow-y-auto p-4 sm:grid-cols-4 md:grid-cols-5">
           <button
             type="button"
@@ -86,7 +127,7 @@ export function RolePickerModal({
                   onPick(c.id);
                   onClose();
                 }}
-                className={`flex flex-col items-center gap-1 rounded-lg border p-2 text-xs hover:border-gold/60 ${on ? "border-gold/60 bg-gold/10" : "border-border bg-surface-2"}`}
+                className={`flex flex-col items-center gap-1 rounded-lg border p-2 text-xs hover:border-gold/60 ${on ? "border-gold/60 bg-gold/10" : "border-border bg-surface-2"} ${highlightIds.has(c.id) ? "ring-2 ring-amber-400/70" : ""}`}
                 title={c.ability.ko}
               >
                 <div

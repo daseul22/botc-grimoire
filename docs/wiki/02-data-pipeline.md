@@ -53,7 +53,7 @@ flowchart TD
 - **Sheet**: id, name, description, difficulty, characterIds, custom?.
 - **RulesSection**: id, title, body, order.
 
-규모: 직업 **183종**(공식+실험판+팬 "로릭"). 팀 7종(마을주민·외지인·하수인·악마·여행자·전설·로릭),
+규모: 직업 **183종**(공식+실험판+팬 "설화"). 팀 7종(마을주민·외지인·하수인·악마·여행자·전설·설화),
 에디션 5종(tb/bmr/snv/loric/other) — [lib/constants.ts](../../lib/constants.ts).
 
 ## 한국어 용어 통일(1c7058f)

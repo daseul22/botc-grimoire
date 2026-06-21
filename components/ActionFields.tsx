@@ -43,6 +43,16 @@ export function ActionFields({
           : [...cur, seat],
     );
 
+  // 지목된 좌석의 *실제* 직업 — 결과 직업 선택 시 ST가 인지하도록 강조한다.
+  // (취함/중독이면 일부러 다른 직업을 줄 수 있으니, 진짜를 보고 줄지/안 줄지 판단.)
+  const targetHighlights = targets
+    .map((seat) => {
+      const p = players.find((pp) => pp.seat === seat);
+      const ch = p ? charMap[p.characterId] : undefined;
+      return ch && p ? { char: ch, note: p.nickname } : null;
+    })
+    .filter((x): x is { char: Character; note: string } => !!x);
+
   return (
     <>
       {spec.targets > 0 && (
@@ -126,6 +136,7 @@ export function ActionFields({
               charMap={charMap}
               value={result}
               onChange={setResult}
+              highlight={targetHighlights}
             />
           )}
           {spec.result === "text" && (
@@ -148,14 +159,20 @@ function RoleResultPicker({
   charMap,
   value,
   onChange,
+  highlight,
 }: {
   charMap: Record<string, Character>;
   value: string;
   onChange: (v: string) => void;
+  /** 지목된 좌석의 실제 직업(모달 상단 강조용) */
+  highlight?: { char: Character; note: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const picked = value ? charMap[value] : undefined;
-  const candidates = Object.values(charMap);
+  // 전설(fabled)·설화(loric)는 스토리텔러 전용 메타 직업 — 정보 능력의 결과로 줄 수 없으니 제외.
+  const candidates = Object.values(charMap).filter(
+    (c) => c.team !== "fabled" && c.team !== "loric",
+  );
   return (
     <>
       <button
@@ -182,6 +199,7 @@ function RoleResultPicker({
         selected={value}
         onPick={onChange}
         onClose={() => setOpen(false)}
+        highlight={highlight}
       />
     </>
   );

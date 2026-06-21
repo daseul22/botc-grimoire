@@ -7,7 +7,7 @@ export const TEAMS: { id: Team; label: Localized; color: string }[] = [
   { id: "demon", label: { ko: "악마", en: "Demon" }, color: "#d23b3b" },
   { id: "traveller", label: { ko: "여행자", en: "Traveller" }, color: "#9b6dd0" },
   { id: "fabled", label: { ko: "전설", en: "Fabled" }, color: "#d4a23a" },
-  { id: "loric", label: { ko: "로릭", en: "Loric" }, color: "#7a8aa0" },
+  { id: "loric", label: { ko: "설화", en: "Loric" }, color: "#7a8aa0" },
 ];
 
 export const TEAM_MAP: Record<Team, (typeof TEAMS)[number]> = Object.fromEntries(
@@ -24,7 +24,7 @@ export const EDITIONS: { id: EditionId; label: Localized }[] = [
   { id: "trouble-brewing", label: { ko: "트러블 브루잉", en: "Trouble Brewing" } },
   { id: "bad-moon-rising", label: { ko: "배드 문 라이징", en: "Bad Moon Rising" } },
   { id: "sects-and-violets", label: { ko: "종파의 제비꽃", en: "Sects & Violets" } },
-  { id: "loric", label: { ko: "로릭", en: "Loric" } },
+  { id: "loric", label: { ko: "설화", en: "Loric" } },
   { id: "other", label: { ko: "기타", en: "Other" } },
 ];
 
