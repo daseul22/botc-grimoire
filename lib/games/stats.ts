@@ -131,6 +131,21 @@ export function nicknameLeaderboard(): NicknameStat[] {
   );
 }
 
+/**
+ * 특정 닉네임으로 기록된 게임 수(진행/종료 무관, distinct 게임). 닉네임 변경 시
+ * '이 닉네임으로 연결될/분리될 기록'을 사용자에게 경고하는 안전장치용. NFC로 정규화 비교.
+ */
+export function countGamesByNickname(nickname: string): number {
+  const key = nickKey(nickname);
+  if (!key) return 0;
+  const rows = db
+    .prepare("SELECT DISTINCT game_id, nickname FROM game_players WHERE TRIM(nickname) <> ''")
+    .all() as { game_id: string; nickname: string }[];
+  const games = new Set<string>();
+  for (const r of rows) if (nickKey(r.nickname) === key) games.add(r.game_id);
+  return games.size;
+}
+
 export type KnownNickname = {
   nickname: string;
   count: number;

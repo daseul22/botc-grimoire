@@ -33,9 +33,17 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 `);
+// 구버전 db 보강 (idempotent) — 닉네임 마지막 변경 시각(쿨다운 판정용). null=변경 이력 없음.
+try {
+  db.exec("ALTER TABLE users ADD COLUMN nickname_changed_at TEXT");
+} catch {
+  /* 이미 존재 */
+}
 
 export const SESSION_COOKIE = "botc-session";
 const SESSION_DAYS = 30;
+/** 닉네임 변경 쿨다운(일). 3개월 ≈ 90일에 1회. */
+export const NICKNAME_COOLDOWN_DAYS = 90;
 const now = () => new Date().toISOString();
 
 export type AuthUser = {
@@ -44,6 +52,8 @@ export type AuthUser = {
   nickname: string;
   roles: Role[];
   createdAt: string;
+  /** 닉네임 마지막 변경 시각(ISO). null = 변경 이력 없음(즉시 변경 가능). */
+  nicknameChangedAt: string | null;
 };
 
 type UserRow = {
@@ -54,6 +64,7 @@ type UserRow = {
   password_salt: string;
   roles: string;
   created_at: string;
+  nickname_changed_at: string | null;
 };
 
 function parseRoles(s: string): Role[] {
@@ -73,6 +84,7 @@ function rowToUser(r: UserRow): AuthUser {
     nickname: r.nickname,
     roles: parseRoles(r.roles),
     createdAt: r.created_at,
+    nicknameChangedAt: r.nickname_changed_at ?? null,
   };
 }
 
@@ -167,6 +179,26 @@ export function verifyCredentialsById(userId: number, password: string): boolean
     | { password_hash: string; password_salt: string }
     | undefined;
   return !!r && verifyPassword(password, r.password_hash, r.password_salt);
+}
+
+/** 닉네임 변경 쿨다운 상태. nextAt = 다음 변경 가능 시각(ISO), 가능하면 null. */
+export function nicknameChangeStatus(user: AuthUser): {
+  canChange: boolean;
+  nextAt: string | null;
+} {
+  if (!user.nicknameChangedAt) return { canChange: true, nextAt: null };
+  const next = new Date(user.nicknameChangedAt).getTime() + NICKNAME_COOLDOWN_DAYS * 86400000;
+  if (Date.now() >= next) return { canChange: true, nextAt: null };
+  return { canChange: false, nextAt: new Date(next).toISOString() };
+}
+
+/** 닉네임 변경(쿨다운/고유성/연결 확인은 호출부에서 검증). nickname_changed_at을 now로 기록. */
+export function changeNickname(userId: number, newNickname: string): void {
+  db.prepare("UPDATE users SET nickname = ?, nickname_changed_at = ? WHERE id = ?").run(
+    normalizeNickname(newNickname),
+    now(),
+    userId,
+  );
 }
 
 export function changePassword(userId: number, newPassword: string): void {

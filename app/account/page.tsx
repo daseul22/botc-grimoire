@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, nicknameChangeStatus } from "@/lib/auth";
 import { ROLE_LABEL } from "@/lib/auth-roles";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
+import { NicknameForm } from "@/components/NicknameForm";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "계정" };
@@ -9,6 +10,8 @@ export const metadata = { title: "계정" };
 export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const nickStatus = nicknameChangeStatus(user);
 
   return (
     <div className="max-w-xl space-y-8">
@@ -44,6 +47,15 @@ export default async function AccountPage() {
         <p className="mt-3 text-xs text-muted">
           이야기꾼·관리자 권한은 관리자만 부여할 수 있습니다.
         </p>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold text-muted">닉네임 변경</h2>
+        <NicknameForm
+          currentNickname={user.nickname}
+          canChange={nickStatus.canChange}
+          nextAt={nickStatus.nextAt}
+        />
       </section>
 
       <section>

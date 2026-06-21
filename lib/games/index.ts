@@ -71,6 +71,7 @@ export {
 } from "./lifecycle";
 export { captureUndo, clearUndo, undoInfo, undoLast } from "./undo";
 export {
+  countGamesByNickname,
   listFinishedGames,
   listKnownNicknames,
   nicknameLeaderboard,

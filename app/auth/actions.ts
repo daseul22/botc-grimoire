@@ -3,12 +3,14 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
+  changeNickname,
   changePassword,
   createSession,
   createUser,
   destroyCurrentSession,
   getCurrentUser,
   loginIdExists,
+  nicknameChangeStatus,
   nicknameExists,
   normalizeLoginId,
   normalizeNickname,
@@ -16,6 +18,7 @@ import {
   verifyCredentialsById,
   type AuthUser,
 } from "@/lib/auth";
+import { countGamesByNickname } from "@/lib/games";
 
 export type AuthResult = { error: string } | void;
 
@@ -82,6 +85,47 @@ export async function meAction(): Promise<Pick<
   const u = await getCurrentUser();
   if (!u) return null;
   return { id: u.id, loginId: u.loginId, nickname: u.nickname, roles: u.roles };
+}
+
+export type ChangeNicknameResult =
+  | { error: string }
+  | { needConfirm: true; newNickname: string; guestGames: number; oldGames: number }
+  | { ok: true; nickname: string };
+
+/**
+ * 닉네임 변경(본인). 3개월에 1회. 통계·내역은 닉네임 문자열로 매칭되므로 안전장치를 둔다:
+ *  - 새 닉네임으로 이미 기록된 게임이 있거나(게스트/타인 기록 흡수 위험),
+ *    현재 닉네임으로 집계된 기록이 분리되는 경우 → 건수를 알려주고 confirm=true 재요청 시에만 적용.
+ */
+export async function changeNicknameAction(input: {
+  newNickname: string;
+  confirm?: boolean;
+}): Promise<ChangeNicknameResult> {
+  const u = await getCurrentUser();
+  if (!u) return { error: "로그인이 필요합니다." };
+
+  const next = normalizeNickname(input.newNickname ?? "");
+  if (next.length < 1 || next.length > 20) return { error: "닉네임은 1~20자여야 합니다." };
+  if (next === u.nickname) return { error: "현재 닉네임과 같습니다." };
+
+  const status = nicknameChangeStatus(u);
+  if (!status.canChange) {
+    const d = status.nextAt ? status.nextAt.slice(0, 10) : "";
+    return { error: `닉네임은 3개월에 한 번만 변경할 수 있습니다. 다음 변경 가능일: ${d}` };
+  }
+
+  if (nicknameExists(next)) return { error: "이미 사용 중인 닉네임입니다." };
+
+  // 안전장치: 새 닉네임으로 이미 기록된 게임(흡수될 게스트/내역) + 현재 닉네임에서 분리될 기록 확인.
+  const guestGames = countGamesByNickname(next);
+  const oldGames = countGamesByNickname(u.nickname);
+  if ((guestGames > 0 || oldGames > 0) && !input.confirm) {
+    return { needConfirm: true, newNickname: next, guestGames, oldGames };
+  }
+
+  changeNickname(u.id, next);
+  revalidatePath("/", "layout");
+  return { ok: true, nickname: next };
 }
 
 /** 비밀번호 변경(본인). */
