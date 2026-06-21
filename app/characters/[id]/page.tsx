@@ -25,5 +25,5 @@ export default async function CharacterPage({
   const c = getCharacter(id);
   if (!c) notFound();
 
-  return <CharacterDetail character={c} />;
+  return <CharacterDetail character={c} roster={characters} />;
 }

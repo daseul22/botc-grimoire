@@ -405,6 +405,28 @@ export function specForPhase(characterId: string, phase: string, day?: number): 
   return nightActionSpec(characterId, day === undefined || day === 1);
 }
 
+// ── 보여주기(showcase) 변형 해석 — 단일 출처 ──
+// spec.showcase는 단일/배열/없음 3형태라, 정규화·변형선택 규칙이 여러 곳(show 페이지·행동 순서 행·
+// 능력 미리보기)에서 손으로 복제되면 한쪽만 바뀌어 어긋난다. 아래 두 헬퍼로 단일화한다.
+
+/** spec.showcase를 항상 배열로 정규화 — 단일=[1개], 없음=[]. 변형 버튼/개수 계산용. */
+export function showcaseVariants(spec: ActionSpec): ShowcaseSpec[] {
+  const raw = spec.showcase;
+  return Array.isArray(raw) ? raw : raw ? [raw] : [];
+}
+
+/** variant 인덱스로 보여주기 변형 1개 선택(0~length-1로 클램프). 정의 없으면 undefined. */
+export function pickShowcase(spec: ActionSpec, variant = 0): ShowcaseSpec | undefined {
+  const arr = showcaseVariants(spec);
+  if (arr.length === 0) return undefined;
+  return arr[Math.min(Math.max(0, variant | 0), arr.length - 1)];
+}
+
+/** record 없이도 보여주기를 노출하는 직업(마술사·꼭두각시) — show 페이지 emptyAllowed 판정. */
+export function showsWithoutRecord(characterId: string): boolean {
+  return characterId === "marionette" || characterId === "magician";
+}
+
 /** 마커 적용 시 실제 저장 문자열. mad는 결과(직업)를 파라미터로 결합. */
 export function markerForAction(marker: string, result: string): string {
   return marker === "mad" && result ? `mad:${result}` : marker;

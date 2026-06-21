@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MARKER_MAP } from "@/lib/markers";
-import { formatResult, INFO_KINDS, markerForAction, misregisterWarn, type ActionSpec } from "@/lib/night-actions";
+import { formatResult, INFO_KINDS, markerForAction, misregisterWarn, showcaseVariants, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer, NightActionRecord } from "@/lib/types";
 import { ActionFields } from "./ActionFields";
 
@@ -43,7 +43,7 @@ export function NightActionRow({
   const canApplyMarker = !!marker && markerSeats.length > 0 && (spec.marker !== "mad" || !!result);
 
   // showcase 배열이면 변형 라벨(악마용/하수인용) — 보여주기 버튼 N개로 분기
-  const showcaseArr = Array.isArray(spec.showcase) ? spec.showcase : spec.showcase ? [spec.showcase] : [];
+  const showcaseArr = showcaseVariants(spec);
   const showcaseLabels = spec.showcaseLabels ?? [];
   const hasShowcase = showcaseArr.length > 0;
 

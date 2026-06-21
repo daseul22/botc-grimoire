@@ -7,6 +7,7 @@ import { EDITION_MAP, TEAM_MAP } from "@/lib/constants";
 import { parseJinxEntry } from "@/lib/jinx";
 import { CharacterIcon } from "./CharacterIcon";
 import { Badge } from "./Badge";
+import { AbilityPreview } from "./AbilityPreview";
 
 const L = (v: Localized | undefined, lang: Lang) =>
   v ? v[lang] || v.ko || v.en || "" : "";
@@ -41,7 +42,13 @@ function Paragraphs({ text }: { text: string }) {
   );
 }
 
-export function CharacterDetail({ character: c }: { character: Character }) {
+export function CharacterDetail({
+  character: c,
+  roster,
+}: {
+  character: Character;
+  roster: Character[];
+}) {
   const [lang, setLang] = useState<Lang>("ko");
   const ko = lang === "ko";
   const team = TEAM_MAP[c.team];
@@ -54,7 +61,8 @@ export function CharacterDetail({ character: c }: { character: Character }) {
   const jinxes = pickList(c.jinxes);
 
   return (
-    <article className="max-w-3xl">
+    <div className="max-w-5xl lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8">
+      <article className="min-w-0">
       <div className="flex items-center justify-between">
         <Link href="/" className="text-sm text-muted hover:text-text">
           ← 직업 목록
@@ -172,6 +180,10 @@ export function CharacterDetail({ character: c }: { character: Character }) {
           </ul>
         </Section>
       )}
-    </article>
+      </article>
+      <aside className="mt-8 lg:mt-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+        <AbilityPreview character={c} roster={roster} />
+      </aside>
+    </div>
   );
 }
