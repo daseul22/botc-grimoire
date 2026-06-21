@@ -11,11 +11,12 @@ import { LunaticActionRow } from "./LunaticActionRow";
 import {
   clearActionAction,
   recordActionAction,
+  setHerringAction,
   setLunaticBluffsAction,
   setLunaticMinionsAction,
   toggleDoneAction,
-  toggleMarkerAction,
 } from "@/app/play/actions";
+import { RedHerringPicker } from "./RedHerringPicker";
 
 type Run = GameActionRun;
 
@@ -264,7 +265,12 @@ export function NightSidebar({
                     />
                     {/* 점쟁이 첫밤: 레드헤링(데몬으로 보일 선한 1명) 지정 편의 — 깜빡하지 않게 카드에서 바로. */}
                     {effId === "fortuneteller" && isFirstNight && (
-                      <RedHerringPicker game={game} busy={busy} run={run} />
+                      <RedHerringPicker
+                        game={game}
+                        busy={busy}
+                        onAssign={(seat) => run(() => setHerringAction(game.id, seat))}
+                        className="mt-1.5 ml-6"
+                      />
                     )}
                   </>
                 )}
@@ -274,44 +280,5 @@ export function NightSidebar({
         </ol>
       )}
     </aside>
-  );
-}
-
-/**
- * 점쟁이 첫밤 전용 레드헤링 지정 위젯. 플레이어 버튼을 클릭하면 그 좌석에 herring 마커를
- * 적용(이미 다른 좌석에 있으면 거기서 떼고 이동). 같은 좌석 다시 클릭하면 해제.
- * 한 fn 안에서 서버 액션을 순차 await → 서버가 매번 최신 DB를 읽어 lost-update 없음.
- */
-function RedHerringPicker({ game, busy, run }: { game: Game; busy: boolean; run: Run }) {
-  const herringSeat = game.players.find((p) => p.markers.includes("herring"))?.seat ?? null;
-  const assign = (seat: number) =>
-    run(async () => {
-      if (herringSeat != null && herringSeat !== seat) await toggleMarkerAction(game.id, herringSeat, "herring");
-      return toggleMarkerAction(game.id, seat, "herring");
-    });
-  return (
-    <div className="mt-1.5 ml-6 rounded-md border border-red-500/30 bg-red-500/5 px-2 py-1.5 text-xs">
-      <div className="mb-1 flex flex-wrap items-center gap-1">
-        <span className="font-semibold text-red-300">레드헤링</span>
-        <span className="text-muted">점쟁이에게 데몬으로 보이는 선한 1명 — 클릭해 지정·이동, 다시 클릭해 해제</span>
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {game.players.map((p) => {
-          const on = p.seat === herringSeat;
-          return (
-            <button
-              key={p.seat}
-              type="button"
-              disabled={busy}
-              onClick={() => assign(p.seat)}
-              className={`rounded px-1.5 py-0.5 disabled:opacity-50 ${on ? "bg-red-500/30 text-red-100 ring-1 ring-red-400" : "bg-surface-2 text-muted hover:text-text"}`}
-              title={on ? "클릭해 해제" : `${p.nickname}을(를) 레드헤링으로 지정`}
-            >
-              {p.nickname}
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }

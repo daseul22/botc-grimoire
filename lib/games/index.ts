@@ -40,6 +40,7 @@ export {
   savePositions,
   setAlignment,
   setGhostVote,
+  setHerring,
   setLock,
   setMemo,
   setNickname,

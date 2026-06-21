@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TEAM_MAP } from "@/lib/constants";
+import { effectiveCharacterId } from "@/lib/markers";
 import type { Character, Game } from "@/lib/types";
 import { RolePickerModal } from "./RolePickerModal";
 
@@ -131,6 +132,17 @@ export function FirstNightSetup({
           })}
         </div>
       </div>
+
+      {/* 점쟁이가 있으면 레드헤링(허상) 지정이 필요하다는 안내만(셋업·남작처럼). 실제 지정은 밤 행동의 점쟁이 행에서.
+          NightSidebar와 동일하게 effective 직업 기준 — 철학자가 점쟁이 능력을 획득한 좌석도 포함. */}
+      {game.players.some(
+        (p) => effectiveCharacterId(p.seat, p.characterId, p.markers, game.disguises) === "fortuneteller",
+      ) && (
+        <p className="rounded-md border border-red-500/30 bg-red-500/5 px-2 py-1.5 text-xs text-muted">
+          <span className="font-semibold text-red-300">점쟁이</span>가 있습니다 — 점쟁이에게 데몬으로 보일{" "}
+          <span className="font-medium text-text">레드헤링(허상)</span> 선한 1명을 밤 행동(점쟁이 행)에서 지정하세요.
+        </p>
+      )}
 
       {/* 미치광이/주정뱅이 가짜 직업 — 본인이 폰에서 자기 진짜 직업 대신 볼 직업.
           하나라도 미선택이면 헤더의 직업배포·직업공유 버튼이 비활성된다. */}

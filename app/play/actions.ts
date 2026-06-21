@@ -29,6 +29,7 @@ import {
   savePositions,
   setBluffs,
   setGhostVote,
+  setHerring,
   setLock,
   setAlignment,
   setDisguise,
@@ -265,6 +266,14 @@ export async function toggleMarkerAction(
   await requireGameManager(gameId);
   captureUndo(gameId, "마커 변경");
   toggleMarker(gameId, seat, markerId);
+  return getGame(gameId)!;
+}
+
+/** 레드헤링 지정/이동/해제 — seat=null이면 해제. 게임 전체에 한 명만 유지(setHerring이 보장). */
+export async function setHerringAction(gameId: string, seat: number | null): Promise<Game> {
+  await requireGameManager(gameId);
+  captureUndo(gameId, "레드헤링 지정");
+  setHerring(gameId, seat);
   return getGame(gameId)!;
 }
 

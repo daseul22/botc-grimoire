@@ -120,6 +120,26 @@ export function toggleMarker(gameId: string, seat: number, markerId: string): vo
   writeState(gameId, idx, s);
 }
 
+/**
+ * 레드헤링 지정 — 점쟁이에게 데몬으로 보이는 선한 1명. 게임 전체에 정확히 한 명만
+ * 존재해야 하므로, 기존 herring 마커를 모든 좌석에서 떼고 seat이 있으면 그 좌석에만 부여한다.
+ * seat=null이면 해제만. (단순 toggleMarker는 다른 좌석의 herring을 안 떼므로 별도 함수.)
+ */
+export function setHerring(gameId: string, seat: number | null): void {
+  const idx = currentIdx(gameId);
+  const s = readState(gameId, idx);
+  for (const [k, st] of Object.entries(s)) {
+    if (st.markers.includes("herring")) {
+      mutateSeat(s, Number(k), { markers: st.markers.filter((m) => m !== "herring") });
+    }
+  }
+  if (seat != null) {
+    const cur = s[seat]?.markers ?? [];
+    if (!cur.includes("herring")) mutateSeat(s, seat, { markers: [...cur, "herring"] });
+  }
+  writeState(gameId, idx, s);
+}
+
 /** 유령표 사용 토글 (전역) */
 export function setGhostVote(gameId: string, seat: number, used: boolean): void {
   db.prepare(
