@@ -560,6 +560,7 @@ export function PlayCanvas({
         {sidebar === "votes" && !night && (
           <VotesSidebar
             game={game}
+            charMap={charMap}
             busy={busy}
             onRecordVote={(nom, nee, votes, ex) => run(() => recordVoteAction(game.id, nom, nee, votes, ex))}
             onClearVote={(nee) => run(() => clearVoteAction(game.id, nee))}

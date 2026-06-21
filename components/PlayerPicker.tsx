@@ -23,6 +23,8 @@ export function PlayerPicker({
   title = "플레이어 선택",
   actionMode = false,
   className = "",
+  disabledSeats,
+  disabledNote = "선택 불가",
 }: {
   players: GamePlayer[];
   value: number | null;
@@ -35,6 +37,10 @@ export function PlayerPicker({
   title?: string;
   actionMode?: boolean;
   className?: string;
+  /** 선택 불가로 표시·차단할 좌석들(예: 같은 낮 이미 지목한/지목받은 좌석). */
+  disabledSeats?: Set<number>;
+  /** disabledSeats 토큰에 붙는 사유 문구(예: "이미 지목함"). */
+  disabledNote?: string;
 }) {
   const [open, setOpen] = useState(false);
   const picked = !actionMode && value != null ? players.find((p) => p.seat === value) : undefined;
@@ -60,6 +66,8 @@ export function PlayerPicker({
         selected={value}
         allowClear={allowClear}
         clearLabel={clearLabel}
+        disabledSeats={disabledSeats}
+        disabledNote={disabledNote}
         onPick={(seat) => {
           onChange(seat);
           setOpen(false);
@@ -77,6 +85,8 @@ function PlayerPickerModal({
   selected,
   allowClear,
   clearLabel,
+  disabledSeats,
+  disabledNote,
   onPick,
   onClose,
 }: {
@@ -86,6 +96,8 @@ function PlayerPickerModal({
   selected: number | null;
   allowClear: boolean;
   clearLabel: string;
+  disabledSeats?: Set<number>;
+  disabledNote?: string;
   onPick: (seat: number | null) => void;
   onClose: () => void;
 }) {
@@ -130,18 +142,24 @@ function PlayerPickerModal({
           {options.map((p) => {
             const on = selected === p.seat;
             const dead = p.status === "dead";
+            const blocked = (disabledSeats?.has(p.seat) ?? false) && !on; // 현재 선택값은 항상 다시 고를 수 있게
             return (
               <button
                 key={p.seat}
                 type="button"
+                disabled={blocked}
                 onClick={() => onPick(p.seat)}
-                className={`flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left hover:border-gold/60 ${on ? "border-gold/60 bg-gold/10" : "border-border bg-surface-2"}`}
+                className={`flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left ${
+                  blocked
+                    ? "cursor-not-allowed border-border bg-surface-2 opacity-40"
+                    : `hover:border-gold/60 ${on ? "border-gold/60 bg-gold/10" : "border-border bg-surface-2"}`
+                }`}
               >
-                <span className={`text-sm font-medium ${dead ? "text-muted line-through" : ""}`}>
+                <span className={`text-sm font-medium ${dead || blocked ? "text-muted line-through" : ""}`}>
                   {p.nickname}
                 </span>
                 <span className="text-[11px] text-muted">
-                  {p.seat + 1}번{dead ? " · 사망" : ""}
+                  {p.seat + 1}번{dead ? " · 사망" : ""}{blocked ? ` · ${disabledNote}` : ""}
                 </span>
               </button>
             );
