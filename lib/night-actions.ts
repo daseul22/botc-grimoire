@@ -187,7 +187,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   chambermaid: { targets: 2, result: "number", hint: "능력으로 깬 수 (0~2)", showcase: { heading: "이 두 명 중 {count}명이 자기 능력으로 깼습니다", tokens: ["name", "name2"] } },
 
   // ── 종파의 제비꽃 ──
-  harlot: { targets: 1, result: "role", hint: "지목한 플레이어 직업" },
+  harlot: { targets: 1, result: "role", hint: "지목한 플레이어 직업", showcase: { heading: "이 사람은 {role}입니다", tokens: ["result", "name"], stack: true } },
   barista: { targets: 1, result: "none" },
   bonecollector: { targets: 1, result: "none", hint: "능력 되찾을 사망자" },
   philosopher: { targets: 0, result: "role", oncePerGame: true, playerPicks: true, hint: "얻은 선한 직업", showcase: { heading: "당신은 {role}의 능력을 얻었습니다", subheading: "기존 능력 대신 이 직업처럼 행동합니다", tokens: ["result"] } },
@@ -200,17 +200,17 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   nodashii: { targets: 1, result: "none", marker: "dying", hint: "이웃 주민 2명 중독" },
   vortox: { targets: 1, result: "none", marker: "dying" },
   vigormortis: { targets: 1, result: "none", marker: "dying" },
-  clockmaker: { targets: 0, result: "number", hint: "악마-하수인 거리" },
+  clockmaker: { targets: 0, result: "number", hint: "악마-하수인 거리", showcase: { heading: "악마와 가장 가까운 하수인 사이의 거리: {count}", subheading: "시계/반시계 중 짧은 쪽 걸음 수" } },
   dreamer: { targets: 1, result: "text", hint: "선 직업 / 악 직업", showcase: { heading: "이 사람은 둘 중 하나입니다", subheading: "선한 직업 또는 악한 직업", tokens: ["name"] } },
   barber: { targets: 0, result: "none" },
   seamstress: { targets: 2, result: "yesno", oncePerGame: true, hint: "둘이 같은 소속인가", showcase: { heading: "두 사람이 같은 진영인가: {yn}", tokens: ["name", "name2"] } },
   sweetheart: { targets: 1, result: "none", marker: "drunk" },
   sage: { targets: 2, result: "none", deathTriggered: true, hint: "둘 중 1명이 악마", showcase: { heading: "이 두 명 중 한 명이 악마입니다", tokens: ["names"] } },
-  mathematician: { targets: 0, result: "number", hint: "비정상 작동 능력 수" },
-  flowergirl: { targets: 0, result: "yesno", hint: "악마가 투표했는가" },
-  towncrier: { targets: 0, result: "yesno", hint: "하수인이 지목했는가" },
+  mathematician: { targets: 0, result: "number", hint: "비정상 작동 능력 수", showcase: { heading: "비정상적으로 작동한 능력: {count}개", subheading: "다른 플레이어의 능력으로 오작동한 수" } },
+  flowergirl: { targets: 0, result: "yesno", hint: "악마가 투표했는가", showcase: { heading: "오늘 낮 악마가 투표했는가: {yn}" } },
+  towncrier: { targets: 0, result: "yesno", hint: "하수인이 지목했는가", showcase: { heading: "오늘 낮 하수인이 지목에 나섰는가: {yn}" } },
   oracle: { targets: 0, result: "number", hint: "사망자 중 악 수", showcase: { heading: "사망자 중 {count}명이 악입니다" } },
-  juggler: { targets: 0, result: "number", hint: "맞힌 추측 수" },
+  juggler: { targets: 0, result: "number", hint: "맞힌 추측 수", showcase: { heading: "오늘 낮 추측 중 {count}개를 맞혔습니다" } },
 
   // ── 기타/실험 직업 ──
   princess: { targets: 0, result: "none" },
@@ -225,7 +225,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   // 마술사: 자체 보여주기 X. 데몬/하수인 정보 단계에 자동 포함되어 노출된다.
   // (show 페이지 ?mode=bluffs/minions가 인플레이 마술사 닉네임을 함께 표시.)
   magician: { targets: 0, result: "none" },
-  villageidiot: { targets: 1, result: "team", hint: "대상의 팀" },
+  villageidiot: { targets: 1, result: "team", hint: "대상의 팀", showcase: { heading: "이 사람은 {team}입니다", tokens: ["name"] } },
   banshee: { targets: 0, result: "none" },
   cultleader: { targets: 0, result: "team", hint: "현재 내 팀", showcase: { heading: "당신은 현재 {team} 팀입니다" } },
   huntsman: { targets: 1, result: "none", oncePerGame: true },
@@ -236,7 +236,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   poppygrower: { targets: 0, result: "none" },
   alchemist: { targets: 0, result: "text", hint: "가진 하수인 능력" },
   balloonist: { targets: 1, result: "role", hint: "알게 된 플레이어 직업", showcase: { heading: "이 사람은 {role}입니다", tokens: ["result", "name"], stack: true } },
-  king: { targets: 0, result: "role", hint: "알게 된 생존 직업" },
+  king: { targets: 0, result: "role", hint: "알게 된 생존 직업", showcase: { heading: "이 직업이 아직 살아 있습니다", tokens: ["result"] } },
   general: { targets: 0, result: "text", hint: "우세 팀(선/악/없음)", showcase: { heading: "오늘 우세한 진영: {result}" } },
   preacher: { targets: 1, result: "none", showcase: { recipient: "target", heading: "전도사가 당신을 선택했습니다", subheading: "당신은 능력을 잃습니다", tokens: ["actor"] } },
   pixie: { targets: 0, result: "role", hint: "집착할 주민 직업", showcase: { heading: "당신은 {role}에 집착해야 합니다", subheading: "집착에 성공했을 때, 그 사람이 죽으면 그의 능력을 얻습니다", tokens: ["result"] } },
@@ -296,8 +296,8 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
 // (곡예사·험담꾼처럼 밤/낮 둘 다 있는 직업은 양쪽에 등재 — 페이즈별로 따로 기록됨)
 export const DAY_ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 트러블 브루잉 ──
-  slayer: { targets: 1, result: "yesno", marker: "dying", oncePerGame: true, hint: "악마 적중?" },
-  virgin: { targets: 1, result: "yesno", marker: "dying", oncePerGame: true, hint: "지목자 주민→처형?" },
+  slayer: { targets: 1, result: "yesno", marker: "dying", oncePerGame: true, hint: "악마 적중?", showcase: { recipient: "none", heading: "이 사람이 악마였는가: {yn}", subheading: "악마였다면 사망합니다", tokens: ["name"] } },
+  virgin: { targets: 1, result: "yesno", marker: "dying", oncePerGame: true, hint: "지목자 주민→처형?", showcase: { recipient: "none", heading: "지목한 사람이 마을주민이라 처형되는가: {yn}", tokens: ["name"] } },
   gunslinger: { targets: 1, result: "none", marker: "dying" },
 
   // ── 배드 문 라이징 ──
@@ -306,7 +306,7 @@ export const DAY_ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 종파의 제비꽃 ──
   juggler: { targets: 0, result: "text", hint: "추측 (최대 5)" },
   savant: { targets: 0, result: "text", hint: "정보 2 (1참 1거짓)" },
-  artist: { targets: 0, result: "yesno", oncePerGame: true, hint: "예/아니오 질문 답" },
+  artist: { targets: 0, result: "yesno", oncePerGame: true, hint: "예/아니오 질문 답", showcase: { heading: "당신의 질문에 대한 답: {yn}" } },
   klutz: { targets: 1, result: "none", hint: "악이면 팀 패배" },
 
   // ── 기타/실험 직업 ──
