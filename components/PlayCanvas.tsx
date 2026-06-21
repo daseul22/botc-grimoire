@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ALIGN_COLOR, TEAM_MAP } from "@/lib/constants";
-import { MARKERS } from "@/lib/markers";
 import { dayActionSpec } from "@/lib/night-actions";
 import { autoRectSides, circlePositions, rectPositions, sidesTotal, type RectSides } from "@/lib/seat-layout";
 import type { Character, Game, GameActionRun } from "@/lib/types";
@@ -297,7 +296,11 @@ export function PlayCanvas({
         </details>
       )}
 
-      <StatusBar game={game} charMap={charMap} />
+      <StatusBar
+        game={game}
+        charMap={charMap}
+        onToggleGlobal={(id) => run(() => toggleGlobalMarkerAction(game.id, id))}
+      />
 
       {!night && (
         <TimerPanel
@@ -309,33 +312,6 @@ export function PlayCanvas({
           onClear={(k) => run(() => clearTimerAction(game.id, k))}
         />
       )}
-
-      {/* 글로벌 마커: Vortox(전체 정보 직업 거짓) 등 게임 전체에 걸치는 효과. 항상 노출(룰 참고용). */}
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="text-muted">전역:</span>
-        {MARKERS.filter((m) => m.scope === "global").map((m) => {
-          const on = game.globalMarkers.includes(m.id);
-          return (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => run(() => toggleGlobalMarkerAction(game.id, m.id))}
-              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5"
-              style={on ? { background: `${m.color}22`, color: m.color, borderColor: `${m.color}88` } : { borderColor: "var(--color-border)", color: "var(--color-muted)" }}
-              title={on ? `${m.label} 해제` : `${m.label} 적용`}
-            >
-              {m.icon ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.icon} alt="" className="h-4 w-4 rounded-full object-cover" />
-              ) : (
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: m.color }}>{m.letter ?? m.label.charAt(0)}</span>
-              )}
-              {m.label}
-            </button>
-          );
-        })}
-      </div>
-
 
       {/* 사이드바 토글 — 모바일 전용. 데스크탑은 보드 내부 absolute에 동일 정의로 다시 렌더된다. */}
       <SidebarTabs

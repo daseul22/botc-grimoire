@@ -57,8 +57,6 @@ export const MARKERS: Marker[] = [
   // ── 글로벌(게임 전체) 마커 ──
   // Vortox(SnV 데몬): 살아있는 동안 모든 정보 직업이 거짓 정보를 받는다.
   { id: "vortox", label: "Vortox 영향", icon: "/icons/vortox.webp", color: "#d23bbd", duration: "permanent", scope: "global", taints: true, letter: "V" },
-  // 일식/날씨/기타 ST가 표시할 글로벌 상태. 기능 효과는 운영자 판단.
-  { id: "eclipse", label: "특수 상태", icon: "", color: "#d4a23a", duration: "permanent", scope: "global", letter: "◑" },
 ];
 
 export const MARKER_MAP: Record<string, Marker> = Object.fromEntries(
