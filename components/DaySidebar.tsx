@@ -5,6 +5,7 @@ import { dayActionSpec, isAbilityUsedUp } from "@/lib/night-actions";
 import type { Character, Game, GameActionRun } from "@/lib/types";
 import { NightActionRow } from "./NightActionRow";
 import { TaintWarning } from "./TaintWarning";
+import { ActionCardHeader, type HeaderTag } from "./ActionCardHeader";
 import {
   clearActionAction,
   recordActionAction,
@@ -65,20 +66,29 @@ export function DaySidebar({
             const usedOnce = isAbilityUsedUp(spec.oncePerGame, p.characterId, p.markers);
             // 능력 사용함 = 흐리게 + 자동 ✓. 사망은 흐리지 않는다(사망 시 발동 능력 때문).
             const checked = done || usedOnce;
+            const dyingPending = !dead && p.markers.includes("dying");
+            const headerTags: HeaderTag[] = [];
+            if (dyingPending)
+              headerTags.push(
+                spec.deathTriggered
+                  ? { key: "dying", label: "사망예정 · 능력 발동", title: "오늘 사망 예정 — 사망 시 발동하는 능력이니 지금 처리하세요", tone: "amber" }
+                  : { key: "dying", label: "사망예정 · 건너뜀", title: "오늘 사망 예정 — 죽은 것으로 보고 능력 사용을 건너뛰세요", tone: "red" },
+              );
+            if (dead) headerTags.push({ key: "dead", label: "사망", title: "사망", tone: "red" });
+            if (usedOnce) headerTags.push({ key: "used", label: "능력 사용함", title: "일회성 능력 — 사용 완료(부활 능력으로 되살아나지 않는 한)", tone: "muted" });
             return (
               <li key={p.seat} className={`px-3 py-2 ${checked ? "opacity-55" : ""}`}>
-                <div className="flex items-center gap-2 text-sm">
-                  {ch.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={ch.image} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
-                  )}
-                  <span className="font-medium">{p.nickname}</span>
-                  <span className="text-xs" style={{ color: TEAM_MAP[ch.team]?.color }}>{ch.name.ko}</span>
-                  <TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={spec.result} />
-                  {dead && <span className="text-xs text-red-400">사망</span>}
-                  {usedOnce && <span className="rounded bg-surface-2 px-1.5 text-[10px] font-medium text-muted" title="일회성 능력 — 사용 완료(부활 능력으로 되살아나지 않는 한)">능력 사용함</span>}
-                  <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${checked ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
-                </div>
+                <ActionCardHeader
+                  image={ch.image}
+                  nickname={p.nickname}
+                  roleName={ch.name.ko}
+                  roleColor={TEAM_MAP[ch.team]?.color}
+                  checked={checked}
+                  done={done}
+                  onToggleDone={() => run(() => toggleDoneAction(game.id, p.seat))}
+                  tags={headerTags}
+                  taint={<TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={spec.result} />}
+                />
                 <p className="mt-1 break-words pl-0.5 text-xs text-muted">{ch.ability.ko}</p>
                 <NightActionRow
                   actor={p}

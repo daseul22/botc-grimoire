@@ -5,6 +5,7 @@ import { effectiveCharacterId, parseMarker } from "@/lib/markers";
 import { ACTION_CRITERIA, actionSpec, isAbilityUsedUp, nightActionSpec } from "@/lib/night-actions";
 import { nightInfoNode } from "@/lib/night-info";
 import { TaintWarning } from "./TaintWarning";
+import { ActionCardHeader, type HeaderTag } from "./ActionCardHeader";
 import type { Character, Game, GameActionRun, NightAction } from "@/lib/types";
 import { NightActionRow } from "./NightActionRow";
 import { LunaticActionRow } from "./LunaticActionRow";
@@ -171,39 +172,40 @@ export function NightSidebar({
             const armed = !!rowSpec.deathTriggered && dead && !usedOnce;
             // 능력 사용함 = 사망처럼 흐리게 + 자동 ✓. 사망 자체는 흐리지 않는다(사망 시 발동 능력 때문).
             const checked = done || usedOnce;
+            // 사망 예정(악마 지목 등) — 스냅샷상 아직 생존. 보통 능력 건너뜀, 단 사망 시 발동 능력은 오히려 처리.
+            // 폰 운영 시 캔버스를 못 봐 놓치기 쉬워 카드에 태그로 표면화한다.
+            const dyingPending = !dead && p.markers.includes("dying");
+            const headerTags: HeaderTag[] = [];
+            if (realCh) headerTags.push({ key: "real", label: `←${realCh.name.ko}`, title: `실제 직업: ${realCh.name.ko}`, tone: "purple" });
+            if (fakeCh) headerTags.push({ key: "fake", label: `→${fakeCh.name.ko}`, title: `가짜 직업: ${fakeCh.name.ko}`, tone: "purple" });
+            if (dyingPending)
+              headerTags.push(
+                rowSpec.deathTriggered
+                  ? { key: "dying", label: "사망예정 · 능력 발동", title: "오늘 밤 사망 예정 — 사망 시 발동하는 능력이니 지금 처리하세요", tone: "amber" }
+                  : { key: "dying", label: "사망예정 · 건너뜀", title: "오늘 밤 사망 예정 — 죽은 것으로 보고 능력 사용을 건너뛰세요", tone: "red" },
+              );
+            if (dead)
+              headerTags.push(
+                armed
+                  ? { key: "dead", label: "사망 · 능력 발동", title: "사망 시 발동하는 능력 — 지금 처리하세요", tone: "amber" }
+                  : { key: "dead", label: "사망", title: "사망", tone: "red" },
+              );
+            if (usedOnce) headerTags.push({ key: "used", label: "능력 사용함", title: "일회성 능력 — 사용 완료(부활 능력으로 되살아나지 않는 한)", tone: "muted" });
             return (
               <li key={`${p.seat}-${effId}`} className={`px-3 py-2 ${checked ? "opacity-55" : ""}`}>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
-                  <span className="relative inline-flex shrink-0">
-                    {ch?.image && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={ch.image} alt="" className="h-6 w-6 rounded-full object-cover" />
-                    )}
-                    {realCh?.image && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={realCh.image}
-                        alt=""
-                        title={`원래 직업: ${realCh.name.ko}`}
-                        className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border border-bg object-cover ring-1 ring-border"
-                      />
-                    )}
-                  </span>
-                  <span className="font-medium">{p.nickname}</span>
-                  <span className="text-xs" style={{ color: ch ? TEAM_MAP[ch.team]?.color : undefined }}>{ch?.name.ko ?? effId}</span>
-                  {realCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`실제 직업: ${realCh.name.ko}`}>←{realCh.name.ko}</span>}
-                  {fakeCh && <span className="rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-300" title={`가짜 직업: ${fakeCh.name.ko}`}>→{fakeCh.name.ko}</span>}
-                  <TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={nightActionSpec(effId, isFirstNight).result} />
-                  {dead &&
-                    (armed ? (
-                      <span className="rounded bg-amber-500/20 px-1.5 text-[10px] font-medium text-amber-300" title="사망 시 발동하는 능력 — 지금 처리하세요">사망 · 능력 발동</span>
-                    ) : (
-                      <span className="text-xs text-red-400">사망</span>
-                    ))}
-                  {usedOnce && <span className="rounded bg-surface-2 px-1.5 text-[10px] font-medium text-muted" title="일회성 능력 — 사용 완료(부활 능력으로 되살아나지 않는 한)">능력 사용함</span>}
-                  <button type="button" title={done ? "처리 완료 해제" : "처리 완료"} onClick={() => run(() => toggleDoneAction(game.id, p.seat))} className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${checked ? "border-green-500 bg-green-500/20 text-green-400" : "border-border text-muted hover:border-green-500/60"}`}>✓</button>
-                </div>
+                <ActionCardHeader
+                  index={i + 1}
+                  image={ch?.image}
+                  overlay={realCh?.image ? { image: realCh.image, title: `원래 직업: ${realCh.name.ko}` } : undefined}
+                  nickname={p.nickname}
+                  roleName={ch?.name.ko ?? effId}
+                  roleColor={ch ? TEAM_MAP[ch.team]?.color : undefined}
+                  checked={checked}
+                  done={done}
+                  onToggleDone={() => run(() => toggleDoneAction(game.id, p.seat))}
+                  tags={headerTags}
+                  taint={<TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={rowSpec.result} />}
+                />
                 {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
                 {ACTION_CRITERIA[effId] && (
                   <p className="mt-1 ml-6 break-words rounded border-l-2 border-sky-500/40 bg-sky-500/5 px-2 py-1 text-[11px] leading-relaxed text-sky-200/85">
