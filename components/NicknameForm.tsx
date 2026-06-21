@@ -39,7 +39,7 @@ export function NicknameForm({
       } else if ("needConfirm" in r) {
         setConfirm({ newNickname: r.newNickname, incoming: r.incoming });
       } else {
-        // 성공: 헤더(AccountMenu) 갱신 + 변경 후 잠금(3개월 쿨다운)
+        // 성공: 헤더(SiteNav) 갱신 + 변경 후 잠금(3개월 쿨다운)
         setCurrent(r.nickname);
         setValue("");
         setConfirm(null);

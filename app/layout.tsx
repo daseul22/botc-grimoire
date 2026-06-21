@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
-import { AccountMenu } from "@/components/AccountMenu";
+import { SiteNav } from "@/components/SiteNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,14 +20,6 @@ export const metadata: Metadata = {
   description: "시계탑에 흐른 피(Blood on the Clocktower) 직업 · 시트 · 규칙 레퍼런스",
 };
 
-const NAV = [
-  { href: "/", label: "직업", en: "Characters" },
-  { href: "/sheets", label: "시트", en: "Sheets" },
-  { href: "/games", label: "내역", en: "Games" },
-  { href: "/stats", label: "통계", en: "Stats" },
-  { href: "/rules", label: "규칙", en: "Rules" },
-];
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -40,23 +32,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider>
-          <header className="border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-10">
-            <div className="mx-auto max-w-[88rem] px-4 h-14 flex items-center gap-6">
-              <Link href="/" className="font-bold text-gold tracking-tight">
+          <header className="border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-20">
+            <div className="mx-auto max-w-[88rem] px-4 h-14 flex items-center gap-2">
+              <Link href="/" className="shrink-0 font-bold text-gold tracking-tight">
                 BotC 그리모어
               </Link>
-              <nav className="flex gap-4 text-sm">
-                {NAV.map((n) => (
-                  <Link
-                    key={n.href}
-                    href={n.href}
-                    className="text-muted hover:text-text transition-colors"
-                  >
-                    {n.label}
-                  </Link>
-                ))}
-              </nav>
-              <AccountMenu />
+              <SiteNav />
             </div>
           </header>
           <main className="flex-1 mx-auto w-full max-w-[88rem] px-4 py-8">
