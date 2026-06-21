@@ -38,6 +38,25 @@ import {
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
+/**
+ * 트랜지션 pending을 "지연 반영"해 버튼 깜빡임을 없앤다.
+ * 로컬 서버 액션은 보통 수십 ms라, 그 사이 모든 disabled={busy} 버튼이 잠깐 흐려졌다
+ * 돌아오며 깜빡인다. active가 delayMs 이상 지속될 때만 true를 반환해, 빠른 액션은
+ * 시각적 비활성 전환 없이 지나가고 진짜 느린 액션만 비활성 표시한다.
+ * (더블클릭 방지는 시각이 아니라 run의 inFlight ref가 담당.)
+ */
+function useDelayedFlag(active: boolean, delayMs = 140): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    const t = setTimeout(() => setShown(true), delayMs);
+    return () => clearTimeout(t);
+  }, [active, delayMs]);
+  // active가 풀리면 즉시 false로(다음 렌더). setState-in-effect 회피용 파생.
+  if (!active && shown) setShown(false);
+  return active && shown;
+}
+
 export function PlayCanvas({
   game: initial,
   sheetChars,
@@ -55,6 +74,10 @@ export function PlayCanvas({
   );
   const toggleSidebar = (key: SidebarKey) => setSidebar((s) => (s === key ? null : key));
   const [pending, startTransition] = useTransition();
+  // 깜빡임 제거용: pending을 지연 반영(빠른 액션은 비활성 표시 자체를 건너뜀).
+  const busy = useDelayedFlag(pending);
+  // 더블클릭/중복 제출 방지 — 시각적 disabled에 의존하지 않고 즉시(동기)로 막는다.
+  const inFlight = useRef(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const press = useRef<{ seat: number; sx: number; sy: number; moved: boolean } | null>(null);
 
@@ -161,7 +184,9 @@ export function PlayCanvas({
       ),
     ]);
 
-  const run: GameActionRun = (fn) =>
+  const run: GameActionRun = (fn) => {
+    if (inFlight.current) return; // 진행 중이면 중복 제출 무시(더블클릭 방지)
+    inFlight.current = true;
     startTransition(async () => {
       try {
         const r = await withTimeout(fn());
@@ -169,12 +194,17 @@ export function PlayCanvas({
         else setGame(r);
       } catch (e) {
         alert(e instanceof Error ? e.message : "요청이 실패했습니다.");
+      } finally {
+        inFlight.current = false;
       }
     });
+  };
 
   // 마커를 여러 좌석에 순차 적용(add-only). state가 페이즈당 단일 JSON이라
   // 동시 호출 시 lost-update가 나므로 await로 직렬 처리한다.
-  const applyMarkers = (seats: number[], markerStr: string) =>
+  const applyMarkers = (seats: number[], markerStr: string) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     startTransition(async () => {
       try {
         let latest: Game | null = null;
@@ -186,8 +216,11 @@ export function PlayCanvas({
         if (latest) setGame(latest);
       } catch (e) {
         alert(e instanceof Error ? e.message : "요청이 실패했습니다.");
+      } finally {
+        inFlight.current = false;
       }
     });
+  };
 
   // 좌표 저장은 낙관적(서버 재조정 없음, 잦은 드래그라 Game 왕복 없음). fire-and-forget이지만
   // 실패를 .catch로 잡아 unhandled rejection을 막고 콘솔에 남긴다(저장 실패 시 새로고침하면 이전 위치).
@@ -253,7 +286,7 @@ export function PlayCanvas({
       <HeaderToolbar
         game={game}
         night={night}
-        busy={pending}
+        busy={busy}
         run={run}
         onArrangeCircle={arrangeCircle}
         onArrangeRect={arrangeRect}
@@ -273,7 +306,7 @@ export function PlayCanvas({
         <FirstNightSetup
           game={game}
           sheetChars={sheetChars}
-          busy={pending}
+          busy={busy}
           onSetBluffs={(ids) => run(() => setBluffsAction(game.id, ids))}
           onSetDisguise={(seat, id) => run(() => setDisguiseAction(game.id, seat, id))}
         />
@@ -287,7 +320,7 @@ export function PlayCanvas({
             <FirstNightSetup
               game={game}
               sheetChars={sheetChars}
-              busy={pending}
+              busy={busy}
               onSetBluffs={() => {}}
               onSetDisguise={() => {}}
               readonly
@@ -305,7 +338,7 @@ export function PlayCanvas({
       {!night && (
         <TimerPanel
           game={game}
-          busy={pending}
+          busy={busy}
           onSetDuration={(k, s) => run(() => setTimerDurationAction(game.id, k, s))}
           onStart={(k) => run(() => startTimerAction(game.id, k))}
           onStop={(k) => run(() => stopTimerAction(game.id, k))}
@@ -480,7 +513,7 @@ export function PlayCanvas({
             charMap={charMap}
             sheetChars={sheetChars}
             isFirstNight={isFirstNight}
-            busy={pending}
+            busy={busy}
             run={run}
             onApplyMarker={applyMarkers}
             onClose={() => setSidebar(null)}
@@ -492,7 +525,7 @@ export function PlayCanvas({
           <DaySidebar
             game={game}
             charMap={charMap}
-            busy={pending}
+            busy={busy}
             run={run}
             onApplyMarker={applyMarkers}
             onClose={() => setSidebar(null)}
@@ -516,7 +549,7 @@ export function PlayCanvas({
             game={game}
             charMap={charMap}
             phase={game.phase ?? "night"}
-            busy={pending}
+            busy={busy}
             onRecordClaim={(seat, role, targets, result) => run(() => recordActionAction(game.id, seat, role, targets, result, true))}
             onClearClaim={(seat, role) => run(() => clearActionAction(game.id, seat, role, true))}
             onClose={() => setSidebar(null)}
@@ -527,7 +560,7 @@ export function PlayCanvas({
         {sidebar === "votes" && !night && (
           <VotesSidebar
             game={game}
-            busy={pending}
+            busy={busy}
             onRecordVote={(nom, nee, votes, ex) => run(() => recordVoteAction(game.id, nom, nee, votes, ex))}
             onClearVote={(nee) => run(() => clearVoteAction(game.id, nee))}
             onToggleGhostVote={(seat, used) => run(() => toggleGhostVoteAction(game.id, seat, used))}
