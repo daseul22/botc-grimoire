@@ -42,8 +42,9 @@ sessions( token_hash PK, user_id, created_at, expires_at )
     기기만 새 세션으로 재발급한다.
   - 새 세션 발급 시 **만료된 세션 행을 함께 정리**(기회적 cleanup)해 `sessions` 테이블 비대화를 막는다.
 - **역할**: `users.roles` JSON 배열. 헬퍼 `hasRole/isAdmin/isStoryteller`(admin은 항상 true).
-- **부트스트랩 관리자**: 모듈 로드 시 관리자가 0명이면 `admin / admin1234`(역할 전부)를 1회 시드.
-  최초 로그인 후 [/account](../../app/account/page.tsx)에서 비밀번호 변경 권장.
+- **부트스트랩 관리자**: 빈 DB(관리자 0명)에서 모듈 로드 시 관리자 계정을 1회 시드한다.
+  약한 고정 비밀번호를 심지 않고, 매 설치마다 **강한 난수 비밀번호를 생성해 서버 콘솔에 1회 출력**
+  (id: `daseul0623`). 최초 로그인 후 [/account](../../app/account/page.tsx)에서 비밀번호 변경 권장.
 
 ### 소유권 컬럼 (멱등 마이그레이션)
 

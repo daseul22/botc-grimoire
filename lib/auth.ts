@@ -7,7 +7,7 @@
 // 보안 체크는 데이터 소스 가까이(서버 액션·민감 페이지)에서 수행한다(Next 권장).
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from "node:crypto";
 import { getDb } from "./db";
 import { ALL_ROLES, isRole, ROLE_LABEL, type Role } from "./auth-roles";
 
@@ -90,6 +90,23 @@ function verifyPassword(password: string, hash: string, salt: string): boolean {
 // ── 토큰 ──
 const newToken = () => randomBytes(32).toString("hex");
 const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
+
+/** 강한 난수 비밀번호 생성(대/소문자·숫자·특수문자 각각 보장). 부트스트랩 관리자용. */
+export function generatePassword(len = 16): string {
+  const U = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // I,O 제외
+  const L = "abcdefghijkmnopqrstuvwxyz"; // l 제외
+  const D = "23456789"; // 0,1 제외
+  const S = "!@#$%^&*-_=+?";
+  const all = U + L + D + S;
+  const pick = (s: string) => s[randomInt(s.length)];
+  const chars = [pick(U), pick(L), pick(D), pick(S), pick(S)];
+  while (chars.length < len) chars.push(pick(all));
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
 
 // ── 정규화 ──
 /** 로그인 ID는 대소문자 무시(소문자 정규화). 닉네임은 통계 닉네임 문자열과 정확히 매칭해야 하므로 trim만. */
@@ -262,22 +279,27 @@ export function registeredNicknames(): Set<string> {
 }
 
 // ── 부트스트랩 관리자 ──
-// 관리자 계정이 하나도 없으면 기본 관리자(admin / admin1234)를 시드한다(최초 1회).
-// 운영 시작 후 /account 에서 비밀번호 변경 권장.
+// 관리자 계정이 하나도 없으면(=빈 DB) 기본 관리자를 1회 시드한다. 약한 고정 비밀번호를
+// 심지 않고 매 설치마다 강한 난수 비밀번호를 생성해 서버 콘솔에 1회 출력한다.
+// (운영 시작 후 /account 에서 비밀번호 변경 권장.)
+const BOOTSTRAP_ADMIN_ID = "daseul0623";
 (function ensureBootstrapAdmin() {
   try {
     if (countAdmins() > 0) return;
-    // 'admin' 로그인 ID가 이미 (관리자 아님으로) 점유돼 있으면 건너뛴다.
-    if (loginIdExists("admin")) return;
+    if (loginIdExists(BOOTSTRAP_ADMIN_ID)) return;
     const nickname = nicknameExists("관리자")
       ? `관리자-${randomBytes(2).toString("hex")}`
       : "관리자";
+    const password = generatePassword(16);
     createUser({
-      loginId: "admin",
+      loginId: BOOTSTRAP_ADMIN_ID,
       nickname,
-      password: "admin1234",
+      password,
       roles: ["admin", "storyteller", "player"],
     });
+    console.warn(
+      `\n[botc] 초기 관리자 계정 생성됨 — id: ${BOOTSTRAP_ADMIN_ID} / 비밀번호: ${password}\n       (최초 로그인 후 /account 에서 비밀번호 변경 권장)\n`,
+    );
   } catch {
     // 시드 실패(경합/락 등)가 모듈 평가 전체를 무너뜨리지 않도록 무시. 다음 기동 때 재시도된다.
   }
