@@ -56,31 +56,35 @@ export function setAlignment(gameId: string, seat: number, alignment: "good" | "
   );
 }
 
-// 좌석 닉네임 수정(주로 1일차 밤 세팅 단계).
-export function setNickname(gameId: string, seat: number, nickname: string): void {
-  db.prepare("UPDATE game_players SET nickname = ? WHERE game_id = ? AND seat = ?").run(
-    nickname,
-    gameId,
-    seat,
-  );
+// 좌석 닉네임 수정(주로 1일차 밤 세팅 단계). userId는 그 닉네임이 매핑되는 가입 계정 id(없으면 null).
+// 닉네임이 곧 좌석의 '정체'이므로 user_id도 함께 갱신한다(게스트면 null로 해제).
+export function setNickname(
+  gameId: string,
+  seat: number,
+  nickname: string,
+  userId: number | null = null,
+): void {
+  db.prepare(
+    "UPDATE game_players SET nickname = ?, user_id = ? WHERE game_id = ? AND seat = ?",
+  ).run(nickname, userId, gameId, seat);
 }
 
-// 두 좌석의 닉네임만 교환. 좌석에 고정된 직업/마커/위치는 그대로.
+// 두 좌석의 닉네임(과 계정 바인딩)을 교환. 좌석에 고정된 직업/마커/위치는 그대로.
 // 오프라인 세팅에서 직업 배정 후 사람이 자리만 옮긴 케이스 대응.
 export function swapSeats(gameId: string, a: number, b: number): void {
   if (a === b) return;
   db.transaction(() => {
     const get = db.prepare(
-      "SELECT nickname FROM game_players WHERE game_id = ? AND seat = ?",
+      "SELECT nickname, user_id FROM game_players WHERE game_id = ? AND seat = ?",
     );
-    const aRow = get.get(gameId, a) as { nickname: string } | undefined;
-    const bRow = get.get(gameId, b) as { nickname: string } | undefined;
+    const aRow = get.get(gameId, a) as { nickname: string; user_id: number | null } | undefined;
+    const bRow = get.get(gameId, b) as { nickname: string; user_id: number | null } | undefined;
     if (!aRow || !bRow) return;
     const upd = db.prepare(
-      "UPDATE game_players SET nickname = ? WHERE game_id = ? AND seat = ?",
+      "UPDATE game_players SET nickname = ?, user_id = ? WHERE game_id = ? AND seat = ?",
     );
-    upd.run(bRow.nickname, gameId, a);
-    upd.run(aRow.nickname, gameId, b);
+    upd.run(bRow.nickname, bRow.user_id, gameId, a);
+    upd.run(aRow.nickname, aRow.user_id, gameId, b);
   })();
 }
 

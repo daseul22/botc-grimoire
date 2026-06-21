@@ -85,6 +85,9 @@ for (const sql of [
   "ALTER TABLE games ADD COLUMN label TEXT NOT NULL DEFAULT ''",
   // 인증 도입: 게임을 시작한 이야기꾼(소유자). 레거시 게임은 null(진행 중이면 관리자만 열람).
   "ALTER TABLE games ADD COLUMN owner_id INTEGER",
+  // 좌석 점유자의 가입 계정 id(안정적). 닉네임이 아니라 계정에 통계가 묶이도록.
+  // null = 게스트(미가입 닉네임). 닉네임을 바꿔도 user_id는 유지돼 전적이 계정을 따라간다.
+  "ALTER TABLE game_players ADD COLUMN user_id INTEGER",
 ]) {
   try {
     db.exec(sql);

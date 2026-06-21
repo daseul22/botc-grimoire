@@ -51,7 +51,7 @@ import {
   getGameOwner,
   type RoleAssignment,
 } from "@/lib/games";
-import { getCurrentUser, isAdmin, isStoryteller, type AuthUser } from "@/lib/auth";
+import { getCurrentUser, isAdmin, isStoryteller, userIdByNickname, type AuthUser } from "@/lib/auth";
 import { TEAM_MAP } from "@/lib/constants";
 import { isOncePerGame } from "@/lib/night-actions";
 import { alignmentOf, CORE_TEAMS, ratioTotal, type Ratio } from "@/lib/ratio";
@@ -147,6 +147,8 @@ export async function startGameAction(input: {
     alignment: r.alignment as "good" | "evil",
     x: pts[r.seat].x,
     y: pts[r.seat].y,
+    // 닉네임이 가입 계정과 일치하면 그 계정에 바인딩(통계가 계정을 따라가도록). 게스트면 null.
+    userId: userIdByNickname(nicknames[r.seat]),
   }));
 
   const id = createGame({
@@ -397,7 +399,8 @@ export async function setNicknameAction(
 ): Promise<Game> {
   await requireGameManager(gameId);
   captureUndo(gameId, "닉네임 변경");
-  setNickname(gameId, seat, nickname);
+  // 새 닉네임이 가입 계정과 일치하면 그 계정에 바인딩, 게스트면 해제(null).
+  setNickname(gameId, seat, nickname, userIdByNickname(nickname));
   return getGame(gameId)!;
 }
 

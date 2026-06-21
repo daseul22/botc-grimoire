@@ -8,7 +8,7 @@ const inputCls =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-gold/60";
 
 type GameCount = { finished: number; inProgress: number };
-type Confirm = { newNickname: string; incoming: GameCount; outgoing: GameCount };
+type Confirm = { newNickname: string; incoming: GameCount };
 
 export function NicknameForm({
   currentNickname,
@@ -37,7 +37,7 @@ export function NicknameForm({
         setError(r.error);
         setConfirm(null);
       } else if ("needConfirm" in r) {
-        setConfirm({ newNickname: r.newNickname, incoming: r.incoming, outgoing: r.outgoing });
+        setConfirm({ newNickname: r.newNickname, incoming: r.incoming });
       } else {
         // 성공: 헤더(AccountMenu) 갱신 + 변경 후 잠금(3개월 쿨다운)
         setCurrent(r.nickname);
@@ -79,53 +79,30 @@ export function NicknameForm({
           {confirm && (
             <div className="space-y-2 rounded-lg border border-gold/40 bg-gold/5 px-3 py-3 text-xs">
               <p className="font-semibold text-gold">변경 전 확인</p>
-              <p className="text-muted">
-                통계·내역은 닉네임으로 연결됩니다. 변경하면:
-              </p>
+              <p className="text-muted">변경하면:</p>
               <ul className="list-disc space-y-1 pl-4 text-muted">
-                {confirm.incoming.finished + confirm.incoming.inProgress > 0 && (
-                  <li>
-                    <span className="text-text">&quot;{confirm.newNickname}&quot;</span>(으)로 기록된
-                    게임이 내 통계·내역에 <span className="text-text">연결</span>됩니다(게스트 기록 포함
-                    가능):
-                    {confirm.incoming.finished > 0 && (
-                      <>
-                        {" "}
-                        종료 <span className="text-gold">{confirm.incoming.finished}건</span>
-                        <span className="text-muted">(통계 집계)</span>
-                      </>
-                    )}
-                    {confirm.incoming.finished > 0 && confirm.incoming.inProgress > 0 && ","}
-                    {confirm.incoming.inProgress > 0 && (
-                      <span className="text-muted">
-                        {" "}
-                        진행 중 {confirm.incoming.inProgress}건(종료 시 연결)
-                      </span>
-                    )}
-                    .
-                  </li>
-                )}
-                {confirm.outgoing.finished + confirm.outgoing.inProgress > 0 && (
-                  <li>
-                    현재 닉네임 <span className="text-text">&quot;{current}&quot;</span>으로 집계된 게임이
-                    내 계정에서 <span className="text-text">분리</span>됩니다:
-                    {confirm.outgoing.finished > 0 && (
-                      <>
-                        {" "}
-                        종료 <span className="text-gold">{confirm.outgoing.finished}건</span>
-                        <span className="text-muted">(통계 집계)</span>
-                      </>
-                    )}
-                    {confirm.outgoing.finished > 0 && confirm.outgoing.inProgress > 0 && ","}
-                    {confirm.outgoing.inProgress > 0 && (
-                      <span className="text-muted">
-                        {" "}
-                        진행 중 {confirm.outgoing.inProgress}건
-                      </span>
-                    )}
-                    .
-                  </li>
-                )}
+                <li>
+                  <span className="text-text">&quot;{confirm.newNickname}&quot;</span>(으)로 기록된
+                  게스트 게임이 내 계정에 <span className="text-text">흡수</span>됩니다:
+                  {confirm.incoming.finished > 0 && (
+                    <>
+                      {" "}
+                      종료 <span className="text-gold">{confirm.incoming.finished}건</span>
+                      <span className="text-muted">(통계 집계)</span>
+                    </>
+                  )}
+                  {confirm.incoming.finished > 0 && confirm.incoming.inProgress > 0 && ","}
+                  {confirm.incoming.inProgress > 0 && (
+                    <span className="text-muted">
+                      {" "}
+                      진행 중 {confirm.incoming.inProgress}건(종료 시 연결)
+                    </span>
+                  )}
+                  .
+                </li>
+                <li>
+                  내 기존 전적은 계정에 묶여 있어 <span className="text-text">그대로 유지</span>됩니다.
+                </li>
                 <li>3개월간 다시 변경할 수 없습니다.</li>
               </ul>
               <div className="flex gap-2 pt-1">

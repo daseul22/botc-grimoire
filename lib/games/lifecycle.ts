@@ -118,7 +118,7 @@ export function createGame(input: {
   sheetId: string;
   sheetName: string;
   config: GameConfig;
-  players: NewPlayer[];
+  players: (NewPlayer & { userId?: number | null })[];
   ownerId?: number | null;
 }): string {
   const id = "g-" + crypto.randomUUID().slice(0, 8);
@@ -129,12 +129,12 @@ export function createGame(input: {
        VALUES (?,?,?,'playing','night',1,NULL,?,0,?,?,?)`,
     ).run(id, input.sheetId, input.sheetName, JSON.stringify(input.config), t, t, input.ownerId ?? null);
     const insPlayer = db.prepare(
-      `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y)
-       VALUES (?,?,?,?,?,?,?)`,
+      `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y,user_id)
+       VALUES (?,?,?,?,?,?,?,?)`,
     );
     const state: StateMap = {};
     for (const p of input.players) {
-      insPlayer.run(id, p.seat, p.nickname, p.characterId, p.alignment, p.x, p.y);
+      insPlayer.run(id, p.seat, p.nickname, p.characterId, p.alignment, p.x, p.y, p.userId ?? null);
       state[p.seat] = { status: "alive", markers: [] };
     }
     db.prepare(
@@ -171,7 +171,7 @@ export function cloneGame(srcId: string, ownerId?: number | null): string {
   if (!src) throw new Error("원본 게임을 찾을 수 없습니다.");
   const players = db
     .prepare(
-      "SELECT seat,nickname,character_id,alignment,x,y,locked FROM game_players WHERE game_id = ? ORDER BY seat",
+      "SELECT seat,nickname,character_id,alignment,x,y,locked,user_id FROM game_players WHERE game_id = ? ORDER BY seat",
     )
     .all(srcId) as {
     seat: number;
@@ -181,6 +181,7 @@ export function cloneGame(srcId: string, ownerId?: number | null): string {
     x: number;
     y: number;
     locked: number;
+    user_id: number | null;
   }[];
 
   const id = "g-" + crypto.randomUUID().slice(0, 8);
@@ -207,12 +208,12 @@ export function cloneGame(srcId: string, ownerId?: number | null): string {
       ownerId ?? null,
     );
     const ins = db.prepare(
-      `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y,locked,status,markers,memo,ghost_vote_used)
-       VALUES (?,?,?,?,?,?,?,?,'alive','[]','',0)`,
+      `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y,locked,status,markers,memo,ghost_vote_used,user_id)
+       VALUES (?,?,?,?,?,?,?,?,'alive','[]','',0,?)`,
     );
     const state: StateMap = {};
     for (const p of players) {
-      ins.run(id, p.seat, p.nickname, p.character_id, p.alignment, p.x, p.y, p.locked);
+      ins.run(id, p.seat, p.nickname, p.character_id, p.alignment, p.x, p.y, p.locked, p.user_id ?? null);
       state[p.seat] = { status: "alive", markers: [] };
     }
     db.prepare(

@@ -138,6 +138,21 @@ export function loginIdExists(loginId: string): boolean {
 export function nicknameExists(nickname: string): boolean {
   return !!db.prepare("SELECT 1 FROM users WHERE nickname = ?").get(normalizeNickname(nickname));
 }
+/** 닉네임(NFC)에 매핑되는 가입 계정 id. 없으면 null. 게임 좌석을 계정에 바인딩할 때 사용. */
+export function userIdByNickname(nickname: string): number | null {
+  const r = db.prepare("SELECT id FROM users WHERE nickname = ?").get(normalizeNickname(nickname)) as
+    | { id: number }
+    | undefined;
+  return r ? r.id : null;
+}
+/** user id → 현재 닉네임 맵. 통계를 계정 기준으로 묶어 '현재 닉네임'으로 표시할 때 사용. */
+export function userNicknamesById(): Map<number, string> {
+  const rows = db.prepare("SELECT id, nickname FROM users").all() as {
+    id: number;
+    nickname: string;
+  }[];
+  return new Map(rows.map((r) => [r.id, r.nickname]));
+}
 
 // ── 생성/검증 ──
 /** 가입. 호출 전에 중복(loginIdExists/nicknameExists)을 검사하라. 경합 시 UNIQUE 제약으로 throw. */

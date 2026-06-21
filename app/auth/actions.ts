@@ -18,7 +18,11 @@ import {
   verifyCredentialsById,
   type AuthUser,
 } from "@/lib/auth";
-import { countGamesByNickname, type NicknameGameCount } from "@/lib/games";
+import {
+  countGuestGamesByNickname,
+  linkGuestGamesToUser,
+  type NicknameGameCount,
+} from "@/lib/games";
 
 export type AuthResult = { error: string } | void;
 
@@ -46,13 +50,14 @@ export async function registerAction(input: {
 
   let user: AuthUser;
   try {
-    // 가입 = 기본 '플레이어'. 닉네임이 기존 통계의 게스트 닉네임과 같으면 그 기록이 자동 연동된다
-    // (통계는 닉네임 문자열로 집계되므로 별도 백필 불필요).
+    // 가입 = 기본 '플레이어'.
     user = createUser({ loginId, nickname, password });
   } catch {
     // 동시 가입 경합 등 UNIQUE 위반.
     return { error: "이미 사용 중인 아이디 또는 닉네임입니다." };
   }
+  // 같은 닉네임으로 플레이한 기존 게스트 기록을 이 계정에 연동(전적 자동 인계).
+  linkGuestGamesToUser(user.id, nickname);
   await createSession(user.id);
   revalidatePath("/", "layout");
   redirect("/");
@@ -92,17 +97,15 @@ export type ChangeNicknameResult =
   | {
       needConfirm: true;
       newNickname: string;
-      /** 새 닉네임으로 기록된 게임(흡수됨) — 종료/진행 분리. */
+      /** 새 닉네임으로 기록된 게스트 게임(내 계정으로 흡수됨) — 종료/진행 분리. */
       incoming: NicknameGameCount;
-      /** 현재 닉네임으로 기록된 게임(분리됨) — 종료/진행 분리. */
-      outgoing: NicknameGameCount;
     }
   | { ok: true; nickname: string };
 
 /**
- * 닉네임 변경(본인). 3개월에 1회. 통계·내역은 닉네임 문자열로 매칭되므로 안전장치를 둔다:
- *  - 새 닉네임으로 이미 기록된 게임이 있거나(게스트/타인 기록 흡수 위험),
- *    현재 닉네임으로 집계된 기록이 분리되는 경우 → 건수를 알려주고 confirm=true 재요청 시에만 적용.
+ * 닉네임 변경(본인). 3개월에 1회. 통계·내역은 계정(user_id)에 묶여 있어 내 기존 전적은 변경 후에도
+ * 그대로 따라온다. 다만 새 닉네임으로 이미 기록된 '게스트' 게임은 내 계정으로 흡수되므로,
+ * 흡수될 기록이 있으면 건수를 알려주고 confirm=true 재요청 시에만 적용한다(사고성 연결 방지).
  */
 export async function changeNicknameAction(input: {
   newNickname: string;
@@ -123,17 +126,16 @@ export async function changeNicknameAction(input: {
 
   if (nicknameExists(next)) return { error: "이미 사용 중인 닉네임입니다." };
 
-  // 안전장치: 새 닉네임으로 이미 기록된 게임(흡수될 게스트/내역) + 현재 닉네임에서 분리될 기록 확인.
-  // 종료 수는 통계 리더보드와 동일, 진행 중은 종료 시 연결됨을 별도 표기.
-  const incoming = countGamesByNickname(next);
-  const outgoing = countGamesByNickname(u.nickname);
-  const total =
-    incoming.finished + incoming.inProgress + outgoing.finished + outgoing.inProgress;
-  if (total > 0 && !input.confirm) {
-    return { needConfirm: true, newNickname: next, incoming, outgoing };
+  // 안전장치: 새 닉네임으로 이미 기록된 '게스트' 게임이 내 계정으로 흡수됨. 있으면 확인 요청.
+  // (내 기존 전적은 계정에 묶여 자동으로 따라오므로 '분리' 경고는 필요 없다.)
+  const incoming = countGuestGamesByNickname(next);
+  if (incoming.finished + incoming.inProgress > 0 && !input.confirm) {
+    return { needConfirm: true, newNickname: next, incoming };
   }
 
   changeNickname(u.id, next);
+  // 새 이름으로 기록된 게스트 게임을 내 계정으로 흡수(있으면).
+  linkGuestGamesToUser(u.id, next);
   revalidatePath("/", "layout");
   return { ok: true, nickname: next };
 }
