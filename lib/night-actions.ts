@@ -134,6 +134,21 @@ export function misregisterWarn(characterId: string): string | undefined {
   return undefined;
 }
 
+/**
+ * 정보 능력의 대상 좌석이 '반대로 등록'돼 ST가 실수하기 쉬운 경우의 경고.
+ * - 직업 기반(은둔자/첩자): 모든 정보 능력에 공통(misregisterWarn).
+ * - 레드헤링(herring 마커): *점쟁이에게만* 데몬(악)으로 등록되므로 actor가 점쟁이일 때만.
+ * 호출측이 정보 능력(INFO_KINDS)인지 이미 가린다.
+ */
+export function infoTargetWarn(
+  target: { characterId: string; markers: string[] },
+  actorCharacterId?: string,
+): string | undefined {
+  if (actorCharacterId === "fortuneteller" && target.markers.includes("herring"))
+    return "레드헤링 — 점쟁이에게 데몬(악)으로 보임";
+  return misregisterWarn(target.characterId);
+}
+
 // 직업별 스펙. 야간 행동이 있는 직업만 등재(없으면 기본값으로 처리).
 export const ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 트러블 브루잉 ──

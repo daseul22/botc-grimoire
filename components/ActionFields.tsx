@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TEAM_MAP } from "@/lib/constants";
-import { INFO_KINDS, misregisterWarn, RESULT_KIND_LABEL, type ActionSpec } from "@/lib/night-actions";
+import { INFO_KINDS, infoTargetWarn, RESULT_KIND_LABEL, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer } from "@/lib/types";
 import { RolePickerModal } from "./RolePickerModal";
 
@@ -14,6 +14,7 @@ export function ActionFields({
   players,
   charMap,
   actorSeat,
+  actorCharacterId,
   targets,
   setTargets,
   result,
@@ -23,6 +24,8 @@ export function ActionFields({
   players: GamePlayer[];
   charMap: Record<string, Character>;
   actorSeat: number;
+  /** 행동 주체의 직업 id — 점쟁이 한정 레드헤링 경고 판정에 사용. */
+  actorCharacterId?: string;
   targets: number[];
   setTargets: (fn: (cur: number[]) => number[]) => void;
   result: string;
@@ -30,10 +33,14 @@ export function ActionFields({
 }) {
   // 본인 좌석도 지목 가능 — 임프 자결(스타패스), 핏해그·갬블러 자기 지정 등.
   const pickable = players;
-  // 정보 능력일 때만 은둔자/첩자 등 '반대 진영으로 보일 수 있는' 대상에 경고.
+  // 정보 능력일 때만 은둔자/첩자(직업) + 레드헤링(점쟁이 한정) 등 '반대로 등록될 수 있는' 대상에 경고.
   const infoAction = INFO_KINDS.has(spec.result);
-  const trapWarn = (seat: number) =>
-    infoAction ? misregisterWarn(players.find((p) => p.seat === seat)?.characterId ?? "") : undefined;
+  const warnFor = (p: GamePlayer): string | undefined =>
+    infoAction ? infoTargetWarn(p, actorCharacterId) : undefined;
+  const trapWarn = (seat: number) => {
+    const p = players.find((pp) => pp.seat === seat);
+    return p ? warnFor(p) : undefined;
+  };
   const toggleTarget = (seat: number) =>
     setTargets((cur) =>
       cur.includes(seat)
@@ -62,7 +69,7 @@ export function ActionFields({
             {pickable.map((p) => {
               const on = targets.includes(p.seat);
               const full = targets.length >= spec.targets && !on;
-              const warn = infoAction ? misregisterWarn(p.characterId) : undefined;
+              const warn = warnFor(p);
               return (
                 <button
                   key={p.seat}

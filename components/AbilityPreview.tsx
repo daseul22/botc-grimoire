@@ -215,6 +215,7 @@ export function AbilityPreview({
           players={players}
           charMap={charMap}
           actorSeat={0}
+          actorCharacterId={character.id}
           targets={targets}
           setTargets={setTargets}
           result={result}

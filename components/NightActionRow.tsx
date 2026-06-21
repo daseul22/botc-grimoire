@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MARKER_MAP } from "@/lib/markers";
-import { formatResult, INFO_KINDS, markerForAction, misregisterWarn, showcaseVariants, type ActionSpec } from "@/lib/night-actions";
+import { formatResult, INFO_KINDS, infoTargetWarn, markerForAction, showcaseVariants, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer, NightActionRecord } from "@/lib/types";
 import { ActionFields } from "./ActionFields";
 
@@ -115,7 +115,10 @@ export function NightActionRow({
         </div>
         {INFO_KINDS.has(spec.result) &&
           record.targets
-            .map((s) => ({ s, w: misregisterWarn(players.find((p) => p.seat === s)?.characterId ?? "") }))
+            .map((s) => {
+              const p = players.find((pp) => pp.seat === s);
+              return { s, w: p ? infoTargetWarn(p, characterId) : undefined };
+            })
             .filter((x) => x.w)
             .map(({ s, w }) => (
               <p key={`w${s}`} className="mt-1 rounded border-l-2 border-amber-400/50 bg-amber-500/5 px-2 py-0.5 text-[11px] text-amber-300/90">
@@ -219,6 +222,7 @@ export function NightActionRow({
         players={players}
         charMap={charMap}
         actorSeat={actor.seat}
+        actorCharacterId={characterId}
         targets={targets}
         setTargets={setTargets}
         result={result}

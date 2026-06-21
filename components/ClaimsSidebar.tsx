@@ -89,6 +89,7 @@ function ClaimForm({
           players={game.players}
           charMap={charMap}
           actorSeat={seat as number}
+          actorCharacterId={role}
           targets={targets}
           setTargets={setTargets}
           result={result}
