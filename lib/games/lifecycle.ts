@@ -95,6 +95,14 @@ export function getGame(id: string): Game | undefined {
   };
 }
 
+/** 게임 소유자(시작한 이야기꾼) user id. 없으면 null(레거시). 권한 판정용. */
+export function getGameOwner(id: string): number | null {
+  const r = db.prepare("SELECT owner_id FROM games WHERE id = ?").get(id) as
+    | { owner_id: number | null }
+    | undefined;
+  return r ? r.owner_id : null;
+}
+
 export function getGameConfig(
   id: string,
 ): (GameConfig & { sheetId: string }) | undefined {
@@ -111,14 +119,15 @@ export function createGame(input: {
   sheetName: string;
   config: GameConfig;
   players: NewPlayer[];
+  ownerId?: number | null;
 }): string {
   const id = "g-" + crypto.randomUUID().slice(0, 8);
   const t = now();
   db.transaction(() => {
     db.prepare(
-      `INSERT INTO games (id,sheet_id,sheet_name,status,phase,day,result,config,current_idx,created_at,updated_at)
-       VALUES (?,?,?,'playing','night',1,NULL,?,0,?,?)`,
-    ).run(id, input.sheetId, input.sheetName, JSON.stringify(input.config), t, t);
+      `INSERT INTO games (id,sheet_id,sheet_name,status,phase,day,result,config,current_idx,created_at,updated_at,owner_id)
+       VALUES (?,?,?,'playing','night',1,NULL,?,0,?,?,?)`,
+    ).run(id, input.sheetId, input.sheetName, JSON.stringify(input.config), t, t, input.ownerId ?? null);
     const insPlayer = db.prepare(
       `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y)
        VALUES (?,?,?,?,?,?,?)`,
@@ -142,7 +151,7 @@ export function createGame(input: {
  * "1일차 밤 셋업" 상태의 새 게임을 만든다. 직업은 그대로 유지 — 새 직업이 필요하면 새 게임에서 재추첨.
  * 새 게임 id 반환.
  */
-export function cloneGame(srcId: string): string {
+export function cloneGame(srcId: string, ownerId?: number | null): string {
   const src = db
     .prepare(
       "SELECT sheet_id, sheet_name, config, bluffs, lunatic_bluffs, lunatic_minions, disguises, label FROM games WHERE id = ?",
@@ -181,8 +190,8 @@ export function cloneGame(srcId: string): string {
 
   db.transaction(() => {
     db.prepare(
-      `INSERT INTO games (id,sheet_id,sheet_name,status,phase,day,result,config,current_idx,created_at,updated_at,bluffs,claimed,global_markers,lunatic_bluffs,lunatic_minions,disguises,label)
-       VALUES (?,?,?,'playing','night',1,NULL,?,0,?,?,?,'[]','[]',?,?,?,?)`,
+      `INSERT INTO games (id,sheet_id,sheet_name,status,phase,day,result,config,current_idx,created_at,updated_at,bluffs,claimed,global_markers,lunatic_bluffs,lunatic_minions,disguises,label,owner_id)
+       VALUES (?,?,?,'playing','night',1,NULL,?,0,?,?,?,'[]','[]',?,?,?,?,?)`,
     ).run(
       id,
       src.sheet_id,
@@ -195,6 +204,7 @@ export function cloneGame(srcId: string): string {
       src.lunatic_minions ?? "[]",
       src.disguises ?? "{}",
       label,
+      ownerId ?? null,
     );
     const ins = db.prepare(
       `INSERT INTO game_players (game_id,seat,nickname,character_id,alignment,x,y,locked,status,markers,memo,ghost_vote_used)
@@ -422,13 +432,15 @@ export type GameSummary = {
   result: string | null;
   playerCount: number;
   createdAt: string;
+  /** 게임을 시작한 이야기꾼 user id (레거시는 null). */
+  ownerId: number | null;
 };
 
 export function listGames(): GameSummary[] {
   const rows = db
     .prepare(
       `SELECT g.id, g.sheet_name AS sheetName, g.label, g.status, g.result, g.current_idx AS currentIdx,
-              g.created_at AS createdAt,
+              g.created_at AS createdAt, g.owner_id AS ownerId,
               (SELECT COUNT(*) FROM game_players p WHERE p.game_id = g.id) AS playerCount
        FROM games g ORDER BY g.created_at DESC`,
     )
@@ -448,6 +460,7 @@ export function listGames(): GameSummary[] {
       result: r.result,
       playerCount: r.playerCount,
       createdAt: r.createdAt,
+      ownerId: r.ownerId ?? null,
     };
   });
 }

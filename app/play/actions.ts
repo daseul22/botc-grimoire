@@ -48,8 +48,10 @@ import {
   toggleDone,
   toggleMarker,
   undoLast,
+  getGameOwner,
   type RoleAssignment,
 } from "@/lib/games";
+import { getCurrentUser, isAdmin, isStoryteller, type AuthUser } from "@/lib/auth";
 import { TEAM_MAP } from "@/lib/constants";
 import { isOncePerGame } from "@/lib/night-actions";
 import { alignmentOf, CORE_TEAMS, ratioTotal, type Ratio } from "@/lib/ratio";
@@ -100,12 +102,32 @@ function assignRoles(
 
 const resolveSheet = (sheetId: string) => getSheet(sheetId) ?? getCustomSheet(sheetId);
 
+/**
+ * 게임 조작(진행/복제/삭제/이름변경 등) 권한: 게임을 시작한 이야기꾼 본인 또는 관리자.
+ * 서버 액션은 공개 POST 엔드포인트이므로 UI 게이팅과 별개로 여기서 반드시 검증한다.
+ * 미인가 시 throw. 플레이어 폰의 자리 점유(claimSeat)는 이 가드를 거치지 않는다.
+ */
+async function requireGameManager(gameId: string): Promise<AuthUser> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("로그인이 필요합니다.");
+  if (isAdmin(user)) return user;
+  const owner = getGameOwner(gameId);
+  if (owner == null || owner !== user.id)
+    throw new Error("이 게임을 조작할 권한이 없습니다.");
+  return user;
+}
+
 export async function startGameAction(input: {
   sheetId: string;
   excludedIds: string[];
   counts: Ratio;
   nicknames: string[];
 }): Promise<{ error: string } | void> {
+  // 게임 시작 = 이야기꾼·관리자만. 시작한 사람이 이 게임의 소유자(이야기꾼)가 된다.
+  const user = await getCurrentUser();
+  if (!user || !isStoryteller(user))
+    return { error: "게임 시작은 이야기꾼 또는 관리자만 가능합니다." };
+
   const sheet = resolveSheet(input.sheetId);
   if (!sheet) return { error: "시트를 찾을 수 없습니다." };
 
@@ -132,11 +154,13 @@ export async function startGameAction(input: {
     sheetName: sheet.name.ko,
     config: { excludedIds: input.excludedIds, counts: input.counts },
     players,
+    ownerId: user.id,
   });
   redirect(`/play/${id}`);
 }
 
 export async function redrawAction(gameId: string): Promise<Game | { error: string }> {
+  await requireGameManager(gameId);
   const cfg = getGameConfig(gameId);
   const game = getGame(gameId);
   if (!cfg || !game) return { error: "게임을 찾을 수 없습니다." };
@@ -162,12 +186,14 @@ export async function redrawAction(gameId: string): Promise<Game | { error: stri
 }
 
 export async function advancePhaseAction(gameId: string): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "페이즈 전환");
   advancePhase(gameId);
   return getGame(gameId)!;
 }
 
 export async function prevPhaseAction(gameId: string): Promise<Game> {
+  await requireGameManager(gameId);
   prevPhase(gameId);
   return getGame(gameId)!;
 }
@@ -178,6 +204,7 @@ export async function setStatusAction(
   status: SeatStatus,
   cause: DeathCause = "",
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "생사 변경");
   setStatus(gameId, seat, status, cause);
   return getGame(gameId)!;
@@ -190,6 +217,7 @@ export async function recordVoteAction(
   votes: number,
   executed: boolean,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "투표 기록");
   recordVote(gameId, { nominator, nominee, votes, executed });
   // 처형 체크 시 캔버스에서도 자동 사망 처리(원인=처형). 되돌리려면 좌석에서 수동 부활.
@@ -198,6 +226,7 @@ export async function recordVoteAction(
 }
 
 export async function clearVoteAction(gameId: string, nominee: number): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "투표 삭제");
   clearVote(gameId, nominee);
   return getGame(gameId)!;
@@ -208,17 +237,20 @@ export async function toggleGhostVoteAction(
   seat: number,
   used: boolean,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "유령표");
   setGhostVote(gameId, seat, used);
   return getGame(gameId)!;
 }
 
 export async function toggleDoneAction(gameId: string, seat: number): Promise<Game> {
+  await requireGameManager(gameId);
   toggleDone(gameId, seat);
   return getGame(gameId)!;
 }
 
 export async function setNoteAction(gameId: string, note: string): Promise<Game> {
+  await requireGameManager(gameId);
   setNote(gameId, note);
   return getGame(gameId)!;
 }
@@ -228,6 +260,7 @@ export async function toggleMarkerAction(
   seat: number,
   markerId: string,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "마커 변경");
   toggleMarker(gameId, seat, markerId);
   return getGame(gameId)!;
@@ -241,6 +274,7 @@ export async function recordActionAction(
   result: string,
   bluff = false,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "행동 기록");
   recordAction(gameId, { actorSeat, characterId, targets, result, bluff });
   // 직업별 자동 사이드 이펙트.
@@ -298,6 +332,7 @@ export async function clearActionAction(
   characterId = "",
   bluff = false,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "행동 삭제");
   // 일회성 능력 기록을 지우면 자동 부여했던 '능력 없음' 마커도 회수(잘못 기록 되돌리기).
   if (!bluff) {
@@ -318,6 +353,7 @@ export async function setBluffsAction(
   gameId: string,
   ids: string[],
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "블러핑 변경");
   setBluffs(gameId, ids);
   return getGame(gameId)!;
@@ -328,6 +364,7 @@ export async function toggleLockAction(
   seat: number,
   locked: boolean,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   setLock(gameId, seat, locked);
   return getGame(gameId)!;
 }
@@ -337,6 +374,7 @@ export async function setMemoAction(
   seat: number,
   memo: string,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   setMemo(gameId, seat, memo);
   return getGame(gameId)!;
 }
@@ -346,6 +384,7 @@ export async function setAlignmentAction(
   seat: number,
   alignment: "good" | "evil",
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "진영 변경");
   setAlignment(gameId, seat, alignment);
   return getGame(gameId)!;
@@ -356,6 +395,7 @@ export async function setNicknameAction(
   seat: number,
   nickname: string,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "닉네임 변경");
   setNickname(gameId, seat, nickname);
   return getGame(gameId)!;
@@ -366,6 +406,7 @@ export async function swapSeatsAction(
   a: number,
   b: number,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "자리 교환");
   swapSeats(gameId, a, b);
   return getGame(gameId)!;
@@ -375,17 +416,20 @@ export async function toggleGlobalMarkerAction(
   gameId: string,
   marker: string,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "전역 마커");
   toggleGlobalMarker(gameId, marker);
   return getGame(gameId)!;
 }
 
 export async function setLunaticBluffsAction(gameId: string, ids: string[]): Promise<Game> {
+  await requireGameManager(gameId);
   setLunaticBluffs(gameId, ids);
   return getGame(gameId)!;
 }
 
 export async function setLunaticMinionsAction(gameId: string, seats: number[]): Promise<Game> {
+  await requireGameManager(gameId);
   setLunaticMinions(gameId, seats);
   return getGame(gameId)!;
 }
@@ -395,21 +439,25 @@ export async function setTimerDurationAction(
   kind: "whisper" | "open",
   durationSec: number,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   setTimerDuration(gameId, kind, durationSec);
   return getGame(gameId)!;
 }
 
 export async function startTimerAction(gameId: string, kind: "whisper" | "open"): Promise<Game> {
+  await requireGameManager(gameId);
   startTimer(gameId, kind);
   return getGame(gameId)!;
 }
 
 export async function stopTimerAction(gameId: string, kind: "whisper" | "open"): Promise<Game> {
+  await requireGameManager(gameId);
   stopTimer(gameId, kind);
   return getGame(gameId)!;
 }
 
 export async function clearTimerAction(gameId: string, kind: "whisper" | "open"): Promise<Game> {
+  await requireGameManager(gameId);
   clearTimer(gameId, kind);
   return getGame(gameId)!;
 }
@@ -419,6 +467,7 @@ export async function setDisguiseAction(
   seat: number,
   characterId: string,
 ): Promise<Game> {
+  await requireGameManager(gameId);
   setDisguise(gameId, seat, characterId);
   // 위장 직업으로 지정된 직업이 악마 블러핑에 들어가 있으면 제거(가짜직업은 인플레이처럼 취급).
   if (characterId) {
@@ -438,6 +487,7 @@ export async function setRoleAction(
   seat: number,
   characterId: string,
 ): Promise<Game | { error: string }> {
+  await requireGameManager(gameId);
   const game = getGame(gameId);
   if (!game) return { error: "게임을 찾을 수 없습니다." };
   const ch = getCharacter(characterId);
@@ -467,6 +517,7 @@ export async function finishGameAction(
   gameId: string,
   result: "good" | "evil",
 ): Promise<void> {
+  await requireGameManager(gameId);
   captureUndo(gameId, "게임 종료");
   finishGame(gameId, result);
   revalidatePath(`/play/${gameId}`);
@@ -477,17 +528,21 @@ export async function savePositionsAction(
   gameId: string,
   positions: { seat: number; x: number; y: number }[],
 ): Promise<void> {
+  await requireGameManager(gameId);
   savePositions(gameId, positions);
 }
 
 export async function deleteGameAction(gameId: string): Promise<void> {
+  await requireGameManager(gameId);
   deleteGame(gameId);
   revalidatePath("/games");
 }
 
 /** 게임 복제 — 같은 셋업(좌석·닉네임·직업·배치)으로 새 1일차 밤 게임을 만들고 진행 화면으로 이동. */
 export async function cloneGameAction(srcId: string): Promise<void> {
-  const id = cloneGame(srcId);
+  // 본인이 만든(또는 관리자) 게임만 복제 가능. 새 게임의 소유자는 복제한 사람.
+  const user = await requireGameManager(srcId);
+  const id = cloneGame(srcId, user.id);
   revalidatePath("/games");
   redirect(`/play/${id}`);
 }
@@ -497,6 +552,7 @@ export async function renameGameAction(
   gameId: string,
   label: string,
 ): Promise<void> {
+  await requireGameManager(gameId);
   renameGame(gameId, label);
   revalidatePath("/games");
   revalidatePath(`/play/${gameId}`);
@@ -504,6 +560,7 @@ export async function renameGameAction(
 
 /** 실행 취소 — 가장 최근 조작 직전 상태로 복원. */
 export async function undoAction(gameId: string): Promise<Game | { error: string }> {
+  await requireGameManager(gameId);
   const label = undoLast(gameId);
   if (label === null) return { error: "되돌릴 조작이 없습니다." };
   revalidatePath(`/play/${gameId}`);
@@ -512,6 +569,7 @@ export async function undoAction(gameId: string): Promise<Game | { error: string
 
 /** 한 좌석의 직업배포 점유 해제 — 만료된 플레이어가 다시 볼 수 있게 ST가 허용. */
 export async function releaseSeatAction(gameId: string, seat: number): Promise<Game> {
+  await requireGameManager(gameId);
   releaseSeat(gameId, seat);
   return getGame(gameId)!;
 }
@@ -521,6 +579,9 @@ export async function releaseSeatAction(gameId: string, seat: number): Promise<G
 export async function lanUrlAction(
   path: string,
 ): Promise<{ url: string } | { error: string }> {
+  // 폰 공유 링크 생성은 이야기꾼·관리자 도구.
+  const user = await getCurrentUser();
+  if (!user || !isStoryteller(user)) return { error: "권한이 없습니다." };
   const addrs: string[] = [];
   for (const list of Object.values(os.networkInterfaces())) {
     for (const ni of list ?? []) {

@@ -139,7 +139,20 @@ export function StatsView({
                       .slice(0, 3);
                     return (
                       <tr key={s.nickname} className="border-t border-border">
-                        <td className="px-3 py-2 font-medium">{s.nickname}</td>
+                        <td className="px-3 py-2 font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            {s.nickname}
+                            {s.registered ? (
+                              <span className="rounded-full border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-[10px] font-normal text-gold">
+                                가입
+                              </span>
+                            ) : (
+                              <span className="rounded-full border border-border bg-surface-2 px-1.5 py-0.5 text-[10px] font-normal text-muted">
+                                게스트
+                              </span>
+                            )}
+                          </span>
+                        </td>
                         <td className="px-3 py-2 text-right tabular-nums">{s.games}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{s.wins}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-gold">{pct}%</td>

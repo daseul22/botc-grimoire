@@ -9,6 +9,9 @@ import { Pill } from "./Pill";
 
 type StatusFilter = "all" | "playing" | "finished";
 
+/** 권한 플래그가 붙은 게임 요약 — 복제/삭제/이름변경 노출 판정용. */
+type GameItem = GameSummary & { canManage: boolean };
+
 function statusText(g: GameSummary): string {
   if (g.status === "finished")
     return `종료 · ${g.result === "good" ? "선 승리" : g.result === "evil" ? "악 승리" : "결과 없음"}`;
@@ -40,7 +43,7 @@ function GameCard({
   onSave,
   onClone,
 }: {
-  g: GameSummary;
+  g: GameItem;
   displayName: string;
   editing: boolean;
   pending: boolean;
@@ -51,6 +54,7 @@ function GameCard({
   onClone: () => void;
 }) {
   const finished = g.status === "finished";
+  const canManage = g.canManage;
   const chip = statusChip(g);
   const hasLabel = g.label.trim().length > 0;
   const [draft, setDraft] = useState(g.label);
@@ -73,9 +77,11 @@ function GameCard({
           >
             {chip.label}
           </span>
-          <span className="pointer-events-auto">
-            <DeleteGameButton id={g.id} />
-          </span>
+          {canManage && (
+            <span className="pointer-events-auto">
+              <DeleteGameButton id={g.id} />
+            </span>
+          )}
         </div>
 
         {editing ? (
@@ -118,25 +124,29 @@ function GameCard({
               <h3 className="min-w-0 flex-1 truncate text-lg font-bold">
                 {displayName}
               </h3>
-              <button
-                type="button"
-                onClick={onClone}
-                disabled={cloning}
-                title="이 게임의 셋업(좌석·닉네임·직업)을 그대로 복제해 새 게임 시작"
-                aria-label="복제"
-                className="pointer-events-auto shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
-              >
-                {cloning ? "복제 중…" : "⧉ 복제"}
-              </button>
-              <button
-                type="button"
-                onClick={onStartEdit}
-                title="이름 지정"
-                aria-label="이름 지정"
-                className="pointer-events-auto shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted transition-colors hover:border-gold/60 hover:text-gold"
-              >
-                ✎ 이름
-              </button>
+              {canManage && (
+                <>
+                  <button
+                    type="button"
+                    onClick={onClone}
+                    disabled={cloning}
+                    title="이 게임의 셋업(좌석·닉네임·직업)을 그대로 복제해 새 게임 시작"
+                    aria-label="복제"
+                    className="pointer-events-auto shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+                  >
+                    {cloning ? "복제 중…" : "⧉ 복제"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onStartEdit}
+                    title="이름 지정"
+                    aria-label="이름 지정"
+                    className="pointer-events-auto shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                  >
+                    ✎ 이름
+                  </button>
+                </>
+              )}
             </div>
             <p className="mt-1 truncate text-xs text-muted">
               {hasLabel ? `스크립트 · ${g.sheetName}` : "이름 미지정"}
@@ -161,7 +171,7 @@ function GameCard({
   );
 }
 
-export function GamesBrowser({ games }: { games: GameSummary[] }) {
+export function GamesBrowser({ games }: { games: GameItem[] }) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [script, setScript] = useState<string>("all");
@@ -223,7 +233,7 @@ export function GamesBrowser({ games }: { games: GameSummary[] }) {
     startTransition(() => cloneGameAction(id));
   }
 
-  const renderCard = (g: GameSummary) => (
+  const renderCard = (g: GameItem) => (
     <GameCard
       key={`${g.id}:${editingId === g.id}`}
       g={{ ...g, label: overrides[g.id] ?? g.label }}

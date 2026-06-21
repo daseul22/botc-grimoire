@@ -83,6 +83,8 @@ for (const sql of [
   "ALTER TABLE games ADD COLUMN disguises TEXT NOT NULL DEFAULT '{}'",
   "ALTER TABLE game_phases ADD COLUMN timers TEXT NOT NULL DEFAULT '{}'",
   "ALTER TABLE games ADD COLUMN label TEXT NOT NULL DEFAULT ''",
+  // 인증 도입: 게임을 시작한 이야기꾼(소유자). 레거시 게임은 null(진행 중이면 관리자만 열람).
+  "ALTER TABLE games ADD COLUMN owner_id INTEGER",
 ]) {
   try {
     db.exec(sql);

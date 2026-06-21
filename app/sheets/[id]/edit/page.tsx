@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { characters } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
+import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { SheetBuilder } from "@/components/SheetBuilder";
 
 // 커스텀 시트만 수정 가능 (가변 데이터 → 항상 최신)
@@ -16,6 +17,11 @@ export default async function EditSheetPage({
   const { id } = await params;
   const sheet = getCustomSheet(id);
   if (!sheet) notFound();
+
+  // 소유자 또는 관리자만 수정 가능.
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (!isAdmin(user) && sheet.ownerId !== user.id) redirect(`/sheets/${id}`);
 
   return (
     <SheetBuilder

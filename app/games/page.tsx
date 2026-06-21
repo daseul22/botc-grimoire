@@ -1,4 +1,5 @@
 import { listGames } from "@/lib/games";
+import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { GamesBrowser } from "@/components/GamesBrowser";
 
 // 게임은 진행 진입 시점부터 DB에 저장됨 → 항상 최신 목록을 보여준다
@@ -6,8 +7,23 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "내역 — Games" };
 
-export default function GamesPage() {
-  const games = listGames();
+export default async function GamesPage() {
+  const user = await getCurrentUser();
+  const admin = isAdmin(user);
+
+  // 가시성: 종료된 게임은 누구나(익명 포함) 복기 열람 가능.
+  //         진행 중 게임은 그 게임을 시작한 이야기꾼 본인 또는 관리자만 보인다
+  //         (다른 이야기꾼의 진행 중 게임은 노출하지 않음).
+  // 관리(복제·삭제·이름변경): 소유자 본인 또는 관리자.
+  const games = listGames()
+    .filter((g) => {
+      if (g.status === "finished") return true;
+      return admin || (!!user && g.ownerId != null && g.ownerId === user.id);
+    })
+    .map((g) => ({
+      ...g,
+      canManage: admin || (!!user && g.ownerId != null && g.ownerId === user.id),
+    }));
 
   return (
     <div>
@@ -15,8 +31,8 @@ export default function GamesPage() {
         내역 <span className="text-base font-normal text-muted">Games</span>
       </h1>
       <p className="mb-6 text-sm text-muted">
-        진행 중인 게임은 이어서, 종료된 게임은 복기할 수 있습니다. 게임마다 이름을 지정해
-        나중에 구분하세요.
+        종료된 게임은 누구나 복기할 수 있습니다. 진행 중인 게임은 시작한 이야기꾼 본인에게만
+        보이며, 이어서 진행·복제·삭제할 수 있습니다.
       </p>
 
       <GamesBrowser games={games} />

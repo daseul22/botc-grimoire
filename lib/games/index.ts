@@ -56,6 +56,7 @@ export {
   finishGame,
   getGame,
   getGameConfig,
+  getGameOwner,
   getHistory,
   listGames,
   prevPhase,

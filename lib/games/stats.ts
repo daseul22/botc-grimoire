@@ -3,6 +3,11 @@
 // 스냅샷)는 이미 DB에 영구 보존되므로, 게임 삭제·재추첨 시 통계도 자동으로 정합을 유지한다.
 // 복기 링크는 /play/[id] (종료 게임이면 복기 화면으로 분기).
 import { currentIdx, db, readState } from "./schema";
+import { registeredNicknames } from "../auth";
+
+// 가입 닉네임은 trim + NFC로 저장된다(lib/auth normalizeNickname). 게임 닉네임을 같은 키로
+// 정규화해 비교해야 결합문자(NFD) 차이로 인한 '가입' 판정 누락이 없다.
+const nickKey = (s: string) => s.trim().normalize("NFC");
 
 export type GameStatPlayer = {
   seat: number;
@@ -81,11 +86,14 @@ export type NicknameStat = {
   /** characterId → 플레이 횟수 */
   roleCounts: Record<string, number>;
   lastPlayedAt: string;
+  /** 이 닉네임이 가입 유저의 닉네임인지(아니면 게스트/레거시 닉네임). */
+  registered: boolean;
 };
 
 /** 종료 게임 기준 닉네임별 집계(게임수·승수·진영 분포·직업 빈도). 게임수 많은 순. */
 export function nicknameLeaderboard(): NicknameStat[] {
   const finished = listFinishedGames();
+  const reg = registeredNicknames();
   const map = new Map<string, NicknameStat>();
   for (const g of finished) {
     for (const p of g.players) {
@@ -101,6 +109,7 @@ export function nicknameLeaderboard(): NicknameStat[] {
           evilCount: 0,
           roleCounts: {},
           lastPlayedAt: g.finishedAt,
+          registered: reg.has(nickKey(nick)),
         };
         map.set(nick, s);
       }
@@ -112,25 +121,53 @@ export function nicknameLeaderboard(): NicknameStat[] {
       if (g.finishedAt > s.lastPlayedAt) s.lastPlayedAt = g.finishedAt;
     }
   }
+  // 가입 유저를 먼저, 그 안에서 게임수·승수 순.
   return [...map.values()].sort(
-    (a, b) => b.games - a.games || b.wins - a.wins || a.nickname.localeCompare(b.nickname),
+    (a, b) =>
+      Number(b.registered) - Number(a.registered) ||
+      b.games - a.games ||
+      b.wins - a.wins ||
+      a.nickname.localeCompare(b.nickname),
   );
 }
 
-export type KnownNickname = { nickname: string; count: number; lastSeen: string };
+export type KnownNickname = {
+  nickname: string;
+  count: number;
+  lastSeen: string;
+  /** 가입 유저의 닉네임인지. */
+  registered: boolean;
+};
 
 /**
- * 자동완성용 — 모든 게임(진행/종료 무관)에서 입력된 적 있는 닉네임 distinct.
- * 자주 쓴 순 → 최근 순.
+ * 자동완성용 — 모든 게임(진행/종료 무관)에서 입력된 적 있는 닉네임 + 가입 유저 닉네임.
+ * 가입 유저 우선 → 자주 쓴 순 → 최근 순. 게임 기록이 없는 가입 유저도 포함된다.
  */
 export function listKnownNicknames(): KnownNickname[] {
-  return db
+  const hist = db
     .prepare(
-      `SELECT p.nickname AS nickname, COUNT(*) AS count, MAX(g.created_at) AS lastSeen
+      `SELECT TRIM(p.nickname) AS nickname, COUNT(*) AS count, MAX(g.created_at) AS lastSeen
        FROM game_players p JOIN games g ON g.id = p.game_id
        WHERE TRIM(p.nickname) <> ''
-       GROUP BY p.nickname
-       ORDER BY count DESC, lastSeen DESC`,
+       GROUP BY TRIM(p.nickname)`,
     )
-    .all() as KnownNickname[];
+    .all() as { nickname: string; count: number; lastSeen: string }[];
+  const reg = registeredNicknames();
+  const map = new Map<string, KnownNickname>();
+  for (const h of hist)
+    map.set(h.nickname, {
+      nickname: h.nickname,
+      count: h.count,
+      lastSeen: h.lastSeen ?? "",
+      registered: reg.has(nickKey(h.nickname)),
+    });
+  // 게임 기록이 없는 가입 유저도 후보에 포함.
+  for (const nick of reg)
+    if (!map.has(nick)) map.set(nick, { nickname: nick, count: 0, lastSeen: "", registered: true });
+  return [...map.values()].sort(
+    (a, b) =>
+      Number(b.registered) - Number(a.registered) ||
+      b.count - a.count ||
+      b.lastSeen.localeCompare(a.lastSeen),
+  );
 }

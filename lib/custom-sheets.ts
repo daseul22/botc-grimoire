@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS custom_sheets (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
+  owner_id INTEGER,
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS custom_sheet_characters (
@@ -18,11 +19,18 @@ CREATE TABLE IF NOT EXISTS custom_sheet_characters (
   PRIMARY KEY (sheet_id, character_id)
 );
 `);
+// 구버전 db 보강 (idempotent) — 인증 도입 전 만든 시트는 owner_id가 없다(레거시 → 관리자만 수정/삭제).
+try {
+  getDb().exec("ALTER TABLE custom_sheets ADD COLUMN owner_id INTEGER");
+} catch {
+  /* 이미 존재 */
+}
 
 type Row = {
   id: string;
   name: string;
   description: string | null;
+  owner_id: number | null;
   created_at: string;
 };
 
@@ -32,6 +40,7 @@ function toSheet(r: Row, ids: string[]): Sheet {
     name: { ko: r.name, en: r.name },
     characterIds: ids,
     custom: true,
+    ownerId: r.owner_id ?? null,
   };
   if (r.description) s.description = { ko: r.description, en: r.description };
   return s;
@@ -69,10 +78,19 @@ export function getCustomSheet(id: string): Sheet | undefined {
   return toSheet(r, ids);
 }
 
+/** 시트 소유자 user id (없으면 null). 수정/삭제 권한 판정용. */
+export function getCustomSheetOwner(id: string): number | null {
+  const r = getDb()
+    .prepare("SELECT owner_id FROM custom_sheets WHERE id = ?")
+    .get(id) as { owner_id: number | null } | undefined;
+  return r ? r.owner_id : null;
+}
+
 export function createCustomSheet(input: {
   name: string;
   description?: string;
   characterIds: string[];
+  ownerId?: number | null;
 }): string {
   const db = getDb();
   const id = "c-" + crypto.randomUUID().slice(0, 8);
@@ -84,8 +102,8 @@ export function createCustomSheet(input: {
   );
   const tx = db.transaction(() => {
     db.prepare(
-      "INSERT INTO custom_sheets (id,name,description,created_at) VALUES (?,?,?,?)",
-    ).run(id, input.name, input.description ?? null, createdAt);
+      "INSERT INTO custom_sheets (id,name,description,owner_id,created_at) VALUES (?,?,?,?,?)",
+    ).run(id, input.name, input.description ?? null, input.ownerId ?? null, createdAt);
     const ins = db.prepare(
       "INSERT INTO custom_sheet_characters (sheet_id,character_id,position) VALUES (?,?,?)",
     );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { charactersForSheet, sheets } from "@/lib/data";
 import { listCustomSheets } from "@/lib/custom-sheets";
 import type { Sheet } from "@/lib/types";
+import { NewSheetButton } from "@/components/NewSheetButton";
 
 // 커스텀 시트는 런타임에 추가되므로 항상 최신 상태를 반영
 export const dynamic = "force-dynamic";
@@ -50,12 +51,7 @@ export default function SheetsPage() {
           </h1>
           <p className="text-sm text-muted">공식 에디션과 직접 만든 커스텀 시트.</p>
         </div>
-        <Link
-          href="/sheets/new"
-          className="rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-bg"
-        >
-          + 새 시트 만들기
-        </Link>
+        <NewSheetButton />
       </div>
 
       <section className="mb-10">

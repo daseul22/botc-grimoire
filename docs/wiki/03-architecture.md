@@ -73,8 +73,17 @@ flowchart TD
 | `/play/[gameId]/seat` | 동적 | 폰 플레이어 뷰 — 자기 자리 직업만 ([09](09-storyteller-tools.md)) |
 | `/play/[gameId]/show/[seat]` | 동적 | 보여주기 풀스크린(`?as=`·`?mode=`·`?v=`) ([09](09-storyteller-tools.md)) |
 | `/play/[gameId]/pick/[seat]` · `/claim` | 동적 | 직업 목록(플레이어 선택) · 잠금 직업배포 |
+| `/login`, `/register`, `/account` | 동적 | 로그인·가입·내 계정([10](10-auth.md)) |
+| `/admin` | 동적 | 사용자 역할 부여(관리자 전용) |
 
 콘텐츠는 정적/SSG(빌드 시 SQLite 읽음), 게임·커스텀시트는 `force-dynamic`(가변).
+
+## 인증·인가 레이어 → [10](10-auth.md)
+
+`lib/auth.ts`(서버 전용, better-sqlite3)가 `users`/`sessions` 테이블·세션 쿠키·역할 가드를
+제공한다. 클라이언트는 역할 상수를 순수 모듈 `lib/auth-roles.ts`에서만 가져온다(런타임 import 금지).
+접근제어는 두 겹 — **UI 게이팅**(클라이언트 `AuthProvider` 컨텍스트)과 **보안 강제**(서버 액션·민감
+페이지의 `requireUser/Storyteller/Admin`·소유권 검사). 시트/게임은 `owner_id`로 소유자를 추적한다.
 
 ## 커스텀 시트 — [lib/custom-sheets.ts](../../lib/custom-sheets.ts)
 

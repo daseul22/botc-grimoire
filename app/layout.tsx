@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthProvider";
+import { AccountMenu } from "@/components/AccountMenu";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,33 +39,36 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <header className="border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-10">
-          <div className="mx-auto max-w-[88rem] px-4 h-14 flex items-center gap-6">
-            <Link href="/" className="font-bold text-gold tracking-tight">
-              BotC 그리모어
-            </Link>
-            <nav className="flex gap-4 text-sm">
-              {NAV.map((n) => (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  className="text-muted hover:text-text transition-colors"
-                >
-                  {n.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </header>
-        <main className="flex-1 mx-auto w-full max-w-[88rem] px-4 py-8">
-          {children}
-        </main>
-        <footer className="border-t border-border text-muted text-xs">
-          <div className="mx-auto max-w-[88rem] px-4 py-4">
-            시계탑에 흐른 피(Blood on the Clocktower)는 The Pandemonium Institute의
-            저작물입니다. 본 사이트는 개인 · 로컬 모임용 팬 도구입니다.
-          </div>
-        </footer>
+        <AuthProvider>
+          <header className="border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-10">
+            <div className="mx-auto max-w-[88rem] px-4 h-14 flex items-center gap-6">
+              <Link href="/" className="font-bold text-gold tracking-tight">
+                BotC 그리모어
+              </Link>
+              <nav className="flex gap-4 text-sm">
+                {NAV.map((n) => (
+                  <Link
+                    key={n.href}
+                    href={n.href}
+                    className="text-muted hover:text-text transition-colors"
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+              </nav>
+              <AccountMenu />
+            </div>
+          </header>
+          <main className="flex-1 mx-auto w-full max-w-[88rem] px-4 py-8">
+            {children}
+          </main>
+          <footer className="border-t border-border text-muted text-xs">
+            <div className="mx-auto max-w-[88rem] px-4 py-4">
+              시계탑에 흐른 피(Blood on the Clocktower)는 The Pandemonium Institute의
+              저작물입니다. 본 사이트는 개인 · 로컬 모임용 팬 도구입니다.
+            </div>
+          </footer>
+        </AuthProvider>
       </body>
     </html>
   );

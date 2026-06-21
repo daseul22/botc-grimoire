@@ -53,6 +53,8 @@ export interface Sheet {
   characterIds: string[];
   /** 사용자가 만든 커스텀 시트 여부 (공식 시트가 아님) */
   custom?: boolean;
+  /** 커스텀 시트 생성자 user id. 권한 게이팅용. 레거시/공식 시트는 null. */
+  ownerId?: number | null;
 }
 
 export interface RulesSection {
