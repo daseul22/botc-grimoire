@@ -9,6 +9,9 @@ import { useGameStream } from "./useGameStream";
 import { useBackClose } from "./useBackClose";
 import { ChatWidget } from "./ChatWidget";
 import { NightRequestPanel, type NightRequestView } from "./NightRequestPanel";
+import { NightHistoryList } from "./NightHistoryList";
+import { Modal } from "./Modal";
+import { getMyRequestHistoryAction } from "@/app/rooms/actions";
 import {
   setGeneralMemoAction,
   setGuessAction,
@@ -51,7 +54,17 @@ export function PlayerGame({
   const [memo, setMemo] = useState(initialNotes.memo);
   const [panelSeat, setPanelSeat] = useState<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<NightRequestView[]>([]);
   const [, startTransition] = useTransition();
+
+  // 기록(받은 정보·내 응답) — 열 때 가져온다.
+  useEffect(() => {
+    if (!historyOpen) return;
+    getMyRequestHistoryAction(roomId)
+      .then((h) => setHistory(h as NightRequestView[]))
+      .catch(() => {});
+  }, [historyOpen, roomId]);
 
   // 이야기꾼이 게임을 바꾸면(사망·이동·밤 행동 요청 등) SSE로 보드를 즉시 갱신.
   useGameStream(gameId, () => {
@@ -284,6 +297,29 @@ export function PlayerGame({
       })()}
 
       <ChatWidget roomId={roomId} meId={meId} members={members} />
+
+      {/* 받은 정보·내 응답 기록 — 진행 요청과 분리해 다시 볼 수 있게. */}
+      <button
+        type="button"
+        onClick={() => setHistoryOpen(true)}
+        className="fixed bottom-4 left-4 z-40 flex h-12 items-center gap-1.5 rounded-full border border-border bg-surface px-4 shadow-lg hover:border-gold/60"
+        title="받은 정보 기록"
+      >
+        <span className="text-sm font-medium">기록</span>
+      </button>
+      <Modal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        panelClassName="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-surface"
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+          <h2 className="text-sm font-semibold">밤 행동 기록</h2>
+          <button type="button" onClick={() => setHistoryOpen(false)} className="rounded p-1 text-muted hover:text-text">✕</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3">
+          <NightHistoryList requests={history} charMap={charMap} />
+        </div>
+      </Modal>
 
       {request && request.status !== "done" && request.status !== "cancelled" && (
         <NightRequestPanel

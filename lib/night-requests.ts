@@ -132,6 +132,26 @@ export function listActive(gameId: string): NightRequest[] {
   return rows.map(toReq);
 }
 
+/** 게임의 모든 요청(기록 — 이야기꾼). 최근 순. 취소는 제외. */
+export function listAllForGame(gameId: string, limit = 200): NightRequest[] {
+  const rows = db
+    .prepare(
+      "SELECT * FROM game_night_requests WHERE game_id=? AND status != 'cancelled' ORDER BY created_at DESC LIMIT ?",
+    )
+    .all(gameId, limit) as Row[];
+  return rows.map(toReq);
+}
+
+/** 한 좌석의 모든 요청(기록 — 플레이어). 최근 순. 취소 제외. */
+export function listAllForSeat(gameId: string, seat: number, limit = 100): NightRequest[] {
+  const rows = db
+    .prepare(
+      "SELECT * FROM game_night_requests WHERE game_id=? AND seat=? AND status != 'cancelled' ORDER BY created_at DESC LIMIT ?",
+    )
+    .all(gameId, seat, limit) as Row[];
+  return rows.map(toReq);
+}
+
 /** 플레이어 응답 — awaiting일 때만. */
 export function respond(id: string, targets: number[], choice: string): void {
   db.prepare(

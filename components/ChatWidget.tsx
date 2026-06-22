@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { getMessagesAction, sendChatAction } from "@/app/rooms/actions";
 import { useRoomStream } from "./useGameStream";
 import { Select } from "./Select";
+import { Modal } from "./Modal";
 
 // lib/chat의 ChatMessage와 동일 구조(클라가 서버 모듈을 import하지 않도록 로컬 정의).
 type ChatMessage = {
@@ -232,16 +233,13 @@ export function ChatWidget({
         </div>
       )}
 
-      {open && expanded && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setExpanded(false)}>
-          <div
-            className="flex h-[80vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {body}
-          </div>
-        </div>
-      )}
+      <Modal
+        open={open && expanded}
+        onClose={() => setExpanded(false)}
+        panelClassName="flex h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xl"
+      >
+        {body}
+      </Modal>
     </>
   );
 }

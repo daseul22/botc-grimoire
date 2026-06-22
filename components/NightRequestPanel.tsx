@@ -22,6 +22,7 @@ export type NightRequestView = {
   playerTargets: number[];
   playerChoice: string;
   info: InfoPayload | null;
+  createdAt: string;
 };
 
 type SeatLite = { seat: number; nickname: string; status: "alive" | "dead" };
@@ -88,8 +89,15 @@ export function NightRequestPanel({
     });
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div data-modal className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-gold/50 bg-surface p-5 shadow-xl">
+    <div
+      data-modal
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={() => setCollapsed(true)}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-gold/50 bg-surface p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-2 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-gold">이야기꾼 요청</p>
           <button

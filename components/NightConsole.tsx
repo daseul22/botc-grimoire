@@ -8,10 +8,12 @@ import {
   cancelNightRequestAction,
   createNightRequestAction,
   deliverNightRequestAction,
+  listNightRequestHistoryAction,
   listNightRequestsAction,
 } from "@/app/rooms/actions";
 import { useGameStream } from "./useGameStream";
 import { Select } from "./Select";
+import { NightHistoryList } from "./NightHistoryList";
 import type { InfoPayload, NightRequestView } from "./NightRequestPanel";
 
 /**
@@ -96,44 +98,61 @@ function ConsolePanel({
   const nameOf = (seat: number) => game.players.find((p) => p.seat === seat)?.nickname ?? `좌석 ${seat + 1}`;
   const roleOf = (seat: number) => charMap[game.players.find((p) => p.seat === seat)?.characterId ?? ""];
 
+  const [mode, setMode] = useState<"active" | "history">("active");
+  const [history, setHistory] = useState<NightRequestView[]>([]);
+  // 기록 탭일 때 전체 기록을 가져오고, 진행 요청이 바뀌면(SSE) 함께 갱신.
+  useEffect(() => {
+    if (mode !== "history") return;
+    listNightRequestHistoryAction(roomId)
+      .then((h) => setHistory(h as NightRequestView[]))
+      .catch(() => {});
+  }, [mode, roomId, requests]);
+
   return (
     <div className="fixed bottom-0 left-0 z-40 flex h-[78vh] w-full flex-col border border-border bg-surface shadow-xl sm:bottom-4 sm:left-4 sm:h-[36rem] sm:w-96 sm:rounded-2xl">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <h2 className="text-sm font-semibold">밤 행동 콘솔</h2>
+        <div className="flex items-center gap-1">
+          <h2 className="mr-1 text-sm font-semibold">밤 행동</h2>
+          <TabBtn on={mode === "active"} onClick={() => setMode("active")}>진행</TabBtn>
+          <TabBtn on={mode === "history"} onClick={() => setMode("history")}>기록</TabBtn>
+        </div>
         <button type="button" onClick={onClose} className="rounded p-1 text-muted hover:text-text">✕</button>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        {/* 활성 요청 */}
-        {requests.length > 0 && (
-          <section>
-            <h3 className="mb-2 text-xs font-semibold text-muted">진행 중 요청</h3>
-            <ul className="space-y-2">
-              {requests.map((r) => (
-                <RequestRow
-                  key={r.id}
-                  req={r}
-                  roomId={roomId}
-                  nameOf={nameOf}
-                  charMap={charMap}
-                  players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
-                  reload={reload}
-                />
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* 새 요청 */}
-        <NewRequest
-          alive={alive.map((p) => ({ seat: p.seat, nickname: p.nickname, role: roleOf(p.seat)?.name.ko }))}
-          players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
-          candidates={sheetChars}
-          charMap={charMap}
-          roomId={roomId}
-          reload={reload}
-        />
-      </div>
+      {mode === "active" ? (
+        <div className="flex-1 space-y-4 overflow-y-auto p-3">
+          {requests.length > 0 && (
+            <section>
+              <h3 className="mb-2 text-xs font-semibold text-muted">진행 중 요청</h3>
+              <ul className="space-y-2">
+                {requests.map((r) => (
+                  <RequestRow
+                    key={r.id}
+                    req={r}
+                    roomId={roomId}
+                    nameOf={nameOf}
+                    charMap={charMap}
+                    players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
+                    reload={reload}
+                  />
+                ))}
+              </ul>
+            </section>
+          )}
+          <NewRequest
+            alive={alive.map((p) => ({ seat: p.seat, nickname: p.nickname, role: roleOf(p.seat)?.name.ko }))}
+            players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
+            candidates={sheetChars}
+            charMap={charMap}
+            roomId={roomId}
+            reload={reload}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-3">
+          <NightHistoryList requests={history} charMap={charMap} nameOf={nameOf} />
+        </div>
+      )}
     </div>
   );
 }

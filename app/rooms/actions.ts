@@ -18,6 +18,8 @@ import {
   getActiveForSeat,
   getRequest,
   listActive,
+  listAllForGame,
+  listAllForSeat,
   respond,
   type InfoPayload,
   type NightRequest,
@@ -401,4 +403,20 @@ export async function listNightRequestsAction(roomId: string): Promise<NightRequ
   const { room } = await requireRoomOwner(roomId);
   if (!room.gameId) return [];
   return listActive(room.gameId);
+}
+
+/** ST: 게임의 밤 행동 기록(전체, 최근 순). */
+export async function listNightRequestHistoryAction(roomId: string): Promise<NightRequest[]> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return [];
+  return listAllForGame(room.gameId);
+}
+
+/** 플레이어: 본인 좌석의 밤 행동 기록(받은 정보 다시 보기). */
+export async function getMyRequestHistoryAction(roomId: string): Promise<NightRequest[]> {
+  const { user, room } = await requireRoomMember(roomId);
+  if (!room.gameId) return [];
+  const seat = seatForUser(room.gameId, user.id);
+  if (seat == null) return [];
+  return listAllForSeat(room.gameId, seat);
 }
