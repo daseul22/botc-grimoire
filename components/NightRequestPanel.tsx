@@ -63,7 +63,7 @@ export function NightRequestPanel({
         onClick={() => setCollapsed(false)}
         className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border border-gold/60 bg-surface px-4 py-2 text-sm font-semibold text-gold shadow-lg"
       >
-        🌙 이야기꾼 요청 보기
+        이야기꾼 요청 보기
       </button>
     );
   }
@@ -220,7 +220,7 @@ export function NightRequestPanel({
               } ${p.status === "dead" ? "opacity-50" : ""}`}
             >
               {p.nickname}
-              {p.status === "dead" && <span className="ml-1 text-xs text-muted">✝</span>}
+              {p.status === "dead" && <span className="ml-1 text-xs text-muted">(사망)</span>}
             </button>
           );
         })}

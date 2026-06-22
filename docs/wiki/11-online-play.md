@@ -47,7 +47,7 @@ flowchart LR
   L -.SSE 시작 감지.-> P2["플레이어 → /rooms/[id]/seat (내 자리)"]
 ```
 
-- **생성**: 시트 상세 `SheetActions`의 "🌐 온라인 방 만들기"(이야기꾼·관리자) → `createRoomAction`.
+- **생성**: 시트 상세 `SheetActions`의 "온라인 방 만들기"(이야기꾼·관리자) → `createRoomAction`.
 - **입장(둘 다)**: 공유 입장코드(`joinRoomByCodeAction`) **그리고** 지정 초대(`sendInviteAction`→
   당사자가 `/rooms`에서 `acceptInviteAction`). 둘 다 멤버로 추가된다.
 - **로비** `components/Lobby.tsx`: 이야기꾼은 초대·좌석배정·비율·시작, 플레이어는 대기·나가기.

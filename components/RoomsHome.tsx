@@ -102,7 +102,7 @@ export function RoomsHome({
       {/* 내가 만든 방 */}
       <RoomList title="내가 만든 방" rooms={owned} empty={
         canCreate
-          ? "시트 페이지에서 '🌐 온라인 방 만들기'로 새 방을 시작하세요."
+          ? "시트 페이지에서 '온라인 방 만들기'로 새 방을 시작하세요."
           : "이야기꾼 권한이 있어야 방을 만들 수 있습니다."
       } />
 

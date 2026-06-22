@@ -50,7 +50,7 @@ export function NightConsole({
         className="fixed bottom-4 left-4 z-40 flex h-12 items-center gap-1.5 rounded-full border border-gold/50 bg-surface px-4 shadow-lg hover:border-gold"
         title="밤 행동 요청"
       >
-        🌙 <span className="text-sm font-semibold">밤 행동</span>
+        <span className="text-sm font-semibold">밤 행동</span>
         {respondedCount > 0 && (
           <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-bg">
             {respondedCount}
@@ -98,7 +98,7 @@ function ConsolePanel({
   return (
     <div className="fixed bottom-0 left-0 z-40 flex h-[78vh] w-full flex-col border border-border bg-surface shadow-xl sm:bottom-4 sm:left-4 sm:h-[36rem] sm:w-96 sm:rounded-2xl">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <h2 className="text-sm font-semibold">🌙 밤 행동 콘솔</h2>
+        <h2 className="text-sm font-semibold">밤 행동 콘솔</h2>
         <button type="button" onClick={onClose} className="rounded p-1 text-muted hover:text-text">✕</button>
       </div>
 

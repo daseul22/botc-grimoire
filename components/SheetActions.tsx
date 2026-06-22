@@ -53,7 +53,7 @@ export function SheetActions({
           disabled={pending}
           className="rounded-lg border border-gold/60 px-4 py-2 text-sm font-semibold text-gold transition-colors hover:bg-gold/10 disabled:opacity-40"
         >
-          {pending ? "방 만드는 중…" : "🌐 온라인 방 만들기"}
+          {pending ? "방 만드는 중…" : "온라인 방 만들기"}
         </button>
       )}
       {error && <span className="text-xs text-red-400">{error}</span>}
