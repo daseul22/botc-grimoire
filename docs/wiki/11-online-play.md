@@ -168,6 +168,13 @@ stateDiagram-v2
 - **불가피한 분기는 클라이언트 replace**: `/rooms/[roomId]`의 started 분기는 서버 `redirect()` 대신 `RoomRedirect`(`router.replace`)로 우회.
   목록 스냅샷이 lobby→started 전환을 못 따라가 옛 링크를 누르는 경우까지 방어.
 
+**공유 LAN 화면의 백링크도 같은 함정**: 온라인 ST 보드는 LAN 컴포넌트(`PlayCanvas`·보여주기·직업선택)를 재사용하고,
+보여주기는 LAN 라우트 `/play/[gameId]/show/[seat]`(직업선택은 `/pick/[seat]`)로 간다. 거기 "← 그리모어"가 LAN 그리모어
+`/play/[gameId]`를 가리키는데, **온라인 게임이면 `/play/[gameId]`가 서버 `redirect()`로 `/rooms/[id]/play`로 보내** 같은 진동이 난다.
+→ show/pick 페이지는 `getRoomByGameId`로 온라인 여부를 보고 백링크를 `/rooms/[id]/play`로 **직접** 건다(LAN이면 `/play/[id]`).
+추가로 `/play/[gameId]`·`/play/[gameId]/seat`의 온라인 redirect도 `RoomRedirect`로 우회(이중 방어).
+배경: **온라인 방을 시작하면 `createGame`으로 실제 Game 레코드가 만들어지고 LAN 라우트 `/play/[gameId]`로도 존재한다** — 보드/보여주기 UI를 LAN과 공유하는 게 이 클래스의 근원.
+
 ## 다듬을 거리
 
 - ST 콘솔 정보 작성 프리셋(직업별 ActionSpec 자동),
