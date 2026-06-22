@@ -156,7 +156,17 @@ stateDiagram-v2
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
   `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `NightHistoryList.tsx` · `useGameStream.ts`.
 - 공통 UI: `components/Select.tsx`(드롭다운, native `<select>` 대체) · `components/Modal.tsx`(가운데 모달 일관 닫기) ·
+  `components/RoomRedirect.tsx`(클라이언트 라우트 교체) ·
   `PlayerPicker`/`RolePickerModal`(좌석·직업 토큰 picker). 네이티브 폼 요소를 앱 톤으로 대체하는 공통 컴포넌트들.
+
+## 라우팅 함정 — 서버 redirect()와 소프트 네비게이션
+
+**프리페치된 `<Link>`가 가리키는 라우트에서 서버 `redirect()`를 호출하면 클라이언트 소프트 네비게이션에서 무한 진동한다**
+(예: `/rooms/[id]` → `redirect('/play')` 이 `/rooms/[id]` ↔ `/play`를 ~70ms마다 `replaceState`로 핑퐁, 새로고침 전까지 안 멈춤).
+하드 로드는 HTTP 307이라 정상이라 "새로고침하면 괜찮은" 형태로 나타난다. 두 갈래로 막는다:
+- **링크는 최종 목적지로 직접**: `RoomsHome`은 시작된 방을 `/rooms/[id]`가 아니라 `/rooms/[id]/play`(이야기꾼)·`/seat`(플레이어)로 링크.
+- **불가피한 분기는 클라이언트 replace**: `/rooms/[roomId]`의 started 분기는 서버 `redirect()` 대신 `RoomRedirect`(`router.replace`)로 우회.
+  목록 스냅샷이 lobby→started 전환을 못 따라가 옛 링크를 누르는 경우까지 방어.
 
 ## 다듬을 거리
 
