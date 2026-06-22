@@ -4,7 +4,7 @@
 
 기존 LAN 그리모어(노트북 1대=서버, 같은 WiFi 폰) 위에 **원격 멀티플레이어**를 얹은 기능.
 디스코드 등에서 음성으로 진행하고, 그리모어·자리·정보 전달은 여기서 **실시간**으로 한다.
-음성은 미구현(디스코드 전제), 채팅은 전체채팅만(추후).
+음성은 미구현(디스코드 전제). 채팅은 전체 + 귓말(이야기꾼은 모든 귓말 열람).
 
 > 핵심 원칙: **기존 진행(`/play`)·내역(`/games`)과 라우트를 분리**하되 컴포넌트(PlayCanvas·SeatView·
 > GameReplay 등)는 재사용한다. 온라인 게임은 `/games` 내역에서 제외되고 `/rooms`에서 다룬다.
@@ -97,16 +97,20 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
   목록을 보내도 비밀이 새지 않는다. 토큰 좌표는 ST 보드와 동일한 `player.x/y`.
 - 실시간: `useGameStream`으로 ST 변경(사망·이동 등)을 즉시 반영. 추측/메모는 로컬 즉시 + 액션 영속.
 
-## 전체 채팅 — `components/ChatWidget.tsx`
+## 채팅(전체 + 귓말) — `components/ChatWidget.tsx`
 
-룸 단위 전체 채팅(로비~게임 같은 `room_id`로 이어짐). 플로팅 위젯(FAB+드로어)이라 로비·플레이어
-보드·이야기꾼 보드 어디서나 같은 채팅을 띄운다. 닫혀 있으면 미읽음 수를 뱃지로 표시.
+룸 단위 채팅(로비~게임 같은 `room_id`로 이어짐). 플로팅 위젯이라 로비·플레이어·이야기꾼 보드
+어디서나 같은 채팅을 띄운다. 작은 드로어 ↔ 화면 중앙 큰 모달 전환(크게 보기). 닫혀 있으면 미읽음 뱃지.
 
-- 데이터: `game_messages(room_id, user_id, nickname, body, created_at)` + `idx(room_id,id)`.
-  `lib/chat.ts` postMessage/listMessages(최근 200). `getMessagesAction`(멤버)·`sendChatAction`(멤버,
-  trim+1000자 캡, `emitRoomUpdate`). 닫힌 룸은 메시지도 정리.
-- 전달: 룸 채널 SSE 재사용 — 메시지 전송이 `emitRoomUpdate`로 룸 구독자(로비·각 ChatWidget)에게
-  신호 → 위젯이 `getMessagesAction` 재조회. 본문은 React 텍스트로 렌더(XSS 자동 escape).
+- 데이터: `game_messages(room_id, user_id, nickname, body, recipient_user_id, recipient_nickname, created_at)`.
+  `recipient_user_id`가 있으면 **귓말**(없으면 전체). `getMessagesAction`·`sendChatAction(body, recipientUserId?)`
+  (멤버, trim+1000자 캡, `emitRoomUpdate`). 닫힌 룸은 메시지도 정리.
+- **귓말 가시성**: 플레이어는 전체 + 본인이 보내거나 받은 귓말만, **이야기꾼(방장)은 모든 귓말 열람**.
+  `listMessages(roomId, viewerUserId, isOwner)`가 SQL로 필터 → 남의 귓말은 서버에서 아예 안 내려간다.
+  받는 사람은 공통 `Select`로 전체/멤버 중 선택(`ChatWidget`에 members 전달).
+- 전달: 룸 채널 SSE 재사용(`emitRoomUpdate` → 위젯이 `getMessagesAction` 재조회). 본문은 React 텍스트(XSS escape).
+- 한글 등 IME 조합 중 Enter는 무시(`e.nativeEvent.isComposing`) — 조합 확정 Enter가 전송까지 일으켜
+  "안녕"이 두 번 가던 버그 방지.
 
 ## 밤 행동 요청/응답 프로토콜 — `lib/night-requests.ts`
 
