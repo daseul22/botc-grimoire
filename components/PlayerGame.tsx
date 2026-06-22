@@ -29,6 +29,7 @@ export function PlayerGame({
   gameId,
   roomId,
   meId,
+  members,
   initialNotes,
   request,
 }: {
@@ -38,6 +39,7 @@ export function PlayerGame({
   gameId: string;
   roomId: string;
   meId: number;
+  members: { userId: number; nickname: string }[];
   initialNotes: { seats: Record<number, SeatGuess>; memo: string };
   request: NightRequestView | null;
 }) {
@@ -281,7 +283,7 @@ export function PlayerGame({
         );
       })()}
 
-      <ChatWidget roomId={roomId} meId={meId} />
+      <ChatWidget roomId={roomId} meId={meId} members={members} />
 
       {request && request.status !== "done" && request.status !== "cancelled" && (
         <NightRequestPanel

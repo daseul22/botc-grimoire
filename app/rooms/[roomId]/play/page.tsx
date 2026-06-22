@@ -46,7 +46,11 @@ export default async function RoomPlayPage({
         knownNicknames={listKnownNicknames().map((k) => k.nickname)}
       />
       <NightConsole game={game} sheetChars={sheetChars} roomId={roomId} />
-      <ChatWidget roomId={roomId} meId={user.id} />
+      <ChatWidget
+        roomId={roomId}
+        meId={user.id}
+        members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
+      />
     </>
   );
 }

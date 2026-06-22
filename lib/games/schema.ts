@@ -108,13 +108,16 @@ CREATE TABLE IF NOT EXISTS game_player_guesses (
   updated_at TEXT NOT NULL,
   PRIMARY KEY (game_id, user_id, target_seat)
 );
--- 룸 전체 채팅(로비~게임 지속). room 단위. nickname은 발신 시점 스냅샷.
+-- 룸 채팅(로비~게임 지속). room 단위. nickname은 발신 시점 스냅샷.
+-- recipient_user_id: null=전체채팅, 값=귓말(발신자·수신자·이야기꾼만 열람).
 CREATE TABLE IF NOT EXISTS game_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   room_id TEXT NOT NULL,
   user_id INTEGER NOT NULL,
   nickname TEXT NOT NULL,
   body TEXT NOT NULL,
+  recipient_user_id INTEGER,
+  recipient_nickname TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_game_messages_room ON game_messages(room_id, id);
@@ -158,6 +161,9 @@ for (const sql of [
   // 좌석 점유자의 가입 계정 id(안정적). 닉네임이 아니라 계정에 통계가 묶이도록.
   // null = 게스트(미가입 닉네임). 닉네임을 바꿔도 user_id는 유지돼 전적이 계정을 따라간다.
   "ALTER TABLE game_players ADD COLUMN user_id INTEGER",
+  // 귓말: 수신자(있으면 귓말). 발신자·수신자·이야기꾼만 열람.
+  "ALTER TABLE game_messages ADD COLUMN recipient_user_id INTEGER",
+  "ALTER TABLE game_messages ADD COLUMN recipient_nickname TEXT NOT NULL DEFAULT ''",
 ]) {
   try {
     db.exec(sql);

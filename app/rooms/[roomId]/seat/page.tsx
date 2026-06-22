@@ -55,6 +55,7 @@ export default async function RoomSeatPage({
       gameId={room.gameId}
       roomId={roomId}
       meId={user.id}
+      members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
       initialNotes={notes}
       request={request}
     />

@@ -260,20 +260,36 @@ export async function setGeneralMemoAction(roomId: string, note: string): Promis
   setGeneralMemo(room.gameId, user.id, note.slice(0, 2000));
 }
 
-// ── 전체 채팅(룸 멤버) ──
+// ── 채팅(룸 멤버) — 전체 + 귓말 ──
 export async function getMessagesAction(roomId: string): Promise<ChatMessage[]> {
-  await requireRoomMember(roomId);
-  return listMessages(roomId);
+  const { user, room } = await requireRoomMember(roomId);
+  // 이야기꾼(방장)은 귓말 포함 전부, 플레이어는 전체 + 본인 관련 귓말만.
+  return listMessages(room.id, user.id, room.ownerId === user.id);
 }
 
 export async function sendChatAction(
   roomId: string,
   body: string,
+  recipientUserId?: number | null,
 ): Promise<{ error: string } | void> {
   const { user, room } = await requireRoomMember(roomId);
   const text = body.trim().slice(0, 1000);
   if (!text) return;
-  postMessage(room.id, user.id, user.nickname, text);
+  let recipient: { id: number; nickname: string } | null = null;
+  if (recipientUserId != null) {
+    const target = room.members.find((m) => m.userId === recipientUserId);
+    if (!target) return { error: "귓말 대상을 찾을 수 없습니다." };
+    if (target.userId === user.id) return; // 자기 자신 귓말은 무시
+    recipient = { id: target.userId, nickname: target.nickname };
+  }
+  postMessage({
+    roomId: room.id,
+    userId: user.id,
+    nickname: user.nickname,
+    body: text,
+    recipientUserId: recipient?.id ?? null,
+    recipientNickname: recipient?.nickname ?? "",
+  });
   emitRoomUpdate(room.id); // 룸 채널 구독자(로비·채팅 위젯) 즉시 갱신
 }
 

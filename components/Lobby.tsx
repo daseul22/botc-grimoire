@@ -89,7 +89,11 @@ export function Lobby({
         <PlayerView room={room} me={me} storyteller={storyteller} players={players} />
       )}
 
-      <ChatWidget roomId={room.id} meId={meId} />
+      <ChatWidget
+        roomId={room.id}
+        meId={meId}
+        members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
+      />
     </div>
   );
 }
