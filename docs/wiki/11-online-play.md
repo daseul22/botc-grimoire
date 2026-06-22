@@ -108,18 +108,43 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 - 전달: 룸 채널 SSE 재사용 — 메시지 전송이 `emitRoomUpdate`로 룸 구독자(로비·각 ChatWidget)에게
   신호 → 위젯이 `getMessagesAction` 재조회. 본문은 React 텍스트로 렌더(XSS 자동 escape).
 
+## 밤 행동 요청/응답 프로토콜 — `lib/night-requests.ts`
+
+이야기꾼↔플레이어 실시간 핸드셰이크. 능력은 자동화하지 않고 ST가 좌석에 요청을 보내면 플레이어가
+매칭 UI로 응답하고, ST가 응답을 보고 최종 정보를 전달한다.
+
+```mermaid
+stateDiagram-v2
+  [*] --> awaiting: ST 요청(pick-players/pick-character)
+  [*] --> delivered: ST 요청(info, 입력 불필요)
+  awaiting --> responded: 플레이어 선택 제출
+  responded --> delivered: ST 최종 정보 전달
+  delivered --> done: 플레이어 확인
+```
+
+- 데이터: `game_night_requests(id, game_id, seat, kind, prompt, max_targets, status, player_targets, player_choice, info_payload)`.
+  좌석당 활성 1개(새 요청이 기존을 cancelled로 슈퍼시드). 액션: `createNightRequest`(ST)·`respond`(본인 좌석)·
+  `deliver`(ST)·`acknowledge`(본인 좌석)·`cancel`(ST)·`getMyRequest`(본인)·`listNightRequests`(ST). 전부 `emitGameUpdate`.
+- **보안**: 플레이어 좌석 페이지는 `getActiveForSeat(gameId, boundSeat)`로 **본인 좌석 요청만** 받는다.
+  `info_payload`는 자기완결 표시 데이터(heading/subheading/roleTokens charId/nameTokens 닉네임)라 전체 게임이
+  새지 않는다. respond/acknowledge는 `seatForUser===req.seat` 검사로 남의 좌석 요청을 못 건드린다.
+- UI: 플레이어 `components/NightRequestPanel.tsx`(좌석 그리드/`RolePickerModal`/정보 표시+확인) ·
+  이야기꾼 `components/NightConsole.tsx`(플로팅 — 활성 요청·응답 확인·`InfoComposer`로 정보 작성·전달).
+- 한계(MVP): 한 요청은 좌석선택 *또는* 직업선택 하나(도박꾼처럼 둘 다 필요한 직업은 두 요청으로).
+
 ## 주요 파일
 
 - `lib/realtime.ts` 이벤트 버스(게임/룸 채널) · `lib/rooms.ts` 룸 데이터 레이어 ·
   `lib/role-assign.ts` 직업 배정(게임/룸 시작 공유) · `lib/redact.ts` 좌석 redaction ·
-  `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅.
+  `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/night-requests.ts` 밤 행동 요청.
 - `app/rooms/actions.ts` 룸 서버 액션 · `app/rooms/**` 룸/로비/입장/진행/자리 페이지.
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
-  `ChatWidget.tsx` · `useGameStream.ts`.
+  `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `useGameStream.ts`.
 
-## 미구현(다음 단계)
+## 다듬을 거리
 
-- 밤 행동 요청/응답 프로토콜(P5).
+- 도박꾼류(좌석+직업 동시 선택) 단일 요청 지원, ST 콘솔 정보 작성 프리셋(직업별 ActionSpec 자동),
+  요청/응답 기록 복기, 이야기꾼 보드 SSE 구독(플레이어발 변경 즉시 반영 — 현재는 콘솔/위젯만 구독).
 - 이야기꾼 보드(PlayCanvas)는 아직 SSE 미구독 — 플레이어발 변경을 ST가 봐야 하는 요청/응답 단계에서
   `getGameAction` refetch+`setGame`을 붙인다.
 

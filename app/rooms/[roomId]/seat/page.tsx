@@ -3,6 +3,7 @@ import { getGame, seatForUser } from "@/lib/games";
 import { getCurrentUser } from "@/lib/auth";
 import { getRoom } from "@/lib/rooms";
 import { getPlayerNotes } from "@/lib/player-board";
+import { getActiveForSeat } from "@/lib/night-requests";
 import { redactGameForSeat } from "@/lib/redact";
 import { characterMapForGame } from "@/lib/game-characters";
 import { PlayerGame } from "@/components/PlayerGame";
@@ -44,6 +45,7 @@ export default async function RoomSeatPage({
   const sheetChars = [...characterMapForGame(game).values()];
   const redacted = redactGameForSeat(game, boundSeat);
   const notes = getPlayerNotes(room.gameId, user.id);
+  const request = getActiveForSeat(room.gameId, boundSeat) ?? null;
 
   return (
     <PlayerGame
@@ -54,6 +56,7 @@ export default async function RoomSeatPage({
       roomId={roomId}
       meId={user.id}
       initialNotes={notes}
+      request={request}
     />
   );
 }

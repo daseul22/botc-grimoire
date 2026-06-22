@@ -482,6 +482,9 @@ export function deleteGame(id: string): void {
     db.prepare("DELETE FROM game_phases WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM game_phase_actions WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM game_undo_stack WHERE game_id = ?").run(id);
+    // 온라인 부가 데이터(플레이어 추측/메모·밤 행동 요청)도 함께 정리.
+    db.prepare("DELETE FROM game_player_guesses WHERE game_id = ?").run(id);
+    db.prepare("DELETE FROM game_night_requests WHERE game_id = ?").run(id);
     db.prepare("DELETE FROM games WHERE id = ?").run(id);
   })();
 }

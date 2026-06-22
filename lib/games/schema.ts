@@ -118,6 +118,23 @@ CREATE TABLE IF NOT EXISTS game_messages (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_game_messages_room ON game_messages(room_id, id);
+-- 밤 행동 요청/응답 핸드셰이크(온라인). 이야기꾼↔플레이어 좌석 단위.
+-- status: awaiting(플레이어 행동) → responded(ST 정산) → delivered(플레이어 확인) → done. info는 바로 delivered.
+CREATE TABLE IF NOT EXISTS game_night_requests (
+  id TEXT PRIMARY KEY,
+  game_id TEXT NOT NULL,
+  seat INTEGER NOT NULL,
+  kind TEXT NOT NULL,                       -- 'info' | 'pick-players' | 'pick-character'
+  prompt TEXT NOT NULL DEFAULT '',
+  max_targets INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'awaiting',
+  player_targets TEXT NOT NULL DEFAULT '[]',
+  player_choice TEXT NOT NULL DEFAULT '',
+  info_payload TEXT,                        -- JSON { heading, subheading, roleTokens:[charId], nameTokens:[nickname] }
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_night_requests_game ON game_night_requests(game_id, seat);
 `);
 // 구버전 db 컬럼 보강 (idempotent)
 for (const sql of [

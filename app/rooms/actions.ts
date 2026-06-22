@@ -9,7 +9,20 @@ import {
   userIdByNickname,
   type AuthUser,
 } from "@/lib/auth";
-import { createGame } from "@/lib/games";
+import { createGame, getGame, seatForUser } from "@/lib/games";
+import {
+  acknowledge,
+  cancelRequest,
+  createRequest,
+  deliver,
+  getActiveForSeat,
+  getRequest,
+  listActive,
+  respond,
+  type InfoPayload,
+  type NightRequest,
+  type NightRequestKind,
+} from "@/lib/night-requests";
 import { assignRoles, resolveSheet } from "@/lib/role-assign";
 import { circlePositions } from "@/lib/seat-layout";
 import { ratioTotal, type Ratio } from "@/lib/ratio";
@@ -262,4 +275,114 @@ export async function sendChatAction(
   if (!text) return;
   postMessage(room.id, user.id, user.nickname, text);
   emitRoomUpdate(room.id); // 룸 채널 구독자(로비·채팅 위젯) 즉시 갱신
+}
+
+// ── 밤 행동 요청/응답(P5) ──
+function sanitizeInfo(info: InfoPayload): InfoPayload {
+  return {
+    heading: String(info.heading ?? "").slice(0, 300),
+    subheading: info.subheading ? String(info.subheading).slice(0, 300) : undefined,
+    roleTokens: (info.roleTokens ?? []).slice(0, 8).map((s) => String(s).slice(0, 64)),
+    nameTokens: (info.nameTokens ?? []).slice(0, 12).map((s) => String(s).slice(0, 60)),
+  };
+}
+
+/** ST가 좌석에 밤 행동 요청 생성(정보 즉시 전달 또는 행동 요청). */
+export async function createNightRequestAction(
+  roomId: string,
+  input: { seat: number; kind: NightRequestKind; prompt?: string; maxTargets?: number; info?: InfoPayload },
+): Promise<{ error: string } | { id: string }> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  // info(즉시 전달)는 반드시 표시할 내용이 있어야 한다 — 빈 info면 플레이어가 막힌 모달에 갇힐 수 있다.
+  if (input.kind === "info" && (!input.info || !input.info.heading?.trim()))
+    return { error: "보낼 정보(큰 메시지)를 입력하세요." };
+  const id = createRequest({
+    gameId: room.gameId,
+    seat: input.seat,
+    kind: input.kind,
+    prompt: (input.prompt ?? "").slice(0, 300),
+    maxTargets: Math.max(0, Math.min(10, input.maxTargets ?? 1)),
+    info: input.kind === "info" && input.info ? sanitizeInfo(input.info) : undefined,
+  });
+  emitGameUpdate(room.gameId);
+  return { id };
+}
+
+/** 플레이어 응답 — 본인 좌석의 요청에만. */
+export async function respondNightRequestAction(
+  roomId: string,
+  requestId: string,
+  targets: number[],
+  choice: string,
+): Promise<{ error: string } | void> {
+  const { user, room } = await requireRoomMember(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const req = getRequest(requestId);
+  if (!req || req.gameId !== room.gameId) return { error: "요청을 찾을 수 없습니다." };
+  if (seatForUser(room.gameId, user.id) !== req.seat) return { error: "본인 좌석의 요청이 아닙니다." };
+  // 좌석 수 클램프 + 실제 존재하는 좌석만 허용(잘못된 값으로 콘솔 표시 오염 방지).
+  const validSeats = new Set(getGame(room.gameId)?.players.map((p) => p.seat) ?? []);
+  const safeTargets = (targets ?? [])
+    .slice(0, req.maxTargets)
+    .map((n) => Number(n) | 0)
+    .filter((s) => validSeats.has(s));
+  respond(requestId, safeTargets, String(choice ?? "").slice(0, 64));
+  emitGameUpdate(room.gameId);
+}
+
+/** ST 최종 정보 전달. */
+export async function deliverNightRequestAction(
+  roomId: string,
+  requestId: string,
+  info: InfoPayload,
+): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const req = getRequest(requestId);
+  if (!req || req.gameId !== room.gameId) return { error: "요청을 찾을 수 없습니다." };
+  deliver(requestId, sanitizeInfo(info));
+  emitGameUpdate(room.gameId);
+}
+
+/** 플레이어가 전달된 정보를 확인. */
+export async function acknowledgeNightRequestAction(
+  roomId: string,
+  requestId: string,
+): Promise<{ error: string } | void> {
+  const { user, room } = await requireRoomMember(roomId);
+  if (!room.gameId) return;
+  const req = getRequest(requestId);
+  if (!req || req.gameId !== room.gameId) return;
+  if (seatForUser(room.gameId, user.id) !== req.seat) return { error: "본인 좌석의 요청이 아닙니다." };
+  acknowledge(requestId);
+  emitGameUpdate(room.gameId);
+}
+
+export async function cancelNightRequestAction(
+  roomId: string,
+  requestId: string,
+): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  // 다른 게임의 요청을 id만으로 취소하지 못하게 소속 검사(다른 핸들러와 동일).
+  const req = getRequest(requestId);
+  if (!req || req.gameId !== room.gameId) return { error: "요청을 찾을 수 없습니다." };
+  cancelRequest(requestId);
+  if (room.gameId) emitGameUpdate(room.gameId);
+}
+
+/** 플레이어: 본인 좌석의 활성 요청을 가져온다(본인 것만). */
+export async function getMyRequestAction(roomId: string): Promise<NightRequest | null> {
+  const { user, room } = await requireRoomMember(roomId);
+  if (!room.gameId) return null;
+  const seat = seatForUser(room.gameId, user.id);
+  if (seat == null) return null;
+  return getActiveForSeat(room.gameId, seat) ?? null;
+}
+
+/** ST: 게임의 모든 활성 요청. */
+export async function listNightRequestsAction(roomId: string): Promise<NightRequest[]> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return [];
+  return listActive(room.gameId);
 }

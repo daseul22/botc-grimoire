@@ -6,6 +6,7 @@ import { characterMapForGame } from "@/lib/game-characters";
 import { PlayCanvas } from "@/components/PlayCanvas";
 import { GameReplay } from "@/components/GameReplay";
 import { ChatWidget } from "@/components/ChatWidget";
+import { NightConsole } from "@/components/NightConsole";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "온라인 진행" };
@@ -44,6 +45,7 @@ export default async function RoomPlayPage({
         sheetChars={sheetChars}
         knownNicknames={listKnownNicknames().map((k) => k.nickname)}
       />
+      <NightConsole game={game} sheetChars={sheetChars} roomId={roomId} />
       <ChatWidget roomId={roomId} meId={user.id} />
     </>
   );

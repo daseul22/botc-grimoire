@@ -8,6 +8,7 @@ import { RolePickerModal } from "./RolePickerModal";
 import { useGameStream } from "./useGameStream";
 import { useBackClose } from "./useBackClose";
 import { ChatWidget } from "./ChatWidget";
+import { NightRequestPanel, type NightRequestView } from "./NightRequestPanel";
 import {
   setGeneralMemoAction,
   setGuessAction,
@@ -29,6 +30,7 @@ export function PlayerGame({
   roomId,
   meId,
   initialNotes,
+  request,
 }: {
   game: Game;
   sheetChars: Character[];
@@ -37,6 +39,7 @@ export function PlayerGame({
   roomId: string;
   meId: number;
   initialNotes: { seats: Record<number, SeatGuess>; memo: string };
+  request: NightRequestView | null;
 }) {
   const router = useRouter();
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;
@@ -48,10 +51,23 @@ export function PlayerGame({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [, startTransition] = useTransition();
 
-  // 이야기꾼이 게임을 바꾸면(사망·이동 등) SSE로 보드를 즉시 갱신.
+  // 이야기꾼이 게임을 바꾸면(사망·이동·밤 행동 요청 등) SSE로 보드를 즉시 갱신.
   useGameStream(gameId, () => {
     if (document.visibilityState === "visible") router.refresh();
   });
+
+  // 백그라운드였다 돌아오면(모바일) 놓친 변경/요청을 다시 가져온다(SSE는 hidden일 때 refresh 건너뜀).
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    document.addEventListener("visibilitychange", tick);
+    window.addEventListener("focus", tick);
+    return () => {
+      document.removeEventListener("visibilitychange", tick);
+      window.removeEventListener("focus", tick);
+    };
+  }, [router]);
 
   const me = game.players.find((p) => p.seat === boundSeat);
   const myCharId = me ? game.disguises?.[boundSeat] ?? me.characterId : "";
@@ -266,6 +282,16 @@ export function PlayerGame({
       })()}
 
       <ChatWidget roomId={roomId} meId={meId} />
+
+      {request && request.status !== "done" && request.status !== "cancelled" && (
+        <NightRequestPanel
+          key={request.id}
+          request={request}
+          roomId={roomId}
+          charMap={charMap}
+          players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
+        />
+      )}
     </div>
   );
 }
