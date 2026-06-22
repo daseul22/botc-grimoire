@@ -119,7 +119,7 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 
 ```mermaid
 stateDiagram-v2
-  [*] --> awaiting: ST 요청(pick-players/pick-character)
+  [*] --> awaiting: ST 요청(pick-players / pick-character / pick-player-character)
   [*] --> delivered: ST 요청(info, 입력 불필요)
   awaiting --> responded: 플레이어 선택 제출
   responded --> delivered: ST 최종 정보 전달
@@ -132,9 +132,10 @@ stateDiagram-v2
 - **보안**: 플레이어 좌석 페이지는 `getActiveForSeat(gameId, boundSeat)`로 **본인 좌석 요청만** 받는다.
   `info_payload`는 자기완결 표시 데이터(heading/subheading/roleTokens charId/nameTokens 닉네임)라 전체 게임이
   새지 않는다. respond/acknowledge는 `seatForUser===req.seat` 검사로 남의 좌석 요청을 못 건드린다.
+- 행동 요청 종류(`kind`): `pick-players`(좌석 N개, `max_targets`로 개수) · `pick-character`(직업 1) ·
+  `pick-player-character`(좌석 1 + 직업 1, 도박꾼류 — `player_targets[0]`=좌석, `player_choice`=직업).
 - UI: 플레이어 `components/NightRequestPanel.tsx`(좌석 그리드/`RolePickerModal`/정보 표시+확인) ·
-  이야기꾼 `components/NightConsole.tsx`(플로팅 — 활성 요청·응답 확인·`InfoComposer`로 정보 작성·전달).
-- 한계(MVP): 한 요청은 좌석선택 *또는* 직업선택 하나(도박꾼처럼 둘 다 필요한 직업은 두 요청으로).
+  이야기꾼 `components/NightConsole.tsx`(플로팅 — 종류별 요청·응답 확인·`InfoComposer`로 정보 작성·전달).
 
 ## 주요 파일
 
@@ -149,7 +150,7 @@ stateDiagram-v2
 
 ## 다듬을 거리
 
-- 도박꾼류(좌석+직업 동시 선택) 단일 요청 지원, ST 콘솔 정보 작성 프리셋(직업별 ActionSpec 자동),
+- ST 콘솔 정보 작성 프리셋(직업별 ActionSpec 자동),
   요청/응답 기록 복기, 이야기꾼 보드 SSE 구독(플레이어발 변경 즉시 반영 — 현재는 콘솔/위젯만 구독).
 - 이야기꾼 보드(PlayCanvas)는 아직 SSE 미구독 — 플레이어발 변경을 ST가 봐야 하는 요청/응답 단계에서
   `getGameAction` refetch+`setGame`을 붙인다.
