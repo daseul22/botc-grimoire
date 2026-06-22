@@ -140,6 +140,8 @@ stateDiagram-v2
 - `app/rooms/actions.ts` 룸 서버 액션 · `app/rooms/**` 룸/로비/입장/진행/자리 페이지.
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
   `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `useGameStream.ts`.
+- `components/Select.tsx` — 공통 드롭다운(native `<select>` 대체, portal 앵커·다크 테마). 좌석 배정·대상
+  좌석 등에 사용. `PlayerPicker`(좌석 토큰 그리드)와 함께 네이티브 폼 요소를 앱 톤으로 대체하는 공통 컴포넌트.
 
 ## 다듬을 거리
 
