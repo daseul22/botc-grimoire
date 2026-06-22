@@ -4,6 +4,7 @@ import { getRoom, listInvitesForRoom } from "@/lib/rooms";
 import { charactersForSheet } from "@/lib/data";
 import { resolveSheet } from "@/lib/role-assign";
 import { Lobby, type LobbyChar, type LobbyInvite } from "@/components/Lobby";
+import { RoomRedirect } from "@/components/RoomRedirect";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "대기실" };
@@ -24,8 +25,9 @@ export default async function RoomPage({
   const me = room.members.find((m) => m.userId === user.id);
 
   // 이미 시작했으면 곧장 게임으로(이야기꾼=보드, 그 외=내 자리). 온라인 전용 라우트.
+  // 서버 redirect()는 소프트 네비게이션에서 무한 진동하므로 클라이언트 replace로 우회.
   if (room.status === "started" && room.gameId) {
-    redirect(isOwner ? `/rooms/${roomId}/play` : `/rooms/${roomId}/seat`);
+    return <RoomRedirect to={isOwner ? `/rooms/${roomId}/play` : `/rooms/${roomId}/seat`} />;
   }
   if (room.status === "closed") {
     return (

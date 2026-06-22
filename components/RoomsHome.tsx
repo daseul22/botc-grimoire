@@ -100,14 +100,14 @@ export function RoomsHome({
       )}
 
       {/* 내가 만든 방 */}
-      <RoomList title="내가 만든 방" rooms={owned} empty={
+      <RoomList title="내가 만든 방" rooms={owned} viewerIsOwner empty={
         canCreate
           ? "시트 페이지에서 '온라인 방 만들기'로 새 방을 시작하세요."
           : "이야기꾼 권한이 있어야 방을 만들 수 있습니다."
       } />
 
       {/* 참가한 방 */}
-      <RoomList title="참가한 방" rooms={joined} empty="참가한 방이 없습니다. 위 코드나 초대로 입장하세요." />
+      <RoomList title="참가한 방" rooms={joined} viewerIsOwner={false} empty="참가한 방이 없습니다. 위 코드나 초대로 입장하세요." />
     </div>
   );
 }
@@ -153,7 +153,24 @@ function InviteRow({ invite }: { invite: InviteCard }) {
   );
 }
 
-function RoomList({ title, rooms, empty }: { title: string; rooms: RoomCard[]; empty: string }) {
+// 시작된 방은 최종 라우트로 직접 보낸다(이야기꾼=보드, 플레이어=내 자리).
+// /rooms/[id]를 거치면 서버 redirect가 클라이언트 소프트 네비게이션에서 진동(무한 리다이렉트)하므로 우회.
+function roomHref(r: RoomCard, viewerIsOwner: boolean): string {
+  if (r.status === "started") return viewerIsOwner ? `/rooms/${r.id}/play` : `/rooms/${r.id}/seat`;
+  return `/rooms/${r.id}`;
+}
+
+function RoomList({
+  title,
+  rooms,
+  empty,
+  viewerIsOwner,
+}: {
+  title: string;
+  rooms: RoomCard[];
+  empty: string;
+  viewerIsOwner: boolean;
+}) {
   return (
     <section className="mb-6">
       <h2 className="mb-2 text-sm font-semibold text-muted">{title}</h2>
@@ -164,7 +181,7 @@ function RoomList({ title, rooms, empty }: { title: string; rooms: RoomCard[]; e
           {rooms.map((r) => (
             <li key={r.id}>
               <Link
-                href={`/rooms/${r.id}`}
+                href={roomHref(r, viewerIsOwner)}
                 className="flex items-center justify-between rounded-lg border border-border bg-surface p-3 transition-colors hover:border-gold/60"
               >
                 <div>
