@@ -11,6 +11,7 @@ import {
   listNightRequestsAction,
 } from "@/app/rooms/actions";
 import { useGameStream } from "./useGameStream";
+import { Select } from "./Select";
 import type { InfoPayload, NightRequestView } from "./NightRequestPanel";
 
 /**
@@ -257,22 +258,17 @@ function NewRequest({
     <section className="rounded-lg border border-gold/40 bg-bg p-3">
       <h3 className="mb-2 text-xs font-semibold">새 요청 보내기</h3>
 
-      <label className="mb-2 block text-xs text-muted">
-        대상 좌석
-        <select
-          value={seat == null ? "" : String(seat)}
-          onChange={(e) => setSeat(e.target.value === "" ? null : Number(e.target.value))}
-          className="mt-1 w-full rounded-lg border border-border bg-surface px-2 py-2 text-sm text-text outline-none focus:border-gold/60"
-        >
-          <option value="">— 선택 —</option>
-          {alive.map((p) => (
-            <option key={p.seat} value={p.seat}>
-              {p.nickname}
-              {p.role ? ` · ${p.role}` : ""}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="mb-2">
+        <p className="mb-1 text-xs text-muted">대상 좌석</p>
+        <Select
+          value={seat}
+          onChange={(v) => setSeat(v)}
+          placeholder="좌석 선택"
+          ariaLabel="대상 좌석"
+          className="w-full"
+          options={alive.map((p) => ({ value: p.seat, label: p.nickname, sublabel: p.role }))}
+        />
+      </div>
 
       {seat != null && (
         <>

@@ -23,6 +23,7 @@ import {
 } from "@/app/rooms/actions";
 import { useRoomStream } from "./useGameStream";
 import { ChatWidget } from "./ChatWidget";
+import { Select } from "./Select";
 
 export type LobbyChar = { id: string; nameKo: string; team: string; ability: string; image?: string };
 export type LobbyInvite = { id: string; nickname: string; status: string };
@@ -246,19 +247,17 @@ function SeatingPanel({ roomId, players }: { roomId: string; players: LobbyMembe
             >
               <span className="truncate text-sm">{p.nickname}</span>
               <div className="flex items-center gap-2">
-                <select
-                  value={p.seat == null ? "" : String(p.seat)}
+                <Select
+                  value={p.seat ?? -1}
                   disabled={pending}
-                  onChange={(e) => assign(p.userId, e.target.value === "" ? null : Number(e.target.value))}
-                  className="rounded-lg border border-border bg-bg px-2 py-1.5 text-sm outline-none focus:border-gold/60"
-                >
-                  <option value="">관전</option>
-                  {Array.from({ length: MAX_PLAYERS }, (_, i) => (
-                    <option key={i} value={i}>
-                      좌석 {i + 1}
-                    </option>
-                  ))}
-                </select>
+                  ariaLabel={`${p.nickname} 좌석`}
+                  onChange={(v) => assign(p.userId, v === -1 ? null : v)}
+                  options={[
+                    { value: -1, label: "관전" },
+                    ...Array.from({ length: MAX_PLAYERS }, (_, i) => ({ value: i, label: `좌석 ${i + 1}` })),
+                  ]}
+                  className="w-28"
+                />
                 <button
                   type="button"
                   disabled={pending}
