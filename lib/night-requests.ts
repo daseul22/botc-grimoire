@@ -1,15 +1,16 @@
 // 밤 행동 요청/응답 핸드셰이크 — 서버 전용. 이야기꾼↔플레이어 좌석 단위 상태머신.
 //
 // 흐름: ST가 좌석에 요청 생성 → 플레이어가 매칭 UI로 응답 → ST가 응답 보고 최종 정보 작성 → 플레이어 확인.
-//   info        : 플레이어 입력 없이 ST가 곧장 정보 전달(empath·washerwoman 등). 생성 즉시 delivered.
-//   pick-players: 플레이어가 좌석 N개 선택(fortuneteller·monk 등).
-//   pick-character: 플레이어가 직업 1개 선택(philosopher 등). 좌석+직업 동시(도박꾼)는 두 요청으로 나눔.
+//   info           : 플레이어 입력 없이 ST가 곧장 정보 전달(empath·washerwoman 등). 생성 즉시 delivered.
+//   pick-players   : 플레이어가 좌석 N개 선택(fortuneteller·monk 등). max_targets로 개수 지정.
+//   pick-character : 플레이어가 직업 1개 선택(philosopher 등).
+//   pick-player-character : 플레이어가 좌석 1 + 직업 1 둘 다 선택(도박꾼 등). targets[0]=좌석, choice=직업.
 //
 // 보안: info_payload는 자기완결 표시 데이터(heading/subheading/roleTokens charId/nameTokens 닉네임)다.
 // 플레이어에겐 *자기 좌석 요청만* 내려가고, ST가 드러내기로 한 정보만 담긴다 → 전체 게임이 새지 않는다.
 import { db, now } from "./games/schema";
 
-export type NightRequestKind = "info" | "pick-players" | "pick-character";
+export type NightRequestKind = "info" | "pick-players" | "pick-character" | "pick-player-character";
 export type NightRequestStatus = "awaiting" | "responded" | "delivered" | "done" | "cancelled";
 export type InfoPayload = {
   heading: string;

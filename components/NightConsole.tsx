@@ -173,14 +173,16 @@ function RequestRow({
       </div>
       {req.prompt && <p className="mb-1 text-xs text-muted">“{req.prompt}”</p>}
 
-      {/* 플레이어 응답 표시 */}
+      {/* 플레이어 응답 표시 — 좌석·직업 둘 다 있으면 함께 표시(플레이어+직업) */}
       {req.status === "responded" && (
-        <div className="mb-2 rounded bg-surface px-2 py-1.5 text-xs">
-          {req.playerChoice ? (
-            <span>선택 직업: <b>{charMap[req.playerChoice]?.name.ko ?? req.playerChoice}</b></span>
-          ) : req.playerTargets.length > 0 ? (
-            <span>선택 좌석: <b>{req.playerTargets.map(nameOf).join(", ")}</b></span>
-          ) : (
+        <div className="mb-2 space-y-0.5 rounded bg-surface px-2 py-1.5 text-xs">
+          {req.playerTargets.length > 0 && (
+            <div>선택 좌석: <b>{req.playerTargets.map(nameOf).join(", ")}</b></div>
+          )}
+          {req.playerChoice && (
+            <div>선택 직업: <b>{charMap[req.playerChoice]?.name.ko ?? req.playerChoice}</b></div>
+          )}
+          {req.playerTargets.length === 0 && !req.playerChoice && (
             <span className="text-muted">(빈 응답)</span>
           )}
         </div>
@@ -228,7 +230,9 @@ function NewRequest({
 }) {
   const [seat, setSeat] = useState<number | null>(null);
   const [tab, setTab] = useState<"info" | "action">("info");
-  const [actionKind, setActionKind] = useState<"pick-players" | "pick-character">("pick-players");
+  const [actionKind, setActionKind] = useState<
+    "pick-players" | "pick-character" | "pick-player-character"
+  >("pick-players");
   const [prompt, setPrompt] = useState("");
   const [maxTargets, setMaxTargets] = useState(1);
   const [pending, startTransition] = useTransition();
@@ -281,14 +285,15 @@ function NewRequest({
             <InfoComposer players={players} candidates={candidates} charMap={charMap} sendLabel="정보 보내기" onSend={sendInfo} />
           ) : (
             <div className="space-y-2">
-              <div className="flex gap-1">
-                <TabBtn on={actionKind === "pick-players"} onClick={() => setActionKind("pick-players")}>좌석 선택</TabBtn>
+              <div className="flex flex-wrap gap-1">
+                <TabBtn on={actionKind === "pick-players"} onClick={() => setActionKind("pick-players")}>플레이어 선택</TabBtn>
                 <TabBtn on={actionKind === "pick-character"} onClick={() => setActionKind("pick-character")}>직업 선택</TabBtn>
+                <TabBtn on={actionKind === "pick-player-character"} onClick={() => setActionKind("pick-player-character")}>플레이어+직업</TabBtn>
               </div>
               <input
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="안내 문구 (예: 두 명을 선택하세요)"
+                placeholder="안내 문구 (예: 한 명을 선택하세요)"
                 className="w-full rounded-lg border border-border bg-surface px-2 py-2 text-sm outline-none focus:border-gold/60"
               />
               {actionKind === "pick-players" && (

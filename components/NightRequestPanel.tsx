@@ -15,7 +15,7 @@ export type InfoPayload = { heading: string; subheading?: string; roleTokens: st
 export type NightRequestView = {
   id: string;
   seat: number;
-  kind: "info" | "pick-players" | "pick-character";
+  kind: "info" | "pick-players" | "pick-character" | "pick-player-character";
   prompt: string;
   maxTargets: number;
   status: "awaiting" | "responded" | "delivered" | "done" | "cancelled";
@@ -68,13 +68,9 @@ export function NightRequestPanel({
     );
   }
 
-  const submitTargets = () =>
+  const respondNow = (t: number[], c: string) =>
     startTransition(async () => {
-      await respondNightRequestAction(roomId, request.id, targets, "");
-    });
-  const submitChoice = (charId: string) =>
-    startTransition(async () => {
-      await respondNightRequestAction(roomId, request.id, [], charId);
+      await respondNightRequestAction(roomId, request.id, t, c);
     });
   const ack = () =>
     startTransition(async () => {
@@ -179,7 +175,7 @@ export function NightRequestPanel({
         </button>
         <button
           type="button"
-          onClick={() => submitChoice(chosen)}
+          onClick={() => respondNow([], chosen)}
           disabled={pending || !chosen}
           className="w-full rounded-lg bg-gold py-2.5 text-sm font-semibold text-bg disabled:opacity-40"
         >
@@ -188,6 +184,68 @@ export function NightRequestPanel({
         <RolePickerModal
           open={pickerOpen}
           title={request.prompt || "직업 선택"}
+          candidates={candidates}
+          selected={chosen}
+          onPick={(id) => setChosen(id)}
+          onClose={() => setPickerOpen(false)}
+          clearLabel="선택 안 함"
+        />
+      </Shell>
+    );
+  }
+
+  // awaiting — 플레이어 + 직업 둘 다 선택(도박꾼 등)
+  if (request.kind === "pick-player-character") {
+    const chosenChar = chosen ? charMap[chosen] : undefined;
+    return (
+      <Shell>
+        <h2 className="mb-2 text-base font-semibold">{request.prompt || "플레이어와 직업을 선택하세요"}</h2>
+        <p className="mb-1 text-xs text-muted">플레이어{targets[0] != null ? " ✓" : ""}</p>
+        <div className="mb-3 grid max-h-40 grid-cols-2 gap-2 overflow-y-auto">
+          {players.map((p) => {
+            const on = targets.includes(p.seat);
+            return (
+              <button
+                key={p.seat}
+                type="button"
+                onClick={() => toggleSeat(p.seat)}
+                className={`truncate rounded-lg border px-3 py-2 text-left text-sm ${
+                  on ? "border-gold bg-gold/15" : "border-border bg-bg hover:border-gold/50"
+                } ${p.status === "dead" ? "opacity-50" : ""}`}
+              >
+                {p.nickname}
+                {p.status === "dead" && <span className="ml-1 text-xs text-muted">(사망)</span>}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mb-1 text-xs text-muted">직업{chosen ? " ✓" : ""}</p>
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="mb-3 flex w-full items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-left text-sm hover:border-gold/60"
+        >
+          {chosenChar ? (
+            <>
+              <CharacterIcon character={chosenChar} size={28} />
+              <span className="font-medium">{chosenChar.name.ko}</span>
+              <span className="ml-auto text-xs text-muted">바꾸기</span>
+            </>
+          ) : (
+            <span className="text-muted">직업 선택…</span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => respondNow(targets, chosen)}
+          disabled={pending || targets.length === 0 || !chosen}
+          className="w-full rounded-lg bg-gold py-2.5 text-sm font-semibold text-bg disabled:opacity-40"
+        >
+          제출
+        </button>
+        <RolePickerModal
+          open={pickerOpen}
+          title="직업 선택"
           candidates={candidates}
           selected={chosen}
           onPick={(id) => setChosen(id)}
@@ -227,7 +285,7 @@ export function NightRequestPanel({
       </div>
       <button
         type="button"
-        onClick={submitTargets}
+        onClick={() => respondNow(targets, "")}
         disabled={pending || targets.length === 0}
         className="mt-4 w-full rounded-lg bg-gold py-2.5 text-sm font-semibold text-bg disabled:opacity-40"
       >
