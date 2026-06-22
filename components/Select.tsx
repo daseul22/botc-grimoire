@@ -35,6 +35,7 @@ export function Select<T extends string | number>({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; width: number; up: boolean } | null>(null);
   const selected = options.find((o) => o.value === value) ?? null;
 
@@ -54,15 +55,20 @@ export function Select<T extends string | number>({
   useEffect(() => {
     if (!open) return;
     const close = () => setOpen(false);
+    const onScroll = (e: Event) => {
+      // 드롭다운 *내부* 스크롤은 유지하고, 바깥(페이지/컨테이너) 스크롤일 때만 닫는다.
+      // (capture라 내부 ul 스크롤도 잡히므로 target이 ul 안이면 무시 — 내부 스크롤 정상 동작.)
+      if (listRef.current && e.target instanceof Node && listRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    // 스크롤/리사이즈 시 앵커가 어긋나므로 닫는다(capture로 중첩 스크롤 컨테이너도 잡음).
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", close);
     window.addEventListener("keydown", onKey);
     return () => {
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
       window.removeEventListener("keydown", onKey);
     };
@@ -106,8 +112,9 @@ export function Select<T extends string | number>({
         createPortal(
           <div data-modal className="fixed inset-0 z-50" onClick={() => setOpen(false)}>
             <ul
+              ref={listRef}
               role="listbox"
-              className="absolute max-h-60 overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-xl"
+              className="absolute max-h-60 overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface py-1 shadow-xl"
               style={{
                 left: pos.left,
                 minWidth: pos.width,

@@ -82,9 +82,11 @@ function uniqueCode(): string {
 }
 
 function readMembers(roomId: string): RoomMember[] {
+  // 가입 순서로 안정 정렬 — 좌석을 바꿔도 로비 행이 점프하지 않게(좌석순 정렬 금지).
+  // 시작 시 좌석 재배치는 startRoomAction이 별도로 seat 기준 정렬하므로 영향 없음.
   const rows = db
     .prepare(
-      "SELECT user_id, nickname, role, seat, last_seen_at FROM game_room_members WHERE room_id = ? ORDER BY (seat IS NULL), seat, joined_at",
+      "SELECT user_id, nickname, role, seat, last_seen_at FROM game_room_members WHERE room_id = ? ORDER BY joined_at, user_id",
     )
     .all(roomId) as MemberRow[];
   return rows.map((r) => ({

@@ -139,13 +139,48 @@ function OwnerView({
   chars: LobbyChar[];
   invites: LobbyInvite[];
 }) {
-  const seated = players.filter((p) => p.seat != null);
-  const seatedCount = seated.length;
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+
+  // 낙관적 좌석/멤버 상태 — 서버 갱신(router.refresh) 전까지 즉시 반영해 선택 시 깜빡임/지연 제거.
+  // 좌석·멤버 "내용"이 바뀔 때만 서버 값으로 동기화(매 렌더 새 배열이라 참조비교 대신 시그니처 비교).
+  const [local, setLocal] = useState(players);
+  const sig = players.map((p) => `${p.userId}:${p.seat}`).join("|");
+  const [lastSig, setLastSig] = useState(sig);
+  if (sig !== lastSig) {
+    setLastSig(sig);
+    setLocal(players);
+  }
+
+  const assignSeat = (userId: number, seat: number | null) => {
+    setLocal((prev) =>
+      prev.map((p) =>
+        p.userId === userId
+          ? { ...p, seat }
+          : seat != null && p.seat === seat
+            ? { ...p, seat: null } // 같은 좌석을 가진 다른 멤버는 비움(서버 동작 미러)
+            : p,
+      ),
+    );
+    startTransition(async () => {
+      await assignSeatAction(room.id, userId, seat);
+      router.refresh();
+    });
+  };
+  const kickMember = (userId: number) => {
+    setLocal((prev) => prev.filter((p) => p.userId !== userId));
+    startTransition(async () => {
+      await kickMemberAction(room.id, userId);
+      router.refresh();
+    });
+  };
+
+  const seatedCount = local.filter((p) => p.seat != null).length;
 
   return (
     <>
       <InvitePanel roomId={room.id} invites={invites} />
-      <SeatingPanel roomId={room.id} players={players} />
+      <SeatingPanel players={local} onAssign={assignSeat} onKick={kickMember} />
       <StartPanel roomId={room.id} seatedCount={seatedCount} chars={chars} />
       <div className="mt-6">
         <DangerButton
@@ -218,17 +253,15 @@ function InvitePanel({ roomId, invites }: { roomId: string; invites: LobbyInvite
   );
 }
 
-function SeatingPanel({ roomId, players }: { roomId: string; players: LobbyMember[] }) {
-  const [pending, startTransition] = useTransition();
-  const assign = (userId: number, seat: number | null) =>
-    startTransition(async () => {
-      await assignSeatAction(roomId, userId, seat);
-    });
-  const kick = (userId: number) =>
-    startTransition(async () => {
-      await kickMemberAction(roomId, userId);
-    });
-
+function SeatingPanel({
+  players,
+  onAssign,
+  onKick,
+}: {
+  players: LobbyMember[];
+  onAssign: (userId: number, seat: number | null) => void;
+  onKick: (userId: number) => void;
+}) {
   return (
     <section className="mb-5">
       <h2 className="mb-2 text-sm font-semibold text-muted">
@@ -249,9 +282,8 @@ function SeatingPanel({ roomId, players }: { roomId: string; players: LobbyMembe
               <div className="flex items-center gap-2">
                 <Select
                   value={p.seat ?? -1}
-                  disabled={pending}
                   ariaLabel={`${p.nickname} 좌석`}
-                  onChange={(v) => assign(p.userId, v === -1 ? null : v)}
+                  onChange={(v) => onAssign(p.userId, v === -1 ? null : v)}
                   options={[
                     { value: -1, label: "관전" },
                     ...Array.from({ length: MAX_PLAYERS }, (_, i) => ({ value: i, label: `좌석 ${i + 1}` })),
@@ -260,9 +292,8 @@ function SeatingPanel({ roomId, players }: { roomId: string; players: LobbyMembe
                 />
                 <button
                   type="button"
-                  disabled={pending}
-                  onClick={() => kick(p.userId)}
-                  className="rounded-lg border border-border px-2 py-1.5 text-xs text-muted hover:text-red-400 disabled:opacity-40"
+                  onClick={() => onKick(p.userId)}
+                  className="rounded-lg border border-border px-2 py-1.5 text-xs text-muted hover:text-red-400"
                   title="내보내기"
                 >
                   ✕
