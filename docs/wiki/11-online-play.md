@@ -136,6 +136,16 @@ stateDiagram-v2
   `pick-player-character`(좌석 1 + 직업 1, 도박꾼류 — `player_targets[0]`=좌석, `player_choice`=직업).
 - UI: 플레이어 `components/NightRequestPanel.tsx`(좌석 그리드/`RolePickerModal`/정보 표시+확인) ·
   이야기꾼 `components/NightConsole.tsx`(플로팅 — 종류별 요청·응답 확인·`InfoComposer`로 정보 작성·전달).
+- 기록: `listAllForGame`/`listAllForSeat` + `listNightRequestHistory`(ST)/`getMyRequestHistory`(플레이어).
+  공용 `components/NightHistoryList.tsx`로 요청·응답·전달 정보를 최근순 표시. NightConsole은 **진행/기록 탭**으로
+  분리(요청이 쌓여도 새 정보와 안 섞임), 플레이어는 '기록' 버튼+모달로 받은 정보를 다시 본다.
+
+## 공통 모달 — `components/Modal.tsx`
+
+가운데 모달은 **백드롭 클릭·Esc·모바일 뒤로가기(`useBackClose`)**로 일관되게 닫힌다(내부 패널은
+클릭 전파를 막아 내용 클릭으로는 안 닫힘, body로 portal). 채팅 확대·기록 모달이 이걸 쓴다.
+`NightRequestPanel`은 강제 응답 모달이라 닫기 대신 *접기*(FAB로 재오픈)로 동작하되 같은 트리거(바깥클릭·Esc·뒤로가기)를 받는다.
+`RolePickerModal`·좌석 메모 패널은 자체적으로 같은 동작을 갖춘다.
 
 ## 주요 파일
 
@@ -144,14 +154,14 @@ stateDiagram-v2
   `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/night-requests.ts` 밤 행동 요청.
 - `app/rooms/actions.ts` 룸 서버 액션 · `app/rooms/**` 룸/로비/입장/진행/자리 페이지.
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
-  `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `useGameStream.ts`.
-- `components/Select.tsx` — 공통 드롭다운(native `<select>` 대체, portal 앵커·다크 테마). 좌석 배정·대상
-  좌석 등에 사용. `PlayerPicker`(좌석 토큰 그리드)와 함께 네이티브 폼 요소를 앱 톤으로 대체하는 공통 컴포넌트.
+  `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `NightHistoryList.tsx` · `useGameStream.ts`.
+- 공통 UI: `components/Select.tsx`(드롭다운, native `<select>` 대체) · `components/Modal.tsx`(가운데 모달 일관 닫기) ·
+  `PlayerPicker`/`RolePickerModal`(좌석·직업 토큰 picker). 네이티브 폼 요소를 앱 톤으로 대체하는 공통 컴포넌트들.
 
 ## 다듬을 거리
 
 - ST 콘솔 정보 작성 프리셋(직업별 ActionSpec 자동),
-  요청/응답 기록 복기, 이야기꾼 보드 SSE 구독(플레이어발 변경 즉시 반영 — 현재는 콘솔/위젯만 구독).
+  이야기꾼 보드 SSE 구독(플레이어발 변경 즉시 반영 — 현재는 콘솔/위젯만 구독).
 - 이야기꾼 보드(PlayCanvas)는 아직 SSE 미구독 — 플레이어발 변경을 ST가 봐야 하는 요청/응답 단계에서
   `getGameAction` refetch+`setGame`을 붙인다.
 
