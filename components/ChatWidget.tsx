@@ -134,12 +134,20 @@ export function ChatWidget({
             title={expanded ? "작게" : "크게 보기"}
           >
             {expanded ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M9 9H4m0 0V4m0 5 6-6m5 5h5m0 0V4m0 5-6-6M9 15H4m0 0v5m0-5 6 6m5-6h5m0 0v5m0-5-6 6" />
+              // 축소(minimize) — 모서리 브래킷이 안쪽(중앙)으로 모임. 그리모어 전체화면 토글과 동일 아이콘.
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
               </svg>
             ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M15 3h6m0 0v6m0-6-7 7M9 21H3m0 0v-6m0 6 7-7" />
+              // 확대(maximize) — 모서리 브래킷이 바깥(모서리)으로 벌어짐.
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
               </svg>
             )}
           </button>
