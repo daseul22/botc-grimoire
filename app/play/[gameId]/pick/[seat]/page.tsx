@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getGame } from "@/lib/games";
+import { getRoomByGameId } from "@/lib/rooms";
 import { charactersForSheet, getSheet } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
 import { PickGrid } from "@/components/PickGrid";
@@ -24,6 +25,10 @@ export default async function PickPage({
   const actor = game.players.find((p) => p.seat === seatNum);
   if (!actor) notFound();
 
+  // 온라인 게임이면 그리모어 백링크를 온라인 보드로 직접(서버 redirect 진동 우회).
+  const room = getRoomByGameId(gameId);
+  const grimoireHref = room ? `/rooms/${room.id}/play` : `/play/${gameId}`;
+
   const sheet = getSheet(game.sheetId) ?? getCustomSheet(game.sheetId);
   const chars = sheet ? charactersForSheet(sheet) : [];
 
@@ -32,7 +37,7 @@ export default async function PickPage({
       <div className="mx-auto max-w-3xl">
         <div className="mb-4 flex items-center justify-between">
           <p className="text-xs text-muted">{actor.nickname} · 직업을 선택하세요</p>
-          <Link href={`/play/${gameId}`} className="text-xs text-muted hover:text-text">
+          <Link href={grimoireHref} className="text-xs text-muted hover:text-text">
             ← 그리모어
           </Link>
         </div>

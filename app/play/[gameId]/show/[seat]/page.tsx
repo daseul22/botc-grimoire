@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getGame } from "@/lib/games";
+import { getRoomByGameId } from "@/lib/rooms";
 import { characterMapForGame } from "@/lib/game-characters";
 import { specForPhase, pickShowcase, showsWithoutRecord } from "@/lib/night-actions";
 import { seatsShownAsDemons, seatsShownAsMinions } from "@/lib/roles";
@@ -32,6 +33,12 @@ export default async function ShowPage({
   if (!game) notFound();
   const actor = game.players.find((p) => p.seat === seat);
   if (!actor) notFound();
+
+  // 온라인(룸) 게임이면 그리모어 백링크는 온라인 보드로 직접 보낸다.
+  // LAN 그리모어(/play/[gameId])는 온라인 게임을 서버 redirect()로 되돌리는데,
+  // 프리페치된 Link의 소프트 네비게이션에서 무한 진동(/play/[id] ↔ /rooms/[id]/play)하기 때문.
+  const room = getRoomByGameId(gameId);
+  const grimoireHref = room ? `/rooms/${room.id}/play` : `/play/${gameId}`;
 
   const map = characterMapForGame(game);
 
@@ -73,7 +80,7 @@ export default async function ShowPage({
             )}
           </div>
           <div className="mt-6 flex items-center justify-between text-sm">
-            <Link href={`/play/${gameId}`} className="text-muted hover:text-text">← 그리모어</Link>
+            <Link href={grimoireHref} className="text-muted hover:text-text">← 그리모어</Link>
             <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
           </div>
         </div>
@@ -104,7 +111,7 @@ export default async function ShowPage({
             </h1>
           </div>
           <div className="mt-6 flex items-center justify-between text-sm">
-            <Link href={`/play/${gameId}`} className="text-muted hover:text-text">← 그리모어</Link>
+            <Link href={grimoireHref} className="text-muted hover:text-text">← 그리모어</Link>
             <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
           </div>
         </div>
@@ -171,7 +178,7 @@ export default async function ShowPage({
             )}
           </div>
           <div className="mt-6 flex items-center justify-between text-sm">
-            <Link href={`/play/${gameId}`} className="text-muted hover:text-text">← 그리모어</Link>
+            <Link href={grimoireHref} className="text-muted hover:text-text">← 그리모어</Link>
             <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
           </div>
         </div>
@@ -205,7 +212,7 @@ export default async function ShowPage({
         </div>
 
         <div className="mt-6 flex items-center justify-between text-sm">
-          <Link href={`/play/${gameId}`} className="text-muted hover:text-text">← 그리모어</Link>
+          <Link href={grimoireHref} className="text-muted hover:text-text">← 그리모어</Link>
           <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
         </div>
       </div>

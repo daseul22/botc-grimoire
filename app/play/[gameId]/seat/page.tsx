@@ -1,8 +1,9 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getGame } from "@/lib/games";
 import { getRoomByGameId } from "@/lib/rooms";
 import { characterMapForGame } from "@/lib/game-characters";
 import { SeatView } from "@/components/SeatView";
+import { RoomRedirect } from "@/components/RoomRedirect";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,9 @@ export default async function SeatPage({
   const game = getGame(gameId);
   if (!game) notFound();
 
+  // 서버 redirect()는 소프트 네비게이션에서 진동하므로 클라이언트 replace로 우회.
   const room = getRoomByGameId(gameId);
-  if (room) redirect(`/rooms/${room.id}/seat`);
+  if (room) return <RoomRedirect to={`/rooms/${room.id}/seat`} />;
 
   return <SeatView game={game} sheetChars={[...characterMapForGame(game).values()]} />;
 }
