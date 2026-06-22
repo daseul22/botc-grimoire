@@ -35,6 +35,46 @@ sequenceDiagram
 > `setDisguiseAction`은 가짜 직업을 지정할 때 그 직업이 악마 블러핑(`game.bluffs`)에 있으면
 > 자동으로 빼낸다(누군가 자기 직업으로 믿는 직업은 인플레이처럼 취급).
 
+## 실시간 푸시(SSE) — 온라인 플레이 P1
+
+위 `setGame` 왕복은 **변경을 일으킨 본인(이야기꾼)** 화면만 즉시 갱신한다. 같은 게임을 보는
+다른 클라(플레이어 폰)는 예전엔 [SeatView](../../components/SeatView.tsx)가 15초마다
+`router.refresh()`로 폴링했다. 온라인 플레이를 위해 이를 **SSE 푸시**로 바꿨다.
+
+```mermaid
+sequenceDiagram
+  participant ST as 이야기꾼
+  participant A as play/actions.ts
+  participant R as lib/realtime.ts (인메모리 버스)
+  participant S as api/games/[id]/stream (SSE)
+  participant P as 플레이어 폰 (SeatView)
+  P->>S: EventSource 구독
+  S->>R: subscribeGame(id)
+  ST->>A: 사망/마커/행동 …
+  A->>A: DB 커밋 후 touch(id)
+  A->>R: emitGameUpdate(id) → rev++
+  R-->>S: update 이벤트
+  S-->>P: data: {rev}
+  P->>P: router.refresh() (권한별 redacted 렌더)
+```
+
+- [lib/realtime.ts](../../lib/realtime.ts): 게임별 `EventEmitter` pub/sub. **진실 원천은 여전히
+  SQLite** — 버스는 "바뀜" 신호(`rev`)만 흘리고 본문은 안 싣는다. 그래서 클라는 신호를 받으면
+  *자기 권한에 맞는 경로*로 다시 fetch/refresh → 비밀 정보(다른 좌석 직업)가 버스로 새지 않는다.
+- 단일 장기실행 Node 프로세스(노트북+터널·작은 VPS 모두) 전제라 인메모리로 충분. 외부 의존성 0.
+  서버리스로 가면 이 파일의 emit/subscribe 구현만 외부 pub/sub로 교체(호출부 불변).
+- emit seam: 거의 모든 mutating 액션이 `return getGame(id)!` 대신 `return touch(id)`
+  ([play/actions.ts](../../app/play/actions.ts))를 써서 커밋 직후 한 번 emit. `void`/`redirect`
+  액션(종료·위치저장·삭제·점유 등)은 `emitGameUpdate(id)`를 직접 호출.
+- 클라: [useGameStream](../../components/useGameStream.ts) 훅이 `EventSource`로 구독(자동 재연결).
+  SeatView가 이를 써서 `update`마다 `router.refresh()`. 15초 폴링은 30초 fallback으로 남겼다.
+- [proxy.ts](../../proxy.ts) matcher에서 `api/`를 제외 — claim 쿠키가 있어도 SSE가
+  claim 페이지로 리다이렉트되지 않게.
+
+> 이야기꾼 보드([PlayCanvas](../../components/PlayCanvas.tsx))는 아직 SSE 미구독이다.
+> 자기 변경은 낙관적 `setGame`이라 불필요하고, **플레이어발 변경**을 ST가 봐야 하는
+> 밤 행동 요청/응답(추후 단계)에서 `getGameAction` refetch + `setGame`을 붙인다.
+
 ## 왜 시트 전체를 클라에 넘기나
 
 [app/play/[gameId]/page.tsx](../../app/play/[gameId]/page.tsx)는 현재 인플레이 직업만이 아니라

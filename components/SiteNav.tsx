@@ -43,6 +43,11 @@ export function SiteNav() {
   const logout = () => startTransition(() => logoutAction());
   const close = () => setOpen(false);
 
+  // 온라인 '방'은 로그인 유저에게만 노출(미로그인 클릭 시 로그인으로 보내짐).
+  const navItems = user
+    ? [...NAV.slice(0, 3), { href: "/rooms", label: "방" }, ...NAV.slice(3)]
+    : NAV;
+
   // ── 계정 영역 조각(데스크탑 인라인 / 모바일 드롭다운 공용) ──
   const accountInline = loading ? (
     <div className="h-6 w-24" aria-hidden />
@@ -72,7 +77,7 @@ export function SiteNav() {
     <>
       {/* ── 데스크탑(md+) ── */}
       <nav className="ml-2 hidden items-center gap-4 text-sm md:flex">
-        {NAV.map((n) => (
+        {navItems.map((n) => (
           <Link key={n.href} href={n.href} className="text-muted transition-colors hover:text-text">{n.label}</Link>
         ))}
       </nav>
@@ -98,7 +103,7 @@ export function SiteNav() {
           {/* 드롭다운 — sticky 헤더 기준 절대 위치(전체 폭). */}
           <div className="absolute inset-x-0 top-full z-40 border-b border-border bg-surface shadow-xl md:hidden">
             <nav className="mx-auto flex max-w-[88rem] flex-col gap-0.5 px-4 py-2 text-sm">
-              {NAV.map((n) => (
+              {navItems.map((n) => (
                 <Link key={n.href} href={n.href} onClick={close} className="rounded-md px-2 py-2 text-muted hover:bg-surface-2 hover:text-text">{n.label}</Link>
               ))}
               <div className="my-1.5 border-t border-border" />

@@ -38,6 +38,7 @@ export {
 } from "./meta";
 export {
   savePositions,
+  seatForUser,
   setAlignment,
   setGhostVote,
   setHerring,

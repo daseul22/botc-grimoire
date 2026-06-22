@@ -65,6 +65,59 @@ CREATE TABLE IF NOT EXISTS game_undo_stack (
   data TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+-- ── 온라인 플레이(원격 멀티플레이어) ──
+-- 게임은 시작 순간에 만들어진다(기존 createGame). 그 전 "로비"를 담는 게 game_rooms.
+-- 로비에서 가입자가 모이고 좌석이 배정되면, 시작 시 createGame을 호출해 game_id를 연결한다.
+CREATE TABLE IF NOT EXISTS game_rooms (
+  id TEXT PRIMARY KEY,                    -- 'r-xxxxxxxx'
+  code TEXT NOT NULL UNIQUE,              -- 공유용 짧은 입장 코드
+  owner_id INTEGER NOT NULL,             -- 이야기꾼(방장) user id
+  sheet_id TEXT NOT NULL,
+  sheet_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'lobby',  -- 'lobby' | 'started' | 'closed'
+  game_id TEXT,                          -- 시작되면 연결되는 games.id
+  config TEXT,                           -- 시작 직전 비율/제외 설정 스냅샷(JSON)
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS game_room_members (
+  room_id TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  nickname TEXT NOT NULL,                -- 가입 시점 닉네임 스냅샷(표시용)
+  role TEXT NOT NULL DEFAULT 'player',   -- 'storyteller' | 'player' | 'spectator'
+  seat INTEGER,                          -- 배정 좌석(null=미배정/관전)
+  joined_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  PRIMARY KEY (room_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS game_invites (
+  id TEXT PRIMARY KEY,                    -- 'i-xxxxxxxx' (초대 토큰)
+  room_id TEXT NOT NULL,
+  invited_user_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'accepted' | 'declined'
+  created_at TEXT NOT NULL,
+  UNIQUE (room_id, invited_user_id)
+);
+-- 플레이어 개인 추측/메모(온라인 마스킹 보드). user별·game별·좌석별. target_seat=-1 은 자유 메모.
+CREATE TABLE IF NOT EXISTS game_player_guesses (
+  game_id TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  target_seat INTEGER NOT NULL,
+  guess_character_id TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (game_id, user_id, target_seat)
+);
+-- 룸 전체 채팅(로비~게임 지속). room 단위. nickname은 발신 시점 스냅샷.
+CREATE TABLE IF NOT EXISTS game_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  room_id TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  nickname TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_game_messages_room ON game_messages(room_id, id);
 `);
 // 구버전 db 컬럼 보강 (idempotent)
 for (const sql of [

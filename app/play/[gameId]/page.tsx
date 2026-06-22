@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getGame, getGameOwner, getHistory, listKnownNicknames } from "@/lib/games";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
+import { getRoomByGameId } from "@/lib/rooms";
 import { characterMapForGame } from "@/lib/game-characters";
 import { PlayCanvas } from "@/components/PlayCanvas";
 import { GameReplay } from "@/components/GameReplay";
@@ -17,6 +18,10 @@ export default async function PlayPage({
   const { gameId } = await params;
   const game = getGame(gameId);
   if (!game) notFound();
+
+  // 온라인(룸) 게임은 별도 라우트(/rooms/[roomId]/play)로 — 기존 진행 페이지와 분리.
+  const room = getRoomByGameId(gameId);
+  if (room) redirect(`/rooms/${room.id}/play`);
 
   // 현재 시트의 전체 직업(상세 데이터 포함)을 통째로 넘긴다.
   // 재추첨·직업변경 후에도 클라이언트가 새 직업 정보를 바로 그릴 수 있게 함.

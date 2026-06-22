@@ -1,0 +1,271 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { Character, Game } from "@/lib/types";
+import { CharacterIcon } from "./CharacterIcon";
+import { RolePickerModal } from "./RolePickerModal";
+import { useGameStream } from "./useGameStream";
+import { useBackClose } from "./useBackClose";
+import { ChatWidget } from "./ChatWidget";
+import {
+  setGeneralMemoAction,
+  setGuessAction,
+  setSeatNoteAction,
+} from "@/app/rooms/actions";
+
+type SeatGuess = { guess: string; note: string };
+
+/**
+ * 온라인 플레이어 메인 뷰 — 이야기꾼과 같은 좌석 배치를 보되 모든 토큰이 "?"(본인 좌석만 진짜 직업).
+ * 좌석을 눌러 직업을 추측하고 메모를 남긴다(개인 기록, 다른 사람에게 안 보임).
+ * game은 서버에서 redact돼 본인 외 좌석의 직업/비밀이 없다.
+ */
+export function PlayerGame({
+  game,
+  sheetChars,
+  boundSeat,
+  gameId,
+  roomId,
+  meId,
+  initialNotes,
+}: {
+  game: Game;
+  sheetChars: Character[];
+  boundSeat: number;
+  gameId: string;
+  roomId: string;
+  meId: number;
+  initialNotes: { seats: Record<number, SeatGuess>; memo: string };
+}) {
+  const router = useRouter();
+  const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;
+
+  // 추측/메모는 로컬에서 즉시 반영 + 서버 액션으로 영속(사적이라 SSE 브로드캐스트 없음).
+  const [seats, setSeats] = useState<Record<number, SeatGuess>>(initialNotes.seats);
+  const [memo, setMemo] = useState(initialNotes.memo);
+  const [panelSeat, setPanelSeat] = useState<number | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [, startTransition] = useTransition();
+
+  // 이야기꾼이 게임을 바꾸면(사망·이동 등) SSE로 보드를 즉시 갱신.
+  useGameStream(gameId, () => {
+    if (document.visibilityState === "visible") router.refresh();
+  });
+
+  const me = game.players.find((p) => p.seat === boundSeat);
+  const myCharId = me ? game.disguises?.[boundSeat] ?? me.characterId : "";
+  const myChar = charMap[myCharId];
+  const disguised = !!game.disguises?.[boundSeat] && game.disguises[boundSeat] !== me?.characterId;
+
+  const guessOf = (seat: number): SeatGuess => seats[seat] ?? { guess: "", note: "" };
+
+  const saveGuess = (seat: number, guess: string) => {
+    setSeats((prev) => ({ ...prev, [seat]: { ...(prev[seat] ?? { guess: "", note: "" }), guess } }));
+    startTransition(async () => {
+      await setGuessAction(roomId, seat, guess);
+    });
+  };
+  // 메모는 controlled 로컬 상태로 두고(타이핑 유실 방지), 영속은 패널 닫힐 때/blur에 한 번.
+  const updateNoteLocal = (seat: number, note: string) =>
+    setSeats((prev) => ({ ...prev, [seat]: { ...(prev[seat] ?? { guess: "", note: "" }), note } }));
+  const persistSeatNote = (seat: number) => {
+    startTransition(async () => {
+      await setSeatNoteAction(roomId, seat, guessOf(seat).note);
+    });
+  };
+  const saveMemo = (note: string) => {
+    startTransition(async () => {
+      await setGeneralMemoAction(roomId, note);
+    });
+  };
+
+  // 패널 닫기 — 닫기 전에 메모를 영속(모바일 뒤로가기로 닫혀도 유실 안 되게).
+  const closePanel = () => {
+    if (panelSeat != null) persistSeatNote(panelSeat);
+    setPanelSeat(null);
+  };
+
+  // 모바일 뒤로가기 → 패널만 닫기(페이지 이탈 X). picker가 열려 있으면 picker가 먼저 처리.
+  useBackClose(panelSeat != null, closePanel);
+  // Escape → 패널 닫기(picker 열려 있을 땐 picker가 소비).
+  useEffect(() => {
+    if (panelSeat == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !pickerOpen) closePanel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // closePanel은 매 렌더 새로 만들어지지만 effect는 panelSeat/pickerOpen 변화에만 재구독한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelSeat, pickerOpen]);
+
+  // 토큰 크기는 인원 수에 맞춰 줄여 겹침을 줄인다. 좌표는 안쪽으로 모아 가장자리 라벨 클리핑 방지.
+  const tokenPx = game.players.length > 11 ? 38 : game.players.length > 8 ? 44 : 52;
+  const INSET = 0.1;
+  const posPct = (v: number) => `${(INSET + v * (1 - 2 * INSET)) * 100}%`;
+
+  return (
+    <div className="mx-auto max-w-xl pb-16">
+      {/* 내 직업 배너 */}
+      {myChar && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-gold/40 bg-surface p-3">
+          <CharacterIcon character={myChar} size={48} />
+          <div className="min-w-0">
+            <p className="text-xs text-muted">
+              내 직업{disguised ? " (믿는 직업)" : ""} · {game.day}일차 {game.phase === "night" ? "밤" : "낮"}
+            </p>
+            <p className="font-bold">{myChar.name.ko}</p>
+            <p className="line-clamp-2 text-xs text-muted">{myChar.ability.ko}</p>
+          </div>
+        </div>
+      )}
+
+      <p className="mb-2 text-xs text-muted">
+        좌석을 눌러 직업을 추측하고 메모하세요. 기록은 나만 볼 수 있습니다.
+      </p>
+
+      {/* 마스킹 보드 — 이야기꾼과 동일 좌석 배치, 본인 외 토큰은 "?" */}
+      <div
+        className="relative mx-auto aspect-square w-full overflow-hidden rounded-xl border border-border bg-surface"
+        style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}
+      >
+        {game.players.map((p) => {
+          const isMe = p.seat === boundSeat;
+          const dead = p.status === "dead";
+          const g = guessOf(p.seat);
+          const guessCh = g.guess ? charMap[g.guess] : undefined;
+          const deathGlyph = p.deathCause === "execution" ? "☠️" : p.deathCause === "night" ? "🌙" : "✕";
+          return (
+            <div
+              key={p.seat}
+              className="absolute flex flex-col items-center gap-0.5"
+              style={{ left: posPct(p.x), top: posPct(p.y), transform: "translate(-50%, -50%)" }}
+            >
+              {/* 탭 타깃은 토큰만(라벨은 아래 pointer-events-none) — 겹친 이웃 좌석 오탭 방지 */}
+              <button
+                type="button"
+                disabled={isMe}
+                onClick={() => setPanelSeat(p.seat)}
+                className="relative block disabled:cursor-default"
+                style={{ width: tokenPx, height: tokenPx }}
+                title={isMe ? "내 자리" : `${p.nickname} — 추측·메모`}
+              >
+                <div
+                  className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 bg-bg ${
+                    dead ? "opacity-40 grayscale" : ""
+                  } ${isMe ? "border-gold ring-2 ring-gold ring-offset-1 ring-offset-surface" : "border-border"}`}
+                >
+                  {isMe && myChar ? (
+                    <CharacterIcon character={myChar} size={tokenPx - 6} />
+                  ) : guessCh ? (
+                    <CharacterIcon character={guessCh} size={tokenPx - 6} />
+                  ) : (
+                    <span className="font-bold text-muted" style={{ fontSize: tokenPx * 0.42 }}>?</span>
+                  )}
+                  {dead && (
+                    <span className="absolute inset-0 flex items-center justify-center text-red-500" style={{ fontSize: tokenPx * 0.45 }}>
+                      {deathGlyph}
+                    </span>
+                  )}
+                </div>
+                {/* 추측(미확정) 표시 — 점선 링 */}
+                {!isMe && guessCh && (
+                  <span className="pointer-events-none absolute -inset-0.5 rounded-full border border-dashed border-gold/70" aria-hidden />
+                )}
+                {/* 메모 표시 */}
+                {!isMe && g.note && (
+                  <span className="pointer-events-none absolute -left-1 -top-1 rounded-full bg-surface-2 px-1 text-[11px]">📝</span>
+                )}
+              </button>
+              <span
+                className={`pointer-events-none max-w-[4.2rem] truncate text-[10px] ${isMe ? "font-semibold text-gold" : "text-text"}`}
+              >
+                {p.nickname}
+                {isMe ? " (나)" : ""}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 자유 메모 */}
+      <div className="mt-4">
+        <label className="mb-1 block text-xs font-semibold text-muted">메모</label>
+        <textarea
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          onBlur={() => saveMemo(memo)}
+          rows={3}
+          placeholder="자유롭게 기록하세요 (나만 봄)"
+          className="w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-gold/60"
+        />
+      </div>
+
+      {/* 좌석 추측·메모 패널 */}
+      {panelSeat != null && (() => {
+        const target = game.players.find((p) => p.seat === panelSeat);
+        if (!target) return null;
+        const g = guessOf(panelSeat);
+        const guessCh = g.guess ? charMap[g.guess] : undefined;
+        return (
+          <div
+            data-modal
+            className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+            onClick={closePanel}
+          >
+            <div
+              className="w-full max-w-md rounded-t-2xl border border-border bg-surface p-4 sm:rounded-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-base font-semibold">{target.nickname}</h2>
+                <button type="button" onClick={closePanel} className="rounded p-1 text-muted hover:text-text">✕</button>
+              </div>
+
+              <p className="mb-1 text-xs text-muted">추측 직업</p>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="mb-3 flex w-full items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-left text-sm hover:border-gold/60"
+              >
+                {guessCh ? (
+                  <>
+                    <CharacterIcon character={guessCh} size={28} />
+                    <span className="font-medium">{guessCh.name.ko}</span>
+                    <span className="ml-auto text-xs text-muted">바꾸기</span>
+                  </>
+                ) : (
+                  <span className="text-muted">직업 선택…</span>
+                )}
+              </button>
+
+              <p className="mb-1 text-xs text-muted">메모</p>
+              <textarea
+                value={g.note}
+                onChange={(e) => updateNoteLocal(panelSeat, e.target.value)}
+                onBlur={() => persistSeatNote(panelSeat)}
+                rows={3}
+                maxLength={500}
+                placeholder="이 사람에 대한 메모"
+                className="w-full resize-y rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60"
+              />
+            </div>
+
+            <RolePickerModal
+              open={pickerOpen}
+              title={`${target.nickname} — 직업 추측`}
+              candidates={sheetChars}
+              selected={g.guess}
+              onPick={(id) => saveGuess(panelSeat, id)}
+              onClose={() => setPickerOpen(false)}
+              clearLabel="추측 지움"
+            />
+          </div>
+        );
+      })()}
+
+      <ChatWidget roomId={roomId} meId={meId} />
+    </div>
+  );
+}

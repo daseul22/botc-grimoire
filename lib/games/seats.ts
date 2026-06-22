@@ -4,6 +4,14 @@ import { MARKER_MAP, parseMarker } from "../markers";
 import type { DeathCause, SeatStatus } from "../types";
 import { currentIdx, db, mutateSeat, now, readState, writeState } from "./schema";
 
+/** 이 게임에서 해당 가입 계정이 바인딩된 좌석(온라인 플레이). 없으면 null. */
+export function seatForUser(gameId: string, userId: number): number | null {
+  const r = db
+    .prepare("SELECT seat FROM game_players WHERE game_id = ? AND user_id = ?")
+    .get(gameId, userId) as { seat: number } | undefined;
+  return r ? r.seat : null;
+}
+
 export function savePositions(
   gameId: string,
   positions: { seat: number; x: number; y: number }[],

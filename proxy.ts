@@ -20,6 +20,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // 정적 자원(이미지·번들·아이콘)은 통과시킨다.
-  matcher: ["/((?!_next/|favicon|icons/).*)"],
+  // 정적 자원(이미지·번들·아이콘)과 API/SSE 라우트는 통과시킨다.
+  // (api/ 제외: 실시간 스트림이 claim 쿠키로 claim 페이지로 리다이렉트되면 안 됨.)
+  matcher: ["/((?!_next/|api/|favicon|icons/).*)"],
 };

@@ -1,4 +1,5 @@
 import { listGames } from "@/lib/games";
+import { onlineGameIds } from "@/lib/rooms";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { GamesBrowser } from "@/components/GamesBrowser";
 
@@ -15,7 +16,10 @@ export default async function GamesPage() {
   //         진행 중 게임은 그 게임을 시작한 이야기꾼 본인 또는 관리자만 보인다
   //         (다른 이야기꾼의 진행 중 게임은 노출하지 않음).
   // 관리(복제·삭제·이름변경): 소유자 본인 또는 관리자.
+  // 온라인(룸) 게임은 별도 페이지(/rooms)에서 다룬다 — 여기 LAN 내역에서는 제외.
+  const online = onlineGameIds();
   const games = listGames()
+    .filter((g) => !online.has(g.id))
     .filter((g) => {
       if (g.status === "finished") return true;
       return admin || (!!user && g.ownerId != null && g.ownerId === user.id);

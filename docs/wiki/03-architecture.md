@@ -52,6 +52,13 @@ flowchart TD
 [night-actions](../../lib/night-actions.ts)(직업별 야간/낮 행동 스펙·정보 능력 오인 경고) ·
 [seat-layout](../../lib/seat-layout.ts)(사각 좌석 자동 배분·둘레 좌표) · [types](../../lib/types.ts).
 
+[realtime.ts](../../lib/realtime.ts)는 서버 전용이되 **DB 의존이 없다**(`node:events`만 사용).
+게임 변경 신호를 인메모리로 pub/sub하며, 서버 액션이 emit하고 SSE route handler가 구독한다([05](05-state-sync.md)).
+
+온라인 플레이([11](11-online-play.md))는 [rooms.ts](../../lib/rooms.ts)(서버 전용, 룸/멤버/초대 CRUD) ·
+[role-assign.ts](../../lib/role-assign.ts)(서버 전용, 직업 배정 — 게임/룸 시작 공유) ·
+[redact.ts](../../lib/redact.ts)(순수, 좌석별 비밀 제거)로 구성된다.
+
 [db.ts](../../lib/db.ts)는 `process.cwd()/db/grimoire.db`를 `fileMustExist`로 연다(시드 안 됐으면
 명확히 실패 → `npm run db:seed`). WAL 모드.
 
@@ -75,8 +82,12 @@ flowchart TD
 | `/play/[gameId]/pick/[seat]` · `/claim` | 동적 | 직업 목록(플레이어 선택) · 잠금 직업배포 |
 | `/login`, `/register`, `/account` | 동적 | 로그인·가입·내 계정([10](10-auth.md)) |
 | `/admin` | 동적 | 사용자 역할 부여(관리자 전용) |
+| `/rooms`, `/rooms/[roomId]`(로비), `/rooms/join/[code]` | 동적 | 온라인 방·로비·입장 ([11](11-online-play.md)) |
+| `/rooms/[roomId]/play` · `/seat` | 동적 | 온라인 진행(이야기꾼 보드)·내 자리 — 기존 `/play`와 분리, 컴포넌트 재사용 ([11](11-online-play.md)) |
+| `/api/games/[gameId]/stream` · `/api/rooms/[roomId]/stream` | SSE | 실시간 게임/룸 변경 푸시 ([05](05-state-sync.md), [11](11-online-play.md)) |
 
 콘텐츠는 정적/SSG(빌드 시 SQLite 읽음), 게임·커스텀시트는 `force-dynamic`(가변).
+실시간 스트림(`/api/.../stream`)은 `dynamic="force-dynamic"`·`runtime="nodejs"`의 route handler.
 
 ## 인증·인가 레이어 → [10](10-auth.md)
 

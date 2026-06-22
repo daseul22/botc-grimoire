@@ -148,5 +148,12 @@ UI에서 버튼을 숨기는 것만으로는 부족하다 — **액션마다 권
   플레이어 폰이 호출해야 하는 무가드 액션은 `claimSeatAction` 패턴을 따른다.
 - **소유권이 필요한 새 리소스**: `owner_id` 컬럼 + 멱등 ALTER + 레거시(null) 분기를 잊지 말 것.
 
+## 온라인 플레이의 접근제어 → [11](11-online-play.md)
+
+원격 멀티플레이어는 룸 멤버십(`game_room_members`)·초대(`game_invites`)·좌석 바인딩
+(`game_players.user_id`)으로 접근을 가른다. 룸 조작은 `requireRoomOwner`, 입장/수락은
+`requireUser`. 특히 플레이어 좌석 뷰는 `redactGameForSeat`로 **본인 좌석 외 비밀을 서버에서 제거**한
+뒤 클라로 보낸다(전체 `Game`을 그대로 직렬화하면 다른 좌석 직업이 네트워크로 새므로).
+
 ---
 [← 이야기꾼 운영 도구](09-storyteller-tools.md) · [홈](README.md)
