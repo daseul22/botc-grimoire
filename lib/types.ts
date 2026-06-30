@@ -174,6 +174,11 @@ export interface Game {
   undo: { count: number; lastLabel: string | null };
   /** 직업배포(claim)에서 점유된 좌석들 — ST가 좌석별 재열람 허용(점유 해제)할 때 사용. */
   claimedSeats: number[];
+  /**
+   * 현재 페이즈보다 앞선 가장 가까운 낮에 처형된 좌석 + 그 직업(장의사 자동 추천용). 처형 없으면 null.
+   * 서버에서 직전 낮 스냅샷 votes로 계산 — game.votes(현재 페이즈)로는 알 수 없어 별도로 싣는다.
+   */
+  lastExecution: { seat: number; characterId: string } | null;
 }
 
 /** 한 번의 타이머 한 종류(밀담 또는 공개토론). */

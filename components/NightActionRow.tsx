@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MARKER_MAP } from "@/lib/markers";
 import { formatResult, INFO_KINDS, infoTargetWarn, markerForAction, showcaseVariants, type ActionSpec } from "@/lib/night-actions";
-import type { Character, GamePlayer, NightActionRecord } from "@/lib/types";
+import type { Character, GamePlayer, NightActionRecord, VoteRecord } from "@/lib/types";
 import { ActionFields } from "./ActionFields";
 
 const short = (s: string) => (s.length > 7 ? s.slice(0, 6) + "…" : s);
@@ -20,6 +20,11 @@ export function NightActionRow({
   onRecord,
   onClear,
   onApplyMarker,
+  suggest = false,
+  globalMarkers,
+  votes,
+  lastExecution,
+  isFirstNight,
 }: {
   actor: GamePlayer;
   spec: ActionSpec;
@@ -33,6 +38,15 @@ export function NightActionRow({
   onRecord: (targets: number[], result: string) => void;
   onClear: () => void;
   onApplyMarker: (seats: number[], markerStr: string) => void;
+  /** 그리모어 상태 기반 결과 자동 추천을 켤지(실제 행동에서만). */
+  suggest?: boolean;
+  /** 전역 마커(Vortox 등) — 자동 추천의 취함/중독 판정용. */
+  globalMarkers?: string[];
+  /** 현재 페이즈 투표 기록 — 자동 추천용(추후 직업). */
+  votes?: VoteRecord[];
+  /** 직전 낮 처형 좌석+직업 — 장의사 자동 추천용. */
+  lastExecution?: { seat: number; characterId: string } | null;
+  isFirstNight?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [targets, setTargets] = useState<number[]>(record?.targets ?? []);
@@ -227,6 +241,11 @@ export function NightActionRow({
         setTargets={setTargets}
         result={result}
         setResult={setResult}
+        suggest={suggest}
+        globalMarkers={globalMarkers}
+        votes={votes}
+        lastExecution={lastExecution}
+        isFirstNight={isFirstNight}
       />
 
       {canApplyMarker && (

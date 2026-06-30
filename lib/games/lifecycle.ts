@@ -92,7 +92,26 @@ export function getGame(id: string): Game | undefined {
     phaseTimers: readTimers(id, idx),
     undo: undoInfo(id),
     claimedSeats: Object.keys(getClaims(id)).map(Number),
+    lastExecution: readLastExecution(id, idx),
   };
+}
+
+/**
+ * 현재 idx보다 앞선 가장 가까운 낮 스냅샷의 처형 대상(좌석+직업) — 장의사 자동 추천용. 없으면 null.
+ * 보통 idx-1(직전 낮)이지만, 과거 페이즈를 보고 있을 수도 있어 phase='day' 중 최대 idx를 찾는다.
+ * 직업은 게임 전역 정체성(game_players)에서 읽는다(스냅샷 무관).
+ */
+function readLastExecution(id: string, idx: number): { seat: number; characterId: string } | null {
+  const dayPh = db
+    .prepare("SELECT idx FROM game_phases WHERE game_id = ? AND idx < ? AND phase = 'day' ORDER BY idx DESC LIMIT 1")
+    .get(id, idx) as { idx: number } | undefined;
+  if (!dayPh) return null;
+  const exec = readVotes(id, dayPh.idx).find((v) => v.executed);
+  if (!exec) return null;
+  const row = db
+    .prepare("SELECT character_id FROM game_players WHERE game_id = ? AND seat = ?")
+    .get(id, exec.nominee) as { character_id: string } | undefined;
+  return row ? { seat: exec.nominee, characterId: row.character_id } : null;
 }
 
 /** 게임 소유자(시작한 이야기꾼) user id. 없으면 null(레거시). 권한 판정용. */

@@ -71,6 +71,39 @@ UI: 순서 사이드바 각 행의 인라인 편집기([NightActionRow](../../co
 폰으로 운영하는 ST가 대상의 진짜 직업을 못 봐 점쟁이가 은둔자를 선으로 알려주는 식의 실수를 막는다.
 별도 데이터 플래그가 없어 명시 목록으로 관리(능력문 자동검출은 군단병 등 오탐이 많음).
 
+## 결과 자동 추천 — [lib/action-suggest.ts](../../lib/action-suggest.ts)
+
+그리모어 상태(좌석 링·진영·생사·마커·전역마커)로 정보 직업이 받을 결과를 **미리 계산해 기본값/근거/이웃**을
+ST에게 제시한다. 자동 제출이 아니라 *제안*이며 ST가 덮어쓸 수 있다. 순수 모듈로 분리(클라/서버 공용, 테스트 용이).
+
+- **`suggestAction(ctx)`**: 등재된 직업만 계산하는 switch 디스패치(미등재는 `null`). `ctx`={effective characterId,
+  actor, players, globalMarkers, votes?, targets, isFirstNight?}. 직업을 **하나씩** 추가하며 고도화.
+- **`livingNeighbors(players, seat)`**: 좌석 번호로 정렬→`findIndex`→modulo 래핑으로 양옆 *생존* 이웃을 구한다
+  (죽은 좌석 건너뜀). 이웃 관계는 **좌석 번호 링**(0..N-1 시계방향) 기준 — x/y(시각 배치)가 아님.
+- **정합성 원칙**: ①진영은 `player.alignment`(진실) 그대로 센다. 은둔자(선→악)·첩자(악→선)는 *값을 뒤집지 않고*
+  `range`+⚠경고로만 표시(등록은 ST 선택이라 결정 불가). ②행동 주체가 `isTainted`(취함/중독/Vortox)면 자동 채움을
+  하지 않고 "진짜값 N — 거짓 줘야 함"으로만 표시. ③turning/gained/became/disguise는 read 시점 alignment를
+  바꾸지 않으므로(advancePhase에서만 변경) raw로 읽는다.
+- **UI 배선**: [ActionFields](../../components/ActionFields.tsx)가 `suggest/globalMarkers/votes/isFirstNight` prop으로
+  이웃 패널 + "추천 N 적용" 칩을 렌더하고, `spec.targets===0`(타겟 비의존)이면 편집기 진입 시 결과를 1회
+  자동 채운다(`useRef` seeded 가드, tainted면 제외). [NightActionRow](../../components/NightActionRow.tsx)가 전달,
+  [NightSidebar](../../components/NightSidebar.tsx)는 **실제 행동 행에만** 추천을 켠다(미치광이 가짜 공격·주장 기록은 OFF).
+- **자동채움형**(targets=0, 편집기 진입 시 결과 자동 채움): **초공감자**(양옆 생존 이웃 중 악 수)·
+  **요리사**(인접 악 쌍, 래핑)·**신탁**(사망자 중 악 수)·**시계공**(데몬↔최근접 하수인 좌석거리,
+  `charMap` 팀 판정)·**광신도**(본인 진영).
+- **지목 의존형**(targets>0, 지목을 다 고르면 추천 칩 노출·자동채움 X): **점쟁이**(지목 2명 중 데몬/레드헤링→예)·
+  **재봉사**(2명 같은 진영?)·**마을백치**(대상 진영)·**공작부인**(방문자 중 악 수). 은둔자/첩자가 지목에 끼면
+  `note`로 주의(점쟁이는 "은둔자가 데몬으로 보일 수 있음").
+- **직업 결과형**(targets>0, 지목 대상의 *직업*을 결과로 추천 → 토큰 모달에서 직접 고르는 수고 제거):
+  **까마귀지기·탕녀·기구조종사**(대상의 진짜 `characterId`)·**세탁부/사서/수사관**(지목 중 주민/외지인/하수인
+  좌석의 직업). disguise(주정뱅이 등)는 *진짜 직업*을 쓰고, became/gained 같은 정체 변경은 ST가 칩을 덮어쓴다.
+- **장의사**(targets=0 직업 자동채움): 직전 낮에 처형된 사람의 직업을 편집기 진입 시 자동 채움. `game.votes`는
+  현재 페이즈치라 알 수 없어, **서버 `getGame`이 직전 낮 스냅샷에서 계산해 `game.lastExecution`{seat,characterId}로
+  싣는다**([readLastExecution](../../lib/games/lifecycle.ts) — `idx`보다 앞선 phase='day' 중 최대 idx의 `executed` 투표).
+  처형이 없으면 추천 없음(깨우지 않음). 직업은 전역 정체성(`game_players`)에서 읽고, 은둔자/첩자면 note로 주의.
+- 보류: 데몬/선·악 좌석을 *임의로 골라* 지목을 채우는 부류(집사장·현상금사냥꾼·기사·귀족 등)는 유효 후보가 많아
+  추천이 노이즈가 되기 쉬워 보류(별도 "추천 지목" 칩 + ST 판단 필요).
+
 ## 밤 행동 순서 사이드바 — [NightSidebar](../../components/NightSidebar.tsx)
 
 좌석마다 `effectiveCharacterId()`([markers.ts](../../lib/markers.ts))로 **운영상 다루는 직업**을

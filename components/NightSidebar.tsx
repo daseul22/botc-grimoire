@@ -264,6 +264,11 @@ export function NightSidebar({
                       onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, effId, targets, result))}
                       onClear={() => run(() => clearActionAction(game.id, p.seat, effId))}
                       onApplyMarker={onApplyMarker}
+                      suggest
+                      globalMarkers={game.globalMarkers}
+                      votes={game.votes}
+                      lastExecution={game.lastExecution}
+                      isFirstNight={isFirstNight}
                     />
                     {/* 점쟁이 첫밤: 레드헤링(데몬으로 보일 선한 1명) 지정 편의 — 깜빡하지 않게 카드에서 바로. */}
                     {effId === "fortuneteller" && isFirstNight && (
