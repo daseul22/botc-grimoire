@@ -11,13 +11,13 @@ export function RequestStatusBadge({ req }: { req: NightRequestView | null | und
   const base = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold";
   switch (req.status) {
     case "done":
-      return <span className={`${base} bg-green-500/20 text-green-300 ring-1 ring-green-500/40`}>✅ 확인함</span>;
+      return <span className={`${base} bg-green-500/20 text-green-300 ring-1 ring-green-500/40`}>✓ 확인함</span>;
     case "delivered":
-      return <span className={`${base} bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40`}>📤 전송함 · 확인 대기</span>;
+      return <span className={`${base} bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40`}>전송함 · 확인 대기</span>;
     case "responded":
-      return <span className={`${base} bg-gold/20 text-gold ring-1 ring-gold/40`}>↩ 응답 옴</span>;
+      return <span className={`${base} bg-gold/20 text-gold ring-1 ring-gold/40`}>응답 옴</span>;
     case "awaiting":
-      return <span className={`${base} bg-surface-2 text-muted ring-1 ring-border`}>⏳ 선택 대기 중</span>;
+      return <span className={`${base} bg-surface-2 text-muted ring-1 ring-border`}>선택 대기 중</span>;
     default:
       return null;
   }

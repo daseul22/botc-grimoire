@@ -151,7 +151,7 @@ export function NightSidebar({
                                 onClick={() => online.pushShowcase(m.seat, m.characterId, { mode: "minion-info", toSeat: m.seat })}
                                 className="rounded bg-gold/15 px-2 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50"
                               >
-                                📲 {online.requestBySeat.get(m.seat) ? "다시 보내기" : "정보 보내기"}
+                                {online.requestBySeat.get(m.seat) ? "다시 보내기" : "정보 보내기"}
                               </button>
                               <RequestStatusBadge req={online.requestBySeat.get(m.seat)} />
                             </div>
@@ -179,7 +179,7 @@ export function NightSidebar({
                             onClick={() => online.pushShowcase(d.seat, d.characterId, { mode: "demon-info", toSeat: d.seat })}
                             className="rounded bg-gold/15 px-2 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50"
                           >
-                            📲 {online.requestBySeat.get(d.seat) ? "다시 보내기" : "정보 보내기"}
+                            {online.requestBySeat.get(d.seat) ? "다시 보내기" : "정보 보내기"}
                           </button>
                           <RequestStatusBadge req={online.requestBySeat.get(d.seat)} />
                         </div>

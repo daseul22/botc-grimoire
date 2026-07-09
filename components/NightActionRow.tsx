@@ -120,7 +120,7 @@ export function NightActionRow({
         title="플레이어 폰에 보여주기"
         className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25 disabled:opacity-50"
       >
-        📲 {label}
+        {label}
       </button>
     ) : (
       <a
@@ -145,7 +145,7 @@ export function NightActionRow({
         title="플레이어 폰에서 직업을 직접 고르게 하기"
         className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text disabled:opacity-50"
       >
-        📲 직업 고르게 하기
+        직업 고르게 하기
       </button>
     ) : (
       <a
