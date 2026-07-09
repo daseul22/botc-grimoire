@@ -11,6 +11,7 @@ import { ChatWidget } from "./ChatWidget";
 import { NightRequestPanel, type NightRequestView } from "./NightRequestPanel";
 import { NightHistoryList } from "./NightHistoryList";
 import { DayVotePanel, type NominationView } from "./DayVotePanel";
+import { DayTimers } from "./DayTimers";
 import { Modal } from "./Modal";
 import { getMyRequestHistoryAction } from "@/app/rooms/actions";
 import {
@@ -151,6 +152,9 @@ export function PlayerGame({
 
   return (
     <div className="mx-auto max-w-xl pb-16 lg:max-w-4xl">
+      {/* 낮 타이머(밀담·공개토론) — ST가 시작하면 헤더 아래에 카운트다운. 진행 중일 때만. */}
+      <DayTimers timers={game.phaseTimers} />
+
       {/* 내 직업 배너 */}
       {myChar && (
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-gold/40 bg-surface p-3">
@@ -314,7 +318,7 @@ export function PlayerGame({
         );
       })()}
 
-      <ChatWidget roomId={roomId} meId={meId} members={members} memberColors={memberColors} />
+      <ChatWidget roomId={roomId} meId={meId} members={members} memberColors={memberColors} locked={game.phase === "night"} />
 
       {/* 받은 정보·내 응답 기록 — 진행 요청과 분리해 다시 볼 수 있게. */}
       <button

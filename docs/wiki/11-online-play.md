@@ -121,6 +121,8 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 - 전달: 룸 채널 SSE 재사용(`emitRoomUpdate` → 위젯이 `getMessagesAction` 재조회). 본문은 React 텍스트(XSS escape).
 - 한글 등 IME 조합 중 Enter는 무시(`e.nativeEvent.isComposing`) — 조합 확정 Enter가 전송까지 일으켜
   "안녕"이 두 번 가던 버그 방지.
+- **밤 잠금**: `phase==='night'`이면 채팅 전송 불가(읽기는 됨). ChatWidget `locked` prop으로 입력·전송 비활성 +
+  "🌙 밤에는 대화할 수 없습니다" 안내, `sendChatAction`도 **서버에서 밤 거부**(클라 우회 차단). 로비·낮·종료는 허용.
 
 ## 플레이어 닉네임 구분 색 — `lib/player-colors.ts`
 
@@ -136,6 +138,14 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
   ([ChatWidget](../../components/ChatWidget.tsx)). 보드는 `seatColors`(seat→hex, 페이지가 `room.members`의 seat·color로 계산)로
   좌석 닉네임 라벨을 색칠([PlayCanvas](../../components/PlayCanvas.tsx) ST 보드 · [PlayerGame](../../components/PlayerGame.tsx) 플레이어 보드).
   LAN 게임은 룸이 없어 색 맵이 비고 → 기존 기본색(추가 부담 0).
+
+## 낮 타이머(플레이어 표시) — `components/DayTimers.tsx`
+
+이야기꾼이 시작한 밀담/공개토론 타이머([TimerPanel](../../components/TimerPanel.tsx))를 플레이어도 본다.
+`game.phaseTimers`는 공개 정보라 redaction에서 보존되므로(strip 목록에 없음) 좌석 뷰가 그대로 받아
+`DayTimers`가 **진행 중인** 타이머만 헤더 아래 **sticky pill**로 카운트다운 표시한다(제어는 ST 전용, 플레이어는
+읽기만). 진행 중이 없으면 숨고, 밤 전환 시 새 스냅샷 타이머가 비어 자동으로 사라진다. `startedAt`(서버 ms)
+기준 클라 시계로 남은 시간 계산(TimerPanel과 동일 모델). 보드를 안 가리는 상단 중앙 위치.
 
 ## 밤 행동 요청/응답 프로토콜 — `lib/night-requests.ts`
 
@@ -224,7 +234,8 @@ stateDiagram-v2
 - `app/rooms/actions.ts` 룸 서버 액션 · `app/rooms/**` 룸/로비/입장/진행/자리 페이지.
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
   `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `NightHistoryList.tsx` ·
-  `DayVotePanel.tsx`(플레이어 투표) · `DayConsole.tsx`(ST 투표 콘솔) · `useGameStream.ts` · `useAutoAdvance.ts`.
+  `DayVotePanel.tsx`(플레이어 투표) · `DayConsole.tsx`(ST 투표 콘솔) · `DayTimers.tsx`(플레이어 타이머) ·
+  `useGameStream.ts` · `useAutoAdvance.ts`.
 - 공통 UI: `components/Select.tsx`(드롭다운, native `<select>` 대체) · `components/Modal.tsx`(가운데 모달 일관 닫기) ·
   `components/RoomRedirect.tsx`(클라이언트 라우트 교체) ·
   `PlayerPicker`/`RolePickerModal`(좌석·직업 토큰 picker). 네이티브 폼 요소를 앱 톤으로 대체하는 공통 컴포넌트들.

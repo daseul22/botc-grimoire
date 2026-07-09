@@ -308,6 +308,12 @@ export async function sendChatAction(
   recipientUserId?: number | null,
 ): Promise<{ error: string } | void> {
   const { user, room } = await requireRoomMember(roomId);
+  // 밤에는 대화 금지(선택지 조작 방지 — 서버에서도 강제). 로비·낮·종료 게임은 허용.
+  if (room.gameId) {
+    const g = getGame(room.gameId);
+    if (g && g.status !== "finished" && g.phase === "night")
+      return { error: "밤에는 대화할 수 없습니다." };
+  }
   const text = body.trim().slice(0, 1000);
   if (!text) return;
   let recipient: { id: number; nickname: string } | null = null;

@@ -34,6 +34,7 @@ export function ChatWidget({
   members = [],
   memberColors = {},
   canEditColors = false,
+  locked = false,
 }: {
   roomId: string;
   meId: number;
@@ -42,6 +43,8 @@ export function ChatWidget({
   memberColors?: Record<number, string>;
   /** 이야기꾼이면 색 편집 가능. */
   canEditColors?: boolean;
+  /** 밤 등 대화 금지 상태 — 읽기는 되지만 전송 불가. */
+  locked?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -144,11 +147,19 @@ export function ChatWidget({
   };
 
   const sendTo = (recipient: number) => {
+    if (locked) return;
     const t = text.trim();
     if (!t) return;
     setText("");
     void sendChatAction(roomId, t, recipient === 0 ? null : recipient).then(load);
   };
+
+  // 밤 등 대화 금지 안내(입력 영역 상단).
+  const lockNote = locked ? (
+    <p className="mb-1.5 rounded-lg border border-border bg-surface-2/60 px-2.5 py-1.5 text-center text-[11px] text-muted">
+      🌙 밤에는 대화할 수 없습니다
+    </p>
+  ) : null;
 
   // 이름 토큰 — 플레이어 색으로. 발신자/수신자 각각 자기 색이라 이야기꾼이 스캔하기 쉽다.
   const nameEl = (userId: number, nickname: string) => (
@@ -267,16 +278,18 @@ export function ChatWidget({
             {recipientId !== 0 && <span className="text-[11px] text-indigo-300">귓말</span>}
           </div>
         )}
+        {lockNote}
         <div className="flex gap-2">
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => onInputKey(e, recipientId)}
             maxLength={1000}
-            placeholder={recipientId === 0 ? "메시지…" : "귓말…"}
-            className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60"
+            disabled={locked}
+            placeholder={locked ? "밤에는 대화할 수 없습니다" : recipientId === 0 ? "메시지…" : "귓말…"}
+            className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60 disabled:opacity-50"
           />
-          <button type="button" onClick={() => sendTo(recipientId)} disabled={!text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
+          <button type="button" onClick={() => sendTo(recipientId)} disabled={locked || !text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
             전송
           </button>
         </div>
@@ -379,16 +392,18 @@ export function ChatWidget({
             )}
           </div>
           <div className="border-t border-border p-2">
+            {lockNote}
             <div className="flex gap-2">
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => onInputKey(e, activeThread)}
                 maxLength={1000}
-                placeholder={activeThread === 0 ? "전체에게 메시지…" : `${activeTitle}에게 귓말…`}
-                className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                disabled={locked}
+                placeholder={locked ? "밤에는 대화할 수 없습니다" : activeThread === 0 ? "전체에게 메시지…" : `${activeTitle}에게 귓말…`}
+                className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60 disabled:opacity-50"
               />
-              <button type="button" onClick={() => sendTo(activeThread)} disabled={!text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
+              <button type="button" onClick={() => sendTo(activeThread)} disabled={locked || !text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
                 전송
               </button>
             </div>
