@@ -89,6 +89,10 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 "?"(본인 좌석만 진짜 직업)다. 좌석을 눌러 **직업을 추측**(점선 링)하고 **메모**(📝)를 남기며, 좌석과
 무관한 자유 메모도 있다. 모두 개인 기록(다른 사람에게 안 보임).
 
+- **반응형 레이아웃**: 데스크탑(`lg`+)은 보드(좌, `flex-1`·정사각 `self-start`) + 자유 메모(우측 사이드바
+  `w-80`, 보드 높이에 맞춰 stretch돼 크게)로 2열. 모바일은 세로 스택(보드 → 메모). 메모를 많이 쓸 수 있게
+  우측 큰 섹션으로 뒀다.
+
 - 데이터: `game_player_guesses(game_id, user_id, target_seat, guess_character_id, note)` —
   `target_seat=-1`은 자유 메모. `lib/player-board.ts`가 upsert/조회. `setGuessAction`·`setSeatNoteAction`·
   `setGeneralMemoAction`(룸 멤버 가드, emit 없음 — 사적). 입력 길이 상한.

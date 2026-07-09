@@ -144,7 +144,7 @@ export function PlayerGame({
   const posPct = (v: number) => `${(INSET + v * (1 - 2 * INSET)) * 100}%`;
 
   return (
-    <div className="mx-auto max-w-xl pb-16">
+    <div className="mx-auto max-w-xl pb-16 lg:max-w-4xl">
       {/* 내 직업 배너 */}
       {myChar && (
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-gold/40 bg-surface p-3">
@@ -163,11 +163,13 @@ export function PlayerGame({
         좌석을 눌러 직업을 추측하고 메모하세요. 기록은 나만 볼 수 있습니다.
       </p>
 
-      {/* 마스킹 보드 — 이야기꾼과 동일 좌석 배치, 본인 외 토큰은 "?" */}
-      <div
-        className="relative mx-auto aspect-square w-full overflow-hidden rounded-xl border border-border bg-surface"
-        style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}
-      >
+      {/* 데스크탑: 보드(좌) + 메모 사이드바(우). 모바일: 세로 스택. */}
+      <div className="lg:flex lg:gap-6">
+        {/* 마스킹 보드 — 이야기꾼과 동일 좌석 배치, 본인 외 토큰은 "?" */}
+        <div
+          className="relative mx-auto aspect-square w-full overflow-hidden rounded-xl border border-border bg-surface lg:mx-0 lg:min-w-0 lg:flex-1 lg:self-start"
+          style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}
+        >
         {game.players.map((p) => {
           const isMe = p.seat === boundSeat;
           const dead = p.status === "dead";
@@ -227,17 +229,19 @@ export function PlayerGame({
         })}
       </div>
 
-      {/* 자유 메모 */}
-      <div className="mt-4">
-        <label className="mb-1 block text-xs font-semibold text-muted">메모</label>
-        <textarea
-          value={memo}
-          onChange={(e) => setMemo(e.target.value)}
-          onBlur={() => saveMemo(memo)}
-          rows={3}
-          placeholder="자유롭게 기록하세요 (나만 봄)"
-          className="w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-gold/60"
-        />
+        {/* 자유 메모 — 데스크탑에선 우측 사이드바로 크게(많이 쓸 수 있게), 모바일은 보드 아래로 */}
+        <aside className="mt-4 flex flex-col lg:mt-0 lg:w-80 lg:shrink-0">
+          <label className="mb-1 block text-xs font-semibold text-muted">
+            메모 <span className="font-normal text-muted/60">· 나만 봄</span>
+          </label>
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            onBlur={() => saveMemo(memo)}
+            placeholder="자유롭게 기록하세요"
+            className="min-h-[8rem] w-full flex-1 resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-gold/60"
+          />
+        </aside>
       </div>
 
       {/* 좌석 추측·메모 패널 */}
