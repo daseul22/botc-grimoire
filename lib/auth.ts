@@ -120,6 +120,25 @@ export function generatePassword(len = 16): string {
   return chars.join("");
 }
 
+/**
+ * 관리자 비밀번호 초기화용 임시 비밀번호(기본 8자리). 전달·타이핑이 쉽도록 영문 대/소문자+숫자만
+ * 쓰고 헷갈리는 문자(I,O,l,0,1)는 제외한다. 대/소문자·숫자 각 최소 1개 보장. (relay 후 사용자 변경 권장)
+ */
+export function generateTempPassword(len = 8): string {
+  const U = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // I,O 제외
+  const L = "abcdefghijkmnopqrstuvwxyz"; // l 제외
+  const D = "23456789"; // 0,1 제외
+  const all = U + L + D;
+  const pick = (s: string) => s[randomInt(s.length)];
+  const chars = [pick(U), pick(L), pick(D)];
+  while (chars.length < len) chars.push(pick(all));
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
+
 // ── 정규화 ──
 /** 로그인 ID는 대소문자 무시(소문자 정규화). 닉네임은 통계 닉네임 문자열과 정확히 매칭해야 하므로 trim만. */
 export const normalizeLoginId = (s: string) => s.trim().toLowerCase();
