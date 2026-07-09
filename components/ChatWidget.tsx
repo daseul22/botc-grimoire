@@ -59,6 +59,7 @@ export function ChatWidget({
   const [showPaneMobile, setShowPaneMobile] = useState(false); // 모바일: 대화 pane 표시(목록 숨김)
   const [colors, setColors] = useState<Record<number, string>>(memberColors); // userId → 색 id(ST 낙관 편집)
   const [editingColorFor, setEditingColorFor] = useState<number | null>(null);
+  const [subParty, setSubParty] = useState<number | null>(null); // ST: 멤버 스레드 안에서 상대 1명으로 좁히기
   const lastSeenId = useRef(0);
   const seeded = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -141,10 +142,15 @@ export function ChatWidget({
   const selectThread = (key: number) => {
     markRead(activeThread); // 떠나는 스레드를 본 것으로 처리
     setActiveThread(key);
+    setSubParty(null); // 스레드 바뀌면 상대 하위 필터 초기화
     markRead(key);
     setShowPaneMobile(true);
     requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current?.scrollHeight ?? 0 }));
   };
+
+  // 귓말 메시지에서 '기준 좌석(self)'의 상대편 userId(스레드 하위 필터용).
+  const otherParty = (m: ChatMessage, self: number) => (m.userId === self ? m.recipientUserId : m.userId);
+  const partyName = (p: number) => (p === meId ? "나" : others.find((o) => o.userId === p)?.nickname ?? `#${p}`);
 
   const sendTo = (recipient: number) => {
     if (locked) return;
@@ -311,15 +317,9 @@ export function ChatWidget({
           onClick={() => selectThread(key)}
           className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left transition-colors ${active ? "" : "hover:bg-surface-2/60"}`}
         >
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-            style={{ backgroundColor: `${c}2b`, color: c }}
-          >
-            {accent ? "전체" : title.slice(0, 2)}
-          </span>
           <span className="min-w-0 flex-1">
             <span className="flex items-center justify-between gap-1">
-              <span className="truncate text-sm font-medium" style={accent ? undefined : { color: c }}>{title}</span>
+              <span className="truncate text-sm font-semibold" style={{ color: c }}>{title}</span>
               {last && <span className="shrink-0 text-[10px] text-muted">{fmt(last.createdAt)}</span>}
             </span>
             <span className="truncate text-xs text-muted">
@@ -337,9 +337,9 @@ export function ChatWidget({
             type="button"
             onClick={() => setEditingColorFor(key)}
             title="닉네임 색 바꾸기"
-            className="flex shrink-0 items-center border-l border-border/60 px-2.5 text-muted hover:text-text"
+            className="flex shrink-0 items-center border-l border-border/60 px-2.5 text-[11px] text-muted hover:text-text"
           >
-            <span className="h-4 w-4 rounded-full border border-white/25" style={{ backgroundColor: c }} />
+            색
           </button>
         )}
       </div>
@@ -348,7 +348,18 @@ export function ChatWidget({
 
   // ── 크게 보기(전체화면): 분할 뷰 ──
   const activeTitle = activeThread === 0 ? "전체 채팅" : others.find((o) => o.userId === activeThread)?.nickname ?? "귓말";
-  const paneMsgs = threadMsgs(activeThread);
+  const activeList = threadMsgs(activeThread);
+  // 이야기꾼이 멤버 스레드를 볼 때 그 안의 '상대'들. 2명 이상이면 하위 필터 노출(한 깊이 더 들어가기).
+  const parties =
+    activeThread === 0
+      ? []
+      : [
+          ...new Set(activeList.map((m) => otherParty(m, activeThread)).filter((x): x is number => x != null)),
+        ].sort((a, b) => partyName(a).localeCompare(partyName(b)));
+  const paneMsgs =
+    activeThread !== 0 && subParty != null
+      ? activeList.filter((m) => otherParty(m, activeThread) === subParty)
+      : activeList;
   const splitBody = (
     <>
       {header}
@@ -379,13 +390,51 @@ export function ChatWidget({
             <button type="button" onClick={() => setShowPaneMobile(false)} className="rounded p-1 text-muted hover:text-text sm:hidden" title="목록">
               ← 목록
             </button>
-            <span className="truncate text-sm font-medium">{activeTitle}</span>
+            <span className="flex min-w-0 items-center gap-1 truncate text-sm font-medium">
+              <span style={activeThread !== 0 ? { color: colorOf(activeThread) } : undefined}>{activeTitle}</span>
+              {activeThread !== 0 && subParty != null && (
+                <>
+                  <span className="text-muted">↔</span>
+                  <span style={{ color: colorOf(subParty) }}>{partyName(subParty)}</span>
+                </>
+              )}
+            </span>
             {activeThread !== 0 && <span className="shrink-0 text-[11px] text-indigo-300">귓말</span>}
           </div>
+
+          {/* 이야기꾼 전용: 이 멤버가 대화한 상대별로 좁혀 보기(2명 이상일 때만). */}
+          {parties.length >= 2 && (
+            <div className="flex flex-wrap items-center gap-1 border-b border-border px-3 py-1.5">
+              <span className="mr-0.5 text-[10px] text-muted">상대별</span>
+              <button
+                type="button"
+                onClick={() => setSubParty(null)}
+                className={`rounded-full border px-2 py-0.5 text-[11px] ${subParty == null ? "border-gold bg-gold/15 text-text" : "border-border text-muted hover:text-text"}`}
+              >
+                전체
+              </button>
+              {parties.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setSubParty(p)}
+                  className={`rounded-full border px-2 py-0.5 text-[11px] ${subParty === p ? "border-gold bg-gold/15" : "border-border hover:bg-surface-2"}`}
+                  style={{ color: colorOf(p) }}
+                >
+                  {partyName(p)}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-2">
             {paneMsgs.length === 0 ? (
               <p className="pt-8 text-center text-xs text-muted">
-                {activeThread === 0 ? "아직 메시지가 없습니다." : `${activeTitle}님과의 귓말이 없습니다. 아래에 입력해 시작하세요.`}
+                {activeThread === 0
+                  ? "아직 메시지가 없습니다."
+                  : subParty != null
+                    ? `${activeTitle} ↔ ${partyName(subParty)} 귓말이 없습니다.`
+                    : `${activeTitle}님과의 귓말이 없습니다. 아래에 입력해 시작하세요.`}
               </p>
             ) : (
               paneMsgs.map((m) => renderMessage(m, true))

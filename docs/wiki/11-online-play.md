@@ -114,10 +114,13 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
   `listMessages(roomId, viewerUserId, isOwner)`가 SQL로 필터 → 남의 귓말은 서버에서 아예 안 내려간다.
   받는 사람은 공통 `Select`로 전체/멤버 중 선택(`ChatWidget`에 members 전달).
 - **분할 뷰(크게 보기)**: 전체화면은 좌측 **대화 목록**(전체 채팅 + 멤버별 귓말 스레드, 최대 14명 —
-  미읽음 배지·마지막 메시지 미리보기·최근 대화순) + 우측 **선택 스레드**로 나뉜다. 특정 유저와의 귓말만
-  따로 본다. 스레드 그룹핑은 **클라 측**(전체=`recipient` null, 멤버 X=X가 발신/수신인 귓말 — 플레이어는 나↔X,
-  이야기꾼은 X가 낀 모든 귓말)이라 DB/서버 무변경. 미읽음 기준선은 최초 로드 시점 id, 스레드 진입/이탈 시
-  읽음 처리(`seen[key]`). 모바일은 목록↔대화 **마스터-디테일**(`← 목록`). 드로어(작게)는 단일 스트림 유지.
+  미읽음 배지·마지막 메시지 미리보기·최근 대화순, **닉네임 색 텍스트**로 구분) + 우측 **선택 스레드**로 나뉜다.
+  특정 유저와의 귓말만 따로 본다. 스레드 그룹핑은 **클라 측**(전체=`recipient` null, 멤버 X=X가 발신/수신인
+  귓말 — 플레이어는 나↔X, 이야기꾼은 X가 낀 모든 귓말)이라 DB/서버 무변경. 미읽음 기준선은 최초 로드 시점 id,
+  스레드 진입/이탈 시 읽음 처리(`seen[key]`). 모바일은 목록↔대화 **마스터-디테일**(`← 목록`). 드로어(작게)는 단일 스트림 유지.
+- **상대별 하위 필터(이야기꾼)**: 이야기꾼은 멤버 X의 스레드에서 X가 낀 모든 귓말이 섞여 보기 힘드므로,
+  스레드 안에 **상대 chip**(전체/각 상대)을 둬 X↔특정 상대(Y) 귓말만 좁혀 본다. 상대가 2명 이상일 때만
+  노출(플레이어는 나↔X뿐이라 안 뜸). `otherParty(m, X)`로 각 귓말의 상대편을 뽑아 distinct 집계·필터.
 - 전달: 룸 채널 SSE 재사용(`emitRoomUpdate` → 위젯이 `getMessagesAction` 재조회). 본문은 React 텍스트(XSS escape).
 - 한글 등 IME 조합 중 Enter는 무시(`e.nativeEvent.isComposing`) — 조합 확정 Enter가 전송까지 일으켜
   "안녕"이 두 번 가던 버그 방지.
@@ -134,7 +137,8 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
   `pickUnusedColor`로 **방에서 안 쓴 색 중 랜덤**(distinct) 배정. 레거시(빈 값) 멤버는 표시 시 userId 기반 폴백.
 - **ST 수정**: `setMemberColorAction`(방장만) → `setMemberColor` + emit. 채팅 사이드바(크게 보기)의 멤버 옆
   색 버튼 → 15색 스와치 팝오버로 변경. 낙관적 로컬 반영 + 저장 + `router.refresh`로 보드까지 동기화.
-- **적용**: 채팅은 `memberColors`(userId→id)로 메시지 라벨의 **발신자·수신자 이름 각각**과 대화 목록 아바타를 색칠
+- **적용**: 채팅은 `memberColors`(userId→id)로 메시지 라벨의 **발신자·수신자 이름 각각**과 대화 목록 **이름**을 색칠
+  (색 원형 아바타·색 점은 제거 — 이름 색으로 충분. ST 색 편집은 목록 행 우측 '색' 버튼 → 15색 팝오버)
   ([ChatWidget](../../components/ChatWidget.tsx)). 보드는 `seatColors`(seat→hex, 페이지가 `room.members`의 seat·color로 계산)로
   좌석 닉네임 라벨을 색칠([PlayCanvas](../../components/PlayCanvas.tsx) ST 보드 · [PlayerGame](../../components/PlayerGame.tsx) 플레이어 보드).
   LAN 게임은 룸이 없어 색 맵이 비고 → 기존 기본색(추가 부담 0).
