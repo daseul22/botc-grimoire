@@ -61,10 +61,13 @@ export function PlayCanvas({
   game: initial,
   sheetChars,
   knownNicknames = [],
+  seatColors = {},
 }: {
   game: Game;
   sheetChars: Character[];
   knownNicknames?: string[];
+  /** seat → hex. 온라인 이야기꾼이 지정한 닉네임 구분 색(LAN이면 빈 맵). */
+  seatColors?: Record<number, string>;
 }) {
   const [game, setGame] = useState(initial);
   const [selected, setSelected] = useState<number | null>(null);
@@ -481,7 +484,7 @@ export function PlayCanvas({
                     </span>
                   )}
                 </div>
-                <span className={`truncate font-medium ${fs ? "max-w-32 text-base font-semibold" : "max-w-24 text-sm"}`}>{p.nickname}</span>
+                <span className={`truncate font-medium ${fs ? "max-w-32 text-base font-semibold" : "max-w-24 text-sm"}`} style={{ color: seatColors[p.seat] }}>{p.nickname}</span>
                 {/* 전체화면: 진영명+직업명을 진영색 칩으로 — 비숙련 관전자가 마을/외지/하수인/악마를 색+글자로 구분 */}
                 {fs && ch ? (
                   <span

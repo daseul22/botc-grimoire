@@ -34,6 +34,8 @@ export function PlayerGame({
   roomId,
   meId,
   members,
+  memberColors = {},
+  seatColors = {},
   initialNotes,
   request,
   nomination,
@@ -47,6 +49,10 @@ export function PlayerGame({
   roomId: string;
   meId: number;
   members: { userId: number; nickname: string }[];
+  /** userId → 색 id(채팅 닉네임 색). */
+  memberColors?: Record<number, string>;
+  /** seat → hex(보드 좌석 라벨 색). */
+  seatColors?: Record<number, string>;
   initialNotes: { seats: Record<number, SeatGuess>; memo: string };
   request: NightRequestView | null;
   nomination: NominationView | null;
@@ -219,7 +225,8 @@ export function PlayerGame({
                 )}
               </button>
               <span
-                className={`pointer-events-none max-w-[4.2rem] truncate text-[10px] ${isMe ? "font-semibold text-gold" : "text-text"}`}
+                className={`pointer-events-none max-w-[4.2rem] truncate text-[10px] ${isMe ? "font-semibold text-gold" : "font-medium text-text"}`}
+                style={isMe ? undefined : { color: seatColors[p.seat] }}
               >
                 {p.nickname}
                 {isMe ? " (나)" : ""}
@@ -307,7 +314,7 @@ export function PlayerGame({
         );
       })()}
 
-      <ChatWidget roomId={roomId} meId={meId} members={members} />
+      <ChatWidget roomId={roomId} meId={meId} members={members} memberColors={memberColors} />
 
       {/* 받은 정보·내 응답 기록 — 진행 요청과 분리해 다시 볼 수 있게. */}
       <button

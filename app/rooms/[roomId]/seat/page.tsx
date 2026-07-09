@@ -5,6 +5,7 @@ import { getRoom } from "@/lib/rooms";
 import { getPlayerNotes } from "@/lib/player-board";
 import { getActiveForSeat } from "@/lib/night-requests";
 import { getActive as getActiveNomination, listForDay, type Nomination } from "@/lib/nominations";
+import { colorHex } from "@/lib/player-colors";
 import { redactGameForSeat } from "@/lib/redact";
 import { characterMapForGame } from "@/lib/game-characters";
 import { PlayerGame } from "@/components/PlayerGame";
@@ -61,6 +62,14 @@ export default async function RoomSeatPage({
     canNominate = !nomination && !!meP && meP.status === "alive" && !iNominated;
   }
 
+  // 닉네임 구분 색: 채팅용 userId→색id, 보드 라벨용 seat→hex.
+  const memberColors = Object.fromEntries(room.members.map((m) => [m.userId, m.color]));
+  const seatColors = Object.fromEntries(
+    room.members
+      .filter((m) => m.seat != null)
+      .map((m) => [m.seat as number, colorHex(m.color, m.userId)]),
+  );
+
   return (
     <PlayerGame
       game={redacted}
@@ -70,6 +79,8 @@ export default async function RoomSeatPage({
       roomId={roomId}
       meId={user.id}
       members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
+      memberColors={memberColors}
+      seatColors={seatColors}
       initialNotes={notes}
       request={request}
       nomination={nomination}

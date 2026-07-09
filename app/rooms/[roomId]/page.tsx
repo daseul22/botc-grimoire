@@ -74,6 +74,7 @@ export default async function RoomPage({
           nickname: m.nickname,
           role: m.role,
           seat: m.seat,
+          color: m.color,
         })),
       }}
       meId={user.id}

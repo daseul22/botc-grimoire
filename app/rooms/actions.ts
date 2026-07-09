@@ -59,10 +59,12 @@ import {
   markRoomStarted,
   removeMember,
   setInviteStatus,
+  setMemberColor,
   setRoomConfig,
   touchMember,
   type Room,
 } from "@/lib/rooms";
+import { isPlayerColor } from "@/lib/player-colors";
 import { setGeneralMemo, setGuess, setSeatNote } from "@/lib/player-board";
 import { listMessages, postMessage, type ChatMessage } from "@/lib/chat";
 
@@ -151,6 +153,20 @@ export async function assignSeatAction(
   await requireRoomOwner(roomId);
   assignSeat(roomId, userId, seat);
   emitRoomUpdate(roomId);
+}
+
+/** 멤버 닉네임 구분 색 지정 — 방장(이야기꾼)만. 채팅·보드에서 플레이어 구분용. */
+export async function setMemberColorAction(
+  roomId: string,
+  userId: number,
+  colorId: string,
+): Promise<{ error: string } | { ok: true }> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!isPlayerColor(colorId)) return { error: "알 수 없는 색상입니다." };
+  setMemberColor(roomId, userId, colorId);
+  emitRoomUpdate(roomId);
+  if (room.gameId) emitGameUpdate(room.gameId);
+  return { ok: true };
 }
 
 export async function kickMemberAction(

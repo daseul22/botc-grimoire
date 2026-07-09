@@ -122,6 +122,21 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 - 한글 등 IME 조합 중 Enter는 무시(`e.nativeEvent.isComposing`) — 조합 확정 Enter가 전송까지 일으켜
   "안녕"이 두 번 가던 버그 방지.
 
+## 플레이어 닉네임 구분 색 — `lib/player-colors.ts`
+
+이야기꾼이 채팅·보드에서 플레이어를 색으로 구분하기 위한 장치(화면만 보고 누가 누군지 헷갈리는 문제).
+서로 잘 구분되는 **15색 팔레트**(색상환 + 갈색·회색, 어두운 배경 가독)를 `lib/player-colors.ts`(순수)에 두고
+`colorHex(id, fallbackKey)`로 해석한다(미지정이면 fallbackKey로 결정론 폴백 — 항상 어떤 색은 나옴).
+
+- **저장·배정**: 멤버 단위(`game_room_members.color`, 색 id). 방 입장(`createRoom`/`addMember`) 시
+  `pickUnusedColor`로 **방에서 안 쓴 색 중 랜덤**(distinct) 배정. 레거시(빈 값) 멤버는 표시 시 userId 기반 폴백.
+- **ST 수정**: `setMemberColorAction`(방장만) → `setMemberColor` + emit. 채팅 사이드바(크게 보기)의 멤버 옆
+  색 버튼 → 15색 스와치 팝오버로 변경. 낙관적 로컬 반영 + 저장 + `router.refresh`로 보드까지 동기화.
+- **적용**: 채팅은 `memberColors`(userId→id)로 메시지 라벨의 **발신자·수신자 이름 각각**과 대화 목록 아바타를 색칠
+  ([ChatWidget](../../components/ChatWidget.tsx)). 보드는 `seatColors`(seat→hex, 페이지가 `room.members`의 seat·color로 계산)로
+  좌석 닉네임 라벨을 색칠([PlayCanvas](../../components/PlayCanvas.tsx) ST 보드 · [PlayerGame](../../components/PlayerGame.tsx) 플레이어 보드).
+  LAN 게임은 룸이 없어 색 맵이 비고 → 기존 기본색(추가 부담 0).
+
 ## 밤 행동 요청/응답 프로토콜 — `lib/night-requests.ts`
 
 이야기꾼↔플레이어 실시간 핸드셰이크. 능력은 자동화하지 않고 ST가 좌석에 요청을 보내면 플레이어가
@@ -204,7 +219,8 @@ stateDiagram-v2
 - `lib/realtime.ts` 이벤트 버스(게임/룸 채널) · `lib/rooms.ts` 룸 데이터 레이어 ·
   `lib/role-assign.ts` 직업 배정(게임/룸 시작 공유) · `lib/redact.ts` 좌석 redaction ·
   `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/night-requests.ts` 밤 행동 요청 ·
-  `lib/nominations.ts` 낮 지목/투표(시계바늘 순차) · `lib/voting.ts` 정산 계산(LAN·온라인 공유).
+  `lib/nominations.ts` 낮 지목/투표(시계바늘 순차) · `lib/voting.ts` 정산 계산(LAN·온라인 공유) ·
+  `lib/player-colors.ts` 닉네임 구분 15색(채팅·보드).
 - `app/rooms/actions.ts` 룸 서버 액션 · `app/rooms/**` 룸/로비/입장/진행/자리 페이지.
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
   `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `NightHistoryList.tsx` ·

@@ -32,6 +32,7 @@ type LobbyMember = {
   nickname: string;
   role: "storyteller" | "player" | "spectator";
   seat: number | null;
+  color: string;
 };
 type LobbyRoom = {
   id: string;
@@ -93,6 +94,8 @@ export function Lobby({
         roomId={room.id}
         meId={meId}
         members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
+        memberColors={Object.fromEntries(room.members.map((m) => [m.userId, m.color]))}
+        canEditColors={isOwner}
       />
     </div>
   );

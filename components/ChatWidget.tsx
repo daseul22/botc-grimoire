@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getMessagesAction, sendChatAction } from "@/app/rooms/actions";
+import { useRouter } from "next/navigation";
+import { getMessagesAction, sendChatAction, setMemberColorAction } from "@/app/rooms/actions";
 import { useRoomStream } from "./useGameStream";
 import { Select } from "./Select";
 import { Modal } from "./Modal";
+import { colorHex, PLAYER_COLORS } from "@/lib/player-colors";
 
 // lib/chat의 ChatMessage와 동일 구조(클라가 서버 모듈을 import하지 않도록 로컬 정의).
 type ChatMessage = {
@@ -30,11 +32,18 @@ export function ChatWidget({
   roomId,
   meId,
   members = [],
+  memberColors = {},
+  canEditColors = false,
 }: {
   roomId: string;
   meId: number;
   members?: ChatMember[];
+  /** userId → 색 id(lib/player-colors). 닉네임 구분 색. */
+  memberColors?: Record<number, string>;
+  /** 이야기꾼이면 색 편집 가능. */
+  canEditColors?: boolean;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
@@ -45,6 +54,8 @@ export function ChatWidget({
   const [seen, setSeen] = useState<Record<number, number>>({}); // 스레드별 마지막으로 본 메시지 id
   const [seedId, setSeedId] = useState<number | null>(null); // 최초 로드 시점 최신 id(스레드 미읽음 기준선)
   const [showPaneMobile, setShowPaneMobile] = useState(false); // 모바일: 대화 pane 표시(목록 숨김)
+  const [colors, setColors] = useState<Record<number, string>>(memberColors); // userId → 색 id(ST 낙관 편집)
+  const [editingColorFor, setEditingColorFor] = useState<number | null>(null);
   const lastSeenId = useRef(0);
   const seeded = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -94,6 +105,17 @@ export function ChatWidget({
     ...others.map((m) => ({ value: m.userId, label: m.nickname })),
   ];
 
+  // 닉네임 구분 색. 지정 없으면 userId 기반 결정론 폴백.
+  const colorOf = (userId: number) => colorHex(colors[userId], userId);
+  // ST 색 편집 — 낙관적 로컬 반영 + 서버 저장, refresh로 보드까지 동기화.
+  const pickColor = (userId: number, colorId: string) => {
+    setColors((c) => ({ ...c, [userId]: colorId }));
+    setEditingColorFor(null);
+    void setMemberColorAction(roomId, userId, colorId)
+      .then(() => router.refresh())
+      .catch(() => {});
+  };
+
   // ── 스레드 그룹핑(클라) ── 전체=공개, 멤버 X 스레드=X가 발신 또는 수신인 귓말.
   // 플레이어는 자기가 당사자인 귓말만 보이므로 X 스레드=나↔X. 이야기꾼은 X가 낀 모든 귓말.
   const publicMsgs = msgs.filter((m) => m.recipientUserId == null);
@@ -128,21 +150,41 @@ export function ChatWidget({
     void sendChatAction(roomId, t, recipient === 0 ? null : recipient).then(load);
   };
 
+  // 이름 토큰 — 플레이어 색으로. 발신자/수신자 각각 자기 색이라 이야기꾼이 스캔하기 쉽다.
+  const nameEl = (userId: number, nickname: string) => (
+    <span style={{ color: colorOf(userId) }} className="font-semibold">{nickname}</span>
+  );
+
   // 메시지 한 줄. inThread=true면 스레드 뷰라 귓말 대상 라벨을 생략(발신자 이름만) — 깔끔하게.
   const renderMessage = (m: ChatMessage, inThread = false) => {
     const mine = m.userId === meId;
     const whisper = m.recipientUserId != null;
-    let label = "";
+    let labelEl: React.ReactNode = null;
     if (inThread) {
       if (!mine)
-        label =
-          whisper && m.recipientUserId !== meId ? `${m.nickname} → ${m.recipientNickname}` : m.nickname;
+        labelEl =
+          whisper && m.recipientUserId !== meId ? (
+            <>{nameEl(m.userId, m.nickname)} → {nameEl(m.recipientUserId!, m.recipientNickname)}</>
+          ) : (
+            nameEl(m.userId, m.nickname)
+          );
     } else if (whisper) {
-      if (mine) label = `귓말 → ${m.recipientNickname}`;
-      else if (m.recipientUserId === meId) label = `${m.nickname} 귓말`;
-      else label = `${m.nickname} → ${m.recipientNickname} 귓말`; // 이야기꾼이 보는 남의 귓말
+      if (mine) labelEl = <>귓말 → {nameEl(m.recipientUserId!, m.recipientNickname)}</>;
+      else if (m.recipientUserId === meId)
+        labelEl = (
+          <>
+            {nameEl(m.userId, m.nickname)} <span className="text-indigo-300">귓말</span>
+          </>
+        );
+      else
+        labelEl = (
+          <>
+            {nameEl(m.userId, m.nickname)} → {nameEl(m.recipientUserId!, m.recipientNickname)}{" "}
+            <span className="text-indigo-300">귓말</span>
+          </>
+        ); // 이야기꾼이 보는 남의 귓말
     } else if (!mine) {
-      label = m.nickname;
+      labelEl = nameEl(m.userId, m.nickname);
     }
     const bubbleCls = whisper
       ? "border border-indigo-400/40 bg-indigo-500/15 text-text"
@@ -151,9 +193,7 @@ export function ChatWidget({
         : "bg-surface-2 text-text";
     return (
       <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
-        {label && (
-          <span className={`mb-0.5 text-[11px] ${whisper ? "text-indigo-300" : "text-muted"}`}>{label}</span>
-        )}
+        {labelEl && <span className="mb-0.5 text-[11px] text-muted">{labelEl}</span>}
         <div className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-sm ${bubbleCls}`}>
           <span className="whitespace-pre-wrap break-words">{m.body}</span>
         </div>
@@ -244,41 +284,52 @@ export function ChatWidget({
     </>
   );
 
-  // ── 대화 목록 한 줄 ──
+  // ── 대화 목록 한 줄 ── (멤버는 플레이어 색으로 아바타·이름; ST는 우측 색 버튼으로 편집)
   const convoRow = (key: number, title: string, accent: boolean) => {
     const list = threadMsgs(key);
     const last = list.length ? list[list.length - 1] : null;
     const n = unreadOf(key, list);
     const active = key === activeThread;
+    const c = accent ? "#d4a23a" : colorOf(key);
     return (
-      <button
-        key={key}
-        type="button"
-        onClick={() => selectThread(key)}
-        className={`flex w-full items-center gap-2 border-b border-border/60 px-3 py-2 text-left transition-colors ${
-          active ? "bg-surface-2" : "hover:bg-surface-2/60"
-        }`}
-      >
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-          accent ? "bg-gold/20 text-gold" : "bg-indigo-500/20 text-indigo-200"
-        }`}>
-          {accent ? "전체" : title.slice(0, 2)}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center justify-between gap-1">
-            <span className="truncate text-sm font-medium">{title}</span>
-            {last && <span className="shrink-0 text-[10px] text-muted">{fmt(last.createdAt)}</span>}
+      <div key={key} className={`flex items-stretch border-b border-border/60 ${active ? "bg-surface-2" : ""}`}>
+        <button
+          type="button"
+          onClick={() => selectThread(key)}
+          className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left transition-colors ${active ? "" : "hover:bg-surface-2/60"}`}
+        >
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+            style={{ backgroundColor: `${c}2b`, color: c }}
+          >
+            {accent ? "전체" : title.slice(0, 2)}
           </span>
-          <span className="truncate text-xs text-muted">
-            {last ? `${last.userId === meId ? "나: " : ""}${last.body}` : accent ? "공개 대화" : "귓말 없음"}
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center justify-between gap-1">
+              <span className="truncate text-sm font-medium" style={accent ? undefined : { color: c }}>{title}</span>
+              {last && <span className="shrink-0 text-[10px] text-muted">{fmt(last.createdAt)}</span>}
+            </span>
+            <span className="truncate text-xs text-muted">
+              {last ? `${last.userId === meId ? "나: " : ""}${last.body}` : accent ? "공개 대화" : "귓말 없음"}
+            </span>
           </span>
-        </span>
-        {n > 0 && (
-          <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-bg">
-            {n > 99 ? "99+" : n}
-          </span>
+          {n > 0 && (
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-bg">
+              {n > 99 ? "99+" : n}
+            </span>
+          )}
+        </button>
+        {canEditColors && !accent && (
+          <button
+            type="button"
+            onClick={() => setEditingColorFor(key)}
+            title="닉네임 색 바꾸기"
+            className="flex shrink-0 items-center border-l border-border/60 px-2.5 text-muted hover:text-text"
+          >
+            <span className="h-4 w-4 rounded-full border border-white/25" style={{ backgroundColor: c }} />
+          </button>
         )}
-      </button>
+      </div>
     );
   };
 
@@ -380,6 +431,38 @@ export function ChatWidget({
       >
         {splitBody}
       </Modal>
+
+      {/* 닉네임 색 선택(이야기꾼) — 15색 스와치. */}
+      {editingColorFor != null && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setEditingColorFor(null)}
+        >
+          <div className="w-full max-w-xs rounded-2xl border border-border bg-surface p-4" onClick={(e) => e.stopPropagation()}>
+            <p className="mb-3 text-sm font-semibold">
+              <span style={{ color: colorOf(editingColorFor) }}>
+                {others.find((o) => o.userId === editingColorFor)?.nickname ?? "플레이어"}
+              </span>{" "}
+              · 닉네임 색
+            </p>
+            <div className="grid grid-cols-5 gap-2">
+              {PLAYER_COLORS.map((pc) => {
+                const cur = colors[editingColorFor!] === pc.id;
+                return (
+                  <button
+                    key={pc.id}
+                    type="button"
+                    title={pc.name}
+                    onClick={() => pickColor(editingColorFor!, pc.id)}
+                    className={`h-9 rounded-lg border-2 ${cur ? "border-white" : "border-transparent hover:border-white/40"}`}
+                    style={{ backgroundColor: pc.hex }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

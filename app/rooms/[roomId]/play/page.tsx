@@ -3,6 +3,7 @@ import { getGame, getGameOwner, getHistory, listKnownNicknames } from "@/lib/gam
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { getRoom } from "@/lib/rooms";
 import { characterMapForGame } from "@/lib/game-characters";
+import { colorHex } from "@/lib/player-colors";
 import { PlayCanvas } from "@/components/PlayCanvas";
 import { GameReplay } from "@/components/GameReplay";
 import { ChatWidget } from "@/components/ChatWidget";
@@ -39,12 +40,20 @@ export default async function RoomPlayPage({
   const canManage = !!user && (isAdmin(user) || (owner != null && owner === user.id));
   if (!canManage) redirect(user ? `/rooms/${roomId}/seat` : "/login");
 
+  // 좌석 라벨 색(이야기꾼이 지정한 닉네임 구분 색): seat → hex.
+  const seatColors = Object.fromEntries(
+    room.members
+      .filter((m) => m.seat != null)
+      .map((m) => [m.seat as number, colorHex(m.color, m.userId)]),
+  );
+
   return (
     <>
       <PlayCanvas
         game={game}
         sheetChars={sheetChars}
         knownNicknames={listKnownNicknames().map((k) => k.nickname)}
+        seatColors={seatColors}
       />
       <NightConsole game={game} sheetChars={sheetChars} roomId={roomId} />
       <DayConsole game={game} sheetChars={sheetChars} roomId={roomId} />
@@ -52,6 +61,8 @@ export default async function RoomPlayPage({
         roomId={roomId}
         meId={user.id}
         members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
+        memberColors={Object.fromEntries(room.members.map((m) => [m.userId, m.color]))}
+        canEditColors={canManage}
       />
     </>
   );

@@ -191,6 +191,8 @@ for (const sql of [
   // 귓말: 수신자(있으면 귓말). 발신자·수신자·이야기꾼만 열람.
   "ALTER TABLE game_messages ADD COLUMN recipient_user_id INTEGER",
   "ALTER TABLE game_messages ADD COLUMN recipient_nickname TEXT NOT NULL DEFAULT ''",
+  // 플레이어 닉네임 구분 색(이야기꾼 지정). ''=미지정(표시 시 userId로 폴백).
+  "ALTER TABLE game_room_members ADD COLUMN color TEXT NOT NULL DEFAULT ''",
 ]) {
   try {
     db.exec(sql);

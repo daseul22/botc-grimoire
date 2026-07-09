@@ -7,6 +7,7 @@
 // 이 모듈은 순수 데이터 CRUD만 — 직업 데이터/배정 로직에 의존하지 않는다.
 
 import { db, now } from "./games/schema";
+import { pickUnusedColor } from "./player-colors";
 
 export type RoomStatus = "lobby" | "started" | "closed";
 export type RoomMemberRole = "storyteller" | "player" | "spectator";
@@ -17,6 +18,8 @@ export type RoomMember = {
   role: RoomMemberRole;
   /** 배정 좌석. null = 미배정(관전/대기). */
   seat: number | null;
+  /** 닉네임 구분 색 id(lib/player-colors). ''=미지정. */
+  color: string;
   lastSeenAt: string;
 };
 
@@ -59,8 +62,20 @@ type MemberRow = {
   nickname: string;
   role: RoomMemberRole;
   seat: number | null;
+  color: string;
   last_seen_at: string;
 };
+
+/** 방에서 이미 쓰인 색 id들(distinct 배정용). */
+function usedColors(roomId: string): string[] {
+  return (
+    db.prepare("SELECT color FROM game_room_members WHERE room_id = ?").all(roomId) as {
+      color: string;
+    }[]
+  )
+    .map((r) => r.color)
+    .filter(Boolean);
+}
 
 // 혼동되는 글자(I,O,0,1) 제외한 입장 코드 알파벳.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -86,7 +101,7 @@ function readMembers(roomId: string): RoomMember[] {
   // 시작 시 좌석 재배치는 startRoomAction이 별도로 seat 기준 정렬하므로 영향 없음.
   const rows = db
     .prepare(
-      "SELECT user_id, nickname, role, seat, last_seen_at FROM game_room_members WHERE room_id = ? ORDER BY joined_at, user_id",
+      "SELECT user_id, nickname, role, seat, color, last_seen_at FROM game_room_members WHERE room_id = ? ORDER BY joined_at, user_id",
     )
     .all(roomId) as MemberRow[];
   return rows.map((r) => ({
@@ -94,6 +109,7 @@ function readMembers(roomId: string): RoomMember[] {
     nickname: r.nickname,
     role: r.role,
     seat: r.seat ?? null,
+    color: r.color ?? "",
     lastSeenAt: r.last_seen_at,
   }));
 }
@@ -131,9 +147,9 @@ export function createRoom(input: {
        VALUES (?,?,?,?,?,'lobby',NULL,NULL,?,?)`,
     ).run(id, code, input.ownerId, input.sheetId, input.sheetName, t, t);
     db.prepare(
-      `INSERT INTO game_room_members (room_id,user_id,nickname,role,seat,joined_at,last_seen_at)
-       VALUES (?,?,?,'storyteller',NULL,?,?)`,
-    ).run(id, input.ownerId, input.ownerNickname, t, t);
+      `INSERT INTO game_room_members (room_id,user_id,nickname,role,seat,color,joined_at,last_seen_at)
+       VALUES (?,?,?,'storyteller',NULL,?,?,?)`,
+    ).run(id, input.ownerId, input.ownerNickname, pickUnusedColor([]), t, t);
   })();
   return id;
 }
@@ -235,10 +251,20 @@ export function addMember(
     ).run(nickname, t, roomId, userId);
   } else {
     db.prepare(
-      `INSERT INTO game_room_members (room_id,user_id,nickname,role,seat,joined_at,last_seen_at)
-       VALUES (?,?,?,?,NULL,?,?)`,
-    ).run(roomId, userId, nickname, role, t, t);
+      `INSERT INTO game_room_members (room_id,user_id,nickname,role,seat,color,joined_at,last_seen_at)
+       VALUES (?,?,?,?,NULL,?,?,?)`,
+    ).run(roomId, userId, nickname, role, pickUnusedColor(usedColors(roomId)), t, t);
   }
+  touchRoom(roomId);
+}
+
+/** 멤버 닉네임 구분 색 지정(이야기꾼). colorId 유효성은 호출부에서 검증. */
+export function setMemberColor(roomId: string, userId: number, colorId: string): void {
+  db.prepare("UPDATE game_room_members SET color = ? WHERE room_id = ? AND user_id = ?").run(
+    colorId,
+    roomId,
+    userId,
+  );
   touchRoom(roomId);
 }
 
