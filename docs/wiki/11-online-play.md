@@ -171,12 +171,14 @@ stateDiagram-v2
   showcase가 뜨고 → **확인했습니다** → 행이 "✓ 플레이어 확인함".
 - **직접 선택 직업**(`playerPicks` — 철학자·도박꾼·세레노버스): **📲 직업 고르게 하기** → 폰에 직업/좌석 picker →
   제출 → 행에 선택 인라인 표시 → "이 선택으로 기록" → 보여주기.
-- **첫밤 특수 정보**(악마 블러핑·하수인 정보): 정보 노드에서 각 데몬/하수인 좌석에 개별 push.
+- **첫밤 정보**(하수인/악마): 정보 노드에서 수신자별 **한 화면 합본**을 push — 하수인은 "동료 하수인 + 악마",
+  악마는 "하수인 + 블러핑 3개"를 한 번에 받는다(1회 기상 = 화면 1개). 노드마다 수신자당 버튼 하나("정보 보내기")라
+  과거의 블러핑/하수인/악마 정보 개별 버튼 혼동이 없다. `resolveShowcase`의 `minion-info`/`demon-info` 모드 → `firstNightInfo` payload.
 
 핵심 — **단일 출처**:
 - [lib/showcase.ts](../../lib/showcase.ts) `resolveShowcase(game, seat, {as,variant,mode}, getTeam)` → `ShowcasePayload`
-  (discriminated: `standard`/`roleTokens`/`nameTokens`). **LAN show 페이지와 온라인 push가 같은 함수**로 "무엇을
-  드러낼지"를 계산해 두 경로가 갈라지지 않는다. show 페이지의 특수 모드(demon/bluffs/minions/lunatic-*)도 여기로 옮겼다.
+  (discriminated: `standard`/`roleTokens`/`nameTokens`/`firstNightInfo`). **LAN show 페이지와 온라인 push가 같은 함수**로
+  "무엇을 드러낼지"를 계산해 두 경로가 갈라지지 않는다. show 페이지의 특수 모드(demon/bluffs/minions/lunatic-*)도 여기로 옮겼다.
 - [components/ShowcasePayloadView.tsx](../../components/ShowcasePayloadView.tsx)가 payload를 그린다 — **LAN show
   페이지·온라인 `NightRequestPanel`·능력 미리보기가 같은 렌더러**(표준은 기존 `ShowcaseView` 재사용). 알 수 없는/
   레거시(구 InfoPayload) payload는 뷰·요약(`showcaseSummary`)이 방어적으로 폴백(막힌 화면 방지).
@@ -192,6 +194,9 @@ stateDiagram-v2
 - 온라인 컨텍스트: `PlayCanvas`가 `online={{roomId}}`면 `listNightRequestsAction`로 좌석별 요청을 조회(게임 SSE로 갱신)해
   `OnlineNightCtx`를 사이드바→[NightActionRow](../../components/NightActionRow.tsx)에 내려, 보여주기/직업목록을 push 버튼으로
   바꾸고 전송·응답·확인 상태를 행에 인라인 표시. `recordActionAction`(행동 기록)은 LAN과 공유.
+- **상태 뱃지**([RequestStatusBadge](../../components/RequestStatusBadge.tsx)): ST가 "내가 보냈는지"와 "플레이어가 확인했는지"를
+  색으로 구분 — 📤 전송함·확인 대기(amber) → ✅ 확인함(green). 선택 요청은 ⏳ 대기 → ↩ 응답 옴. 행·정보 노드 공용. 요청이 있으면
+  push 버튼은 "다시 보내기"로 바뀐다. 플레이어 확인(acknowledge)이 게임 SSE로 ST 뱃지를 green으로 갱신.
 - 플레이어 [components/NightRequestPanel.tsx](../../components/NightRequestPanel.tsx): delivered면 `ShowcasePayloadView`로
   1:1 렌더 + '확인했습니다', awaiting이면 좌석/직업 picker. **본인 좌석 요청만**(`getActiveForSeat`), respond/ack는
   `seatForUser===req.seat` 검사.
@@ -259,6 +264,7 @@ stateDiagram-v2
 - `app/rooms/actions.ts` 룸 서버 액션 · `app/rooms/**` 룸/로비/입장/진행/자리 페이지.
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
   `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightHistoryList.tsx` · `ShowcasePayloadView.tsx`(보여주기 렌더) ·
+  `RequestStatusBadge.tsx`(전송/확인 상태 뱃지) ·
   `DayVotePanel.tsx`(플레이어 투표) · `DayConsole.tsx`(ST 투표 콘솔) · `DayTimers.tsx`(플레이어 타이머) ·
   `useGameStream.ts` · `useAutoAdvance.ts`.
 - LAN·온라인 공유: `components/NightSidebar.tsx`/`DaySidebar.tsx`/`NightActionRow.tsx`(`online` 컨텍스트로 보여주기 push) ·

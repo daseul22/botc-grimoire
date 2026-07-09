@@ -5,6 +5,7 @@ import { MARKER_MAP } from "@/lib/markers";
 import { formatResult, INFO_KINDS, infoTargetWarn, markerForAction, showcaseVariants, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer, NightActionRecord, VoteRecord } from "@/lib/types";
 import { ActionFields } from "./ActionFields";
+import { RequestStatusBadge } from "./RequestStatusBadge";
 import type { NightRequestView } from "./NightRequestPanel";
 
 const short = (s: string) => (s.length > 7 ? s.slice(0, 6) + "…" : s);
@@ -182,21 +183,17 @@ export function NightActionRow({
       </div>
     ) : null;
 
-  // 온라인 전송/응답 상태(정보=전송·확인 / 선택=대기·응답→기록).
+  // 온라인 전송/응답 상태 — 색 뱃지로 "전송함·대기 / 확인함"을 구분. 선택 요청은 응답→기록 흐름.
   const onlineStatus = () => {
     if (!online || !req) return null;
-    if (req.kind === "info") {
-      return (
-        <span className={`text-[11px] ${req.status === "done" ? "text-green-400" : "text-gold"}`}>
-          {req.status === "done" ? "✓ 플레이어 확인함" : "📤 전송됨 · 확인 대기"}
-        </span>
-      );
-    }
+    // 보여주기(info): 전송함/확인함 뱃지만.
+    if (req.kind === "info") return <RequestStatusBadge req={req} />;
+    // 직업 고르게 하기(pick): 대기 뱃지+취소 / 응답 뱃지+선택+기록.
     if (req.status === "awaiting") {
       return (
-        <span className="flex items-center gap-1.5 text-[11px] text-muted">
-          플레이어 선택 대기 중…
-          <button type="button" onClick={() => online.cancelRequest(req.id)} className="hover:text-red-400">취소</button>
+        <span className="flex items-center gap-1.5">
+          <RequestStatusBadge req={req} />
+          <button type="button" onClick={() => online.cancelRequest(req.id)} className="text-[11px] text-muted hover:text-red-400">취소</button>
         </span>
       );
     }
@@ -205,7 +202,7 @@ export function NightActionRow({
       const role = req.playerChoice ? charMap[req.playerChoice]?.name.ko ?? req.playerChoice : "";
       return (
         <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="text-gold">플레이어 선택:</span>
+          <RequestStatusBadge req={req} />
           <span className="font-medium">{[nm, role].filter(Boolean).join(" / ") || "(빈 응답)"}</span>
           <button
             type="button"

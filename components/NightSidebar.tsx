@@ -9,6 +9,7 @@ import { ActionCardHeader, type HeaderTag } from "./ActionCardHeader";
 import type { Character, Game, GameActionRun, NightAction } from "@/lib/types";
 import { NightActionRow, type OnlineNightCtx } from "./NightActionRow";
 import { LunaticActionRow } from "./LunaticActionRow";
+import { RequestStatusBadge } from "./RequestStatusBadge";
 import {
   clearActionAction,
   recordActionAction,
@@ -135,23 +136,25 @@ export function NightSidebar({
                     <span className="text-xs text-muted">단계</span>
                   </div>
                   <p className="mt-1 break-words pl-6 text-xs text-muted">{node.reminder}</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5 pl-6">
+                  <div className="mt-1.5 flex flex-col gap-1.5 pl-6">
                     {isMinion ? (
                       online ? (
-                        // 온라인: 각 하수인 폰에 '악마가 누구인지'(mode=demon) push.
+                        // 온라인: 각 하수인 폰에 '동료 하수인 + 악마'를 한 화면으로 push(1회 기상).
                         game.players
-                          .filter((x) => charMap[x.characterId]?.team === "minion")
+                          .filter((x) => charMap[x.characterId]?.team === "minion" && x.characterId !== "marionette")
                           .map((m) => (
-                            <button
-                              key={m.seat}
-                              type="button"
-                              disabled={online.busy}
-                              onClick={() => online.pushShowcase(m.seat, m.characterId, { mode: "demon", toSeat: m.seat })}
-                              className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-0.5 text-xs disabled:opacity-50"
-                            >
+                            <div key={m.seat} className="flex flex-wrap items-center gap-1.5 text-xs">
                               <span className="text-muted">{m.nickname}</span>
-                              <span className="rounded bg-gold/15 px-1.5 py-0.5 text-gold">📲 악마 정보</span>
-                            </button>
+                              <button
+                                type="button"
+                                disabled={online.busy}
+                                onClick={() => online.pushShowcase(m.seat, m.characterId, { mode: "minion-info", toSeat: m.seat })}
+                                className="rounded bg-gold/15 px-2 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50"
+                              >
+                                📲 {online.requestBySeat.get(m.seat) ? "다시 보내기" : "정보 보내기"}
+                              </button>
+                              <RequestStatusBadge req={online.requestBySeat.get(m.seat)} />
+                            </div>
                           ))
                       ) : (
                         minionInfoSeat != null && (
@@ -159,27 +162,34 @@ export function NightSidebar({
                             href={`/play/${game.id}/show/${minionInfoSeat}?mode=demon`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-xs text-gold hover:bg-gold/25"
+                            className="inline-flex w-fit items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-xs text-gold hover:bg-gold/25"
                           >
                             보여주기
                           </a>
                         )
                       )
+                    ) : online ? (
+                      // 온라인: 각 악마 폰에 '하수인 + 블러핑'을 한 화면으로 push.
+                      demonSeats.map((d) => (
+                        <div key={d.seat} className="flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="text-muted">{d.nickname}</span>
+                          <button
+                            type="button"
+                            disabled={online.busy}
+                            onClick={() => online.pushShowcase(d.seat, d.characterId, { mode: "demon-info", toSeat: d.seat })}
+                            className="rounded bg-gold/15 px-2 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50"
+                          >
+                            📲 {online.requestBySeat.get(d.seat) ? "다시 보내기" : "정보 보내기"}
+                          </button>
+                          <RequestStatusBadge req={online.requestBySeat.get(d.seat)} />
+                        </div>
+                      ))
                     ) : (
                       demonSeats.map((d) => (
-                        <span key={d.seat} className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-0.5 text-xs">
+                        <span key={d.seat} className="inline-flex w-fit items-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-0.5 text-xs">
                           <span className="text-muted">{d.nickname}</span>
-                          {online ? (
-                            <>
-                              <button type="button" disabled={online.busy} onClick={() => online.pushShowcase(d.seat, d.characterId, { mode: "bluffs", toSeat: d.seat })} className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50">📲 블러핑</button>
-                              <button type="button" disabled={online.busy} onClick={() => online.pushShowcase(d.seat, d.characterId, { mode: "minions", toSeat: d.seat })} className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50">📲 하수인</button>
-                            </>
-                          ) : (
-                            <>
-                              <a href={`/play/${game.id}/show/${d.seat}?mode=bluffs`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">블러핑</a>
-                              <a href={`/play/${game.id}/show/${d.seat}?mode=minions`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">하수인</a>
-                            </>
-                          )}
+                          <a href={`/play/${game.id}/show/${d.seat}?mode=bluffs`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">블러핑</a>
+                          <a href={`/play/${game.id}/show/${d.seat}?mode=minions`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">하수인</a>
                         </span>
                       ))
                     )}

@@ -51,6 +51,13 @@ export type ShowcasePayload =
       subheading?: string;
       nameTokens: string[];
       emptyText: string;
+    }
+  | {
+      // 첫밤 정보 한 화면(수신자 1회 기상) — 여러 섹션(동료 하수인/악마/블러핑)을 함께 보여준다.
+      kind: "firstNightInfo";
+      forNickname: string;
+      sections: { label: string; kind: "names" | "roles"; items: string[] }[];
+      emptyText: string;
     };
 
 export type ResolveShowcaseOpts = {
@@ -103,6 +110,25 @@ export function resolveShowcase(
       nameTokens: names,
       emptyText: "악마가 지정되지 않았습니다.",
     };
+  }
+
+  // ─── 첫밤 정보(합본): 하수인 1명이 받는 화면 = 동료 하수인 + 악마 ───
+  if (mode === "minion-info") {
+    const minions = seatsShownAsMinions(game.players, getTeam).map((s) => nickOf(game, s));
+    const demons = seatsShownAsDemons(game.players, getTeam).map((s) => nickOf(game, s));
+    const sections: { label: string; kind: "names" | "roles"; items: string[] }[] = [];
+    if (minions.length) sections.push({ label: "동료 하수인", kind: "names", items: minions });
+    if (demons.length) sections.push({ label: "악마", kind: "names", items: demons });
+    return { kind: "firstNightInfo", forNickname: actor.nickname, sections, emptyText: "알려줄 정보가 없습니다." };
+  }
+
+  // ─── 첫밤 정보(합본): 악마가 받는 화면 = 하수인 + 블러핑 3개 ───
+  if (mode === "demon-info") {
+    const minions = seatsShownAsMinions(game.players, getTeam).map((s) => nickOf(game, s));
+    const sections: { label: string; kind: "names" | "roles"; items: string[] }[] = [];
+    if (minions.length) sections.push({ label: "하수인", kind: "names", items: minions });
+    if (game.bluffs.length) sections.push({ label: "블러핑 (내가 아닌 직업)", kind: "roles", items: game.bluffs });
+    return { kind: "firstNightInfo", forNickname: actor.nickname, sections, emptyText: "알려줄 정보가 없습니다." };
   }
 
   // ─── 특수 모드: 데몬/미치광이 첫밤 정보(블러핑 / 하수인) ───
@@ -186,6 +212,12 @@ export function showcaseSummary(
   if (p.kind === "roleTokens") return { heading: p.heading, roleTokens: p.roleTokens, nameTokens: [] };
   if (p.kind === "nameTokens")
     return { heading: p.heading, subheading: p.subheading, roleTokens: [], nameTokens: p.nameTokens };
+  if (p.kind === "firstNightInfo")
+    return {
+      heading: p.sections.map((s) => s.label).join(" · ") || "첫밤 정보",
+      roleTokens: p.sections.filter((s) => s.kind === "roles").flatMap((s) => s.items),
+      nameTokens: p.sections.filter((s) => s.kind === "names").flatMap((s) => s.items),
+    };
 
   // 레거시 페이로드(구 InfoPayload {heading, roleTokens, nameTokens}, kind 없음) 방어.
   const legacy = p as unknown as {

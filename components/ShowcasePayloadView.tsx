@@ -53,6 +53,29 @@ export function ShowcasePayloadView({
     );
   }
 
+  if (payload.kind === "firstNightInfo") {
+    // 첫밤 정보 합본 — 여러 섹션(동료 하수인 / 악마 / 블러핑)을 한 화면에.
+    return (
+      <>
+        <p className="text-center text-base text-muted">{payload.forNickname} 님께</p>
+        {payload.sections.length === 0 ? (
+          <p className="text-base text-muted">{payload.emptyText}</p>
+        ) : (
+          payload.sections.map((sec, i) => (
+            <div key={i} className="flex flex-col items-center gap-2">
+              <p className="text-sm font-semibold uppercase tracking-wide text-gold">{sec.label}</p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {sec.kind === "roles"
+                  ? sec.items.map((id) => <RoleTokenBig key={id} ch={getChar(id)} />)
+                  : sec.items.map((n, k) => <NameOnlyBig key={`${n}-${k}`} nickname={n} />)}
+              </div>
+            </div>
+          ))
+        )}
+      </>
+    );
+  }
+
   if (payload.kind === "standard") {
     // 표준 — 기존 ShowcaseView 재사용(능력 미리보기·LAN show와 동일 마크업).
     return (
