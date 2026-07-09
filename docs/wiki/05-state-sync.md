@@ -32,6 +32,12 @@ sequenceDiagram
 - **게임 복제**: `cloneGameAction`은 `cloneGame`으로 같은 셋업의 새 1일차 밤 게임을 만들고
   새 진행 화면으로 `redirect`.
 
+> **버튼 깜빡임 방지**: 로컬 서버 액션은 보통 수십 ms라 `disabled={pending}`을 직접 쓰면 그 사이 버튼이
+> 잠깐 흐려졌다 돌아오며 깜빡인다. 공용 [useDelayedFlag](../../components/useDelayedFlag.ts)로 pending을 140ms
+> 지연 반영해(빠른 액션은 시각 비활성 전환 자체를 건너뜀) 깜빡임을 없애고, 더블클릭은 `inFlight` ref로 동기
+> 차단한다. `PlayCanvas`·`DayVotePanel`·`DayConsole` 등 액션 버튼이 이 규약을 따른다. 또한 색 변경처럼
+> 화면만 갱신하면 되는 조작은 `router.refresh`(서버 재렌더=번쩍임) 대신 **낙관적 로컬 state**로 즉시 반영한다.
+
 > `setDisguiseAction`은 가짜 직업을 지정할 때 그 직업이 악마 블러핑(`game.bluffs`)에 있으면
 > 자동으로 빼낸다(누군가 자기 직업으로 믿는 직업은 인플레이처럼 취급).
 

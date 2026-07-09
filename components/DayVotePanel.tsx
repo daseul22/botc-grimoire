@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useBackClose } from "./useBackClose";
 import { useAutoAdvance } from "./useAutoAdvance";
+import { useDelayedFlag } from "./useDelayedFlag";
 import { castHandAction, nominateAction } from "@/app/rooms/actions";
 
 // lib/nominations의 Nomination과 동일 구조(클라가 서버 모듈 import 안 하도록 로컬 정의).
@@ -46,6 +47,8 @@ export function DayVotePanel({
   nominatedSeats: number[];
 }) {
   const [pending, startTransition] = useTransition();
+  const busy = useDelayedFlag(pending); // 깜빡임 제거: 빠른 액션은 disabled 시각 전환 생략
+  const inFlight = useRef(false); // 중복 제출 동기 차단(시각 disabled에 의존 안 함)
   const [pickerOpen, setPickerOpen] = useState(false);
   const [collapsedKey, setCollapsedKey] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -69,19 +72,32 @@ export function DayVotePanel({
   // 현재 투표자 클라가 자동 진행 백업(ST가 주 드라이버). 내 차례일 때만.
   useAutoAdvance(myTurn ? nomination : null, roomId);
 
-  const cast = (hand: 0 | 1) =>
+  const cast = (hand: 0 | 1) => {
+    if (inFlight.current || !nomination) return;
+    inFlight.current = true;
     startTransition(async () => {
-      if (!nomination) return;
-      const r = await castHandAction(roomId, nomination.id, hand);
-      if (r && "error" in r) setErr(r.error);
+      try {
+        const r = await castHandAction(roomId, nomination.id, hand);
+        if (r && "error" in r) setErr(r.error);
+      } finally {
+        inFlight.current = false;
+      }
     });
+  };
 
-  const nominate = (nomineeSeat: number) =>
+  const nominate = (nomineeSeat: number) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     startTransition(async () => {
-      const r = await nominateAction(roomId, nomineeSeat);
-      setPickerOpen(false);
-      if (r && "error" in r) setErr(r.error);
+      try {
+        const r = await nominateAction(roomId, nomineeSeat);
+        setPickerOpen(false);
+        if (r && "error" in r) setErr(r.error);
+      } finally {
+        inFlight.current = false;
+      }
     });
+  };
 
   // ── 지목 없음 ──
   if (!nomination || nomination.status === "committed" || nomination.status === "cancelled") {
@@ -101,7 +117,7 @@ export function DayVotePanel({
             excluded={[boundSeat, ...nominatedSeats]}
             onPick={nominate}
             onClose={() => setPickerOpen(false)}
-            pending={pending}
+            pending={busy}
           />
         )}
       </>
@@ -151,7 +167,7 @@ export function DayVotePanel({
             <button
               type="button"
               onClick={() => cast(1)}
-              disabled={pending || deadNoGhost}
+              disabled={busy || deadNoGhost}
               className={`flex-1 rounded-xl py-3 text-base font-bold disabled:opacity-40 ${
                 myHand === 1 ? "bg-gold text-bg" : "border border-gold/60 text-gold hover:bg-gold/10"
               }`}
@@ -161,7 +177,7 @@ export function DayVotePanel({
             <button
               type="button"
               onClick={() => cast(0)}
-              disabled={pending}
+              disabled={busy}
               className={`flex-1 rounded-xl py-3 text-base font-bold disabled:opacity-40 ${
                 myHand === 0 ? "bg-surface-2 text-text" : "border border-border text-muted hover:bg-surface-2"
               }`}

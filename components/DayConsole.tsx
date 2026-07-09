@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Character, Game } from "@/lib/types";
 import { useGameStream } from "./useGameStream";
 import { useAutoAdvance } from "./useAutoAdvance";
+import { useDelayedFlag } from "./useDelayedFlag";
 import { Select } from "./Select";
 import { computeTally } from "@/lib/voting";
 import type { NominationView } from "./DayVotePanel";
@@ -94,6 +95,8 @@ function DayPanel({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const busy = useDelayedFlag(pending); // 깜빡임 제거: 빠른 액션은 disabled 시각 전환 생략
+  const inFlight = useRef(false); // 중복 제출 동기 차단
   const [err, setErr] = useState("");
   const charMap = useMemo(
     () => Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>,
@@ -102,17 +105,24 @@ function DayPanel({
   const nameOf = (seat: number) => game.players.find((p) => p.seat === seat)?.nickname ?? `좌석 ${seat + 1}`;
   const tally = computeTally(game.players, game.votes, charMap);
 
-  const run = (fn: () => Promise<{ error: string } | unknown>, refresh = false) =>
+  const run = (fn: () => Promise<{ error: string } | unknown>, refresh = false) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     startTransition(async () => {
       setErr("");
-      const r = (await fn()) as { error?: string } | undefined;
-      if (r && "error" in r && r.error) {
-        setErr(r.error);
-        return;
+      try {
+        const r = (await fn()) as { error?: string } | undefined;
+        if (r && "error" in r && r.error) {
+          setErr(r.error);
+          return;
+        }
+        reload();
+        if (refresh) router.refresh(); // 처형 사망을 보드(PlayCanvas)에 반영
+      } finally {
+        inFlight.current = false;
       }
-      reload();
-      if (refresh) router.refresh(); // 처형 사망을 보드(PlayCanvas)에 반영
     });
+  };
 
   const upCount = nom ? nom.hands.filter((h) => h.hand === 1).length : 0;
   const curSeat = nom && nom.status === "voting" ? nom.order[nom.pointer] : undefined;
@@ -160,7 +170,7 @@ function DayPanel({
             game={game}
             usedNominators={new Set(game.votes.map((v) => v.nominator))}
             usedNominees={new Set(game.votes.map((v) => v.nominee))}
-            pending={pending}
+            pending={busy}
             onCreate={(nominator, nominee) =>
               run(() => openNominationOnBehalfAction(roomId, nominator, nominee))
             }
@@ -221,7 +231,7 @@ function DayPanel({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={busy}
                   onClick={() => run(() => startVoteAction(roomId, nom.id))}
                   className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-bg disabled:opacity-40"
                 >
@@ -240,16 +250,16 @@ function DayPanel({
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={busy}
                   onClick={() => run(() => advanceNominationAction(roomId, nom.id, nom.step))}
                   className="rounded-lg bg-gold px-2.5 py-1.5 text-sm font-semibold text-bg disabled:opacity-40"
                 >
                   ⏭ 다음
                 </button>
                 {nom.paused ? (
-                  <button type="button" disabled={pending} onClick={() => run(() => resumeNominationAction(roomId, nom.id))} className="rounded-lg border border-border px-2.5 py-1.5 text-xs hover:text-text">▶ 재개</button>
+                  <button type="button" disabled={busy} onClick={() => run(() => resumeNominationAction(roomId, nom.id))} className="rounded-lg border border-border px-2.5 py-1.5 text-xs hover:text-text">▶ 재개</button>
                 ) : (
-                  <button type="button" disabled={pending} onClick={() => run(() => pauseNominationAction(roomId, nom.id))} className="rounded-lg border border-border px-2.5 py-1.5 text-xs hover:text-text">⏸ 일시정지</button>
+                  <button type="button" disabled={busy} onClick={() => run(() => pauseNominationAction(roomId, nom.id))} className="rounded-lg border border-border px-2.5 py-1.5 text-xs hover:text-text">⏸ 일시정지</button>
                 )}
                 <Select
                   value={nom.perSeatSec}
@@ -270,7 +280,7 @@ function DayPanel({
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
-                    disabled={pending}
+                    disabled={busy}
                     onClick={() => {
                       if (confirm(`${nameOf(nom.nominee)}을(를) 처형할까요? (좌석이 사망 처리됩니다)`))
                         run(() => commitNominationAction(roomId, nom.id, true), true);
@@ -281,7 +291,7 @@ function DayPanel({
                   </button>
                   <button
                     type="button"
-                    disabled={pending}
+                    disabled={busy}
                     onClick={() => run(() => commitNominationAction(roomId, nom.id, false), true)}
                     className="rounded-lg border border-border px-3 py-1.5 text-sm hover:text-text disabled:opacity-40"
                   >
@@ -293,7 +303,7 @@ function DayPanel({
 
             <button
               type="button"
-              disabled={pending}
+              disabled={busy}
               onClick={() => {
                 if (confirm("이 지목을 취소할까요?")) run(() => cancelNominationAction(roomId, nom.id));
               }}

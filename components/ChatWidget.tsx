@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { getMessagesAction, sendChatAction, setMemberColorAction } from "@/app/rooms/actions";
 import { useRoomStream } from "./useGameStream";
 import { Select } from "./Select";
@@ -46,7 +45,6 @@ export function ChatWidget({
   /** 밤 등 대화 금지 상태 — 읽기는 되지만 전송 불가. */
   locked?: boolean;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
@@ -111,13 +109,12 @@ export function ChatWidget({
 
   // 닉네임 구분 색. 지정 없으면 userId 기반 결정론 폴백.
   const colorOf = (userId: number) => colorHex(colors[userId], userId);
-  // ST 색 편집 — 낙관적 로컬 반영 + 서버 저장, refresh로 보드까지 동기화.
+  // ST 색 편집 — 낙관적 로컬 반영 + 서버 저장. 채팅은 즉시 갱신, 보드 라벨은 다음 갱신 때 반영.
+  // (여기서 router.refresh를 부르면 보드 전체가 재렌더돼 번쩍임 → 생략.)
   const pickColor = (userId: number, colorId: string) => {
     setColors((c) => ({ ...c, [userId]: colorId }));
     setEditingColorFor(null);
-    void setMemberColorAction(roomId, userId, colorId)
-      .then(() => router.refresh())
-      .catch(() => {});
+    void setMemberColorAction(roomId, userId, colorId).catch(() => {});
   };
 
   // ── 스레드 그룹핑(클라) ── 전체=공개, 멤버 X 스레드=X가 발신 또는 수신인 귓말.
