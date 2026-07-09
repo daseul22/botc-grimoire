@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getRoom } from "@/lib/rooms";
 import { getPlayerNotes } from "@/lib/player-board";
 import { getActiveForSeat } from "@/lib/night-requests";
+import { getActive as getActiveNomination, listForDay, type Nomination } from "@/lib/nominations";
 import { redactGameForSeat } from "@/lib/redact";
 import { characterMapForGame } from "@/lib/game-characters";
 import { PlayerGame } from "@/components/PlayerGame";
@@ -47,6 +48,19 @@ export default async function RoomSeatPage({
   const notes = getPlayerNotes(room.gameId, user.id);
   const request = getActiveForSeat(room.gameId, boundSeat) ?? null;
 
+  // 낮 지목/투표(공개 정보) — 낮에만. redaction 대상 아님(누가 손 들었는지 전원 공개).
+  let nomination: Nomination | null = null;
+  let canNominate = false;
+  let nominatedSeats: number[] = [];
+  if (game.phase === "day" && game.status !== "finished") {
+    nomination = getActiveNomination(room.gameId, game.day) ?? null;
+    const today = listForDay(room.gameId, game.day);
+    nominatedSeats = today.map((n) => n.nominee);
+    const meP = game.players.find((p) => p.seat === boundSeat);
+    const iNominated = today.some((n) => n.nominator === boundSeat);
+    canNominate = !nomination && !!meP && meP.status === "alive" && !iNominated;
+  }
+
   return (
     <PlayerGame
       game={redacted}
@@ -58,6 +72,9 @@ export default async function RoomSeatPage({
       members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
       initialNotes={notes}
       request={request}
+      nomination={nomination}
+      canNominate={canNominate}
+      nominatedSeats={nominatedSeats}
     />
   );
 }

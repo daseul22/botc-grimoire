@@ -10,6 +10,7 @@ import { useBackClose } from "./useBackClose";
 import { ChatWidget } from "./ChatWidget";
 import { NightRequestPanel, type NightRequestView } from "./NightRequestPanel";
 import { NightHistoryList } from "./NightHistoryList";
+import { DayVotePanel, type NominationView } from "./DayVotePanel";
 import { Modal } from "./Modal";
 import { getMyRequestHistoryAction } from "@/app/rooms/actions";
 import {
@@ -35,6 +36,9 @@ export function PlayerGame({
   members,
   initialNotes,
   request,
+  nomination,
+  canNominate,
+  nominatedSeats,
 }: {
   game: Game;
   sheetChars: Character[];
@@ -45,6 +49,9 @@ export function PlayerGame({
   members: { userId: number; nickname: string }[];
   initialNotes: { seats: Record<number, SeatGuess>; memo: string };
   request: NightRequestView | null;
+  nomination: NominationView | null;
+  canNominate: boolean;
+  nominatedSeats: number[];
 }) {
   const router = useRouter();
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;
@@ -328,6 +335,19 @@ export function PlayerGame({
           roomId={roomId}
           charMap={charMap}
           players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
+        />
+      )}
+
+      {/* 낮 지목·투표(시계바늘 순차) — 낮에만. 내 차례엔 강제 모달, 그 외엔 하단 배너. */}
+      {game.phase === "day" && me && (
+        <DayVotePanel
+          nomination={nomination}
+          roomId={roomId}
+          boundSeat={boundSeat}
+          players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
+          me={{ status: me.status, ghostVoteUsed: me.ghostVoteUsed }}
+          canNominate={canNominate}
+          nominatedSeats={nominatedSeats}
         />
       )}
     </div>

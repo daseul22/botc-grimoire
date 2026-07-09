@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Character, Game, VoteRecord } from "@/lib/types";
 import { PlayerPicker } from "./PlayerPicker";
+import { computeTally, type CutoffInfo } from "@/lib/voting";
 
 const DEATH_GLYPH: Record<string, string> = { execution: "☠️", night: "🌙", other: "✕", "": "✕" };
 const DEATH_TITLE: Record<string, string> = {
@@ -11,9 +12,6 @@ const DEATH_TITLE: Record<string, string> = {
   other: "기타 사망",
   "": "사망",
 };
-
-/** 지목 대상의 커트라인 정보. 여행자는 처형이 아니라 '추방'(생존 과반 초과)이라 기준이 다르다. */
-type CutoffInfo = { value: number; word: string; tip: string };
 
 function Chevron() {
   return (
@@ -104,37 +102,24 @@ export function VotesSidebar({
   const [editNominee, setEditNominee] = useState<number | null>(null);
   const nameOf = (seat: number) => game.players.find((p) => p.seat === seat)?.nickname ?? `${seat}`;
   const dead = game.players.filter((p) => p.status === "dead");
-  const ghostLeft = dead.filter((p) => !p.ghostVoteUsed).length;
-
-  // ── 투표 정산 도우미 ──
-  // 처형으로 죽은 좌석은 그 낮 '투표 당시' 인원이므로 생존 수에 도로 포함 — 처형 후 커트라인이 흔들리지 않게.
-  const executedSeats = new Set(game.votes.filter((v) => v.executed).map((v) => v.nominee));
-  const aliveCount = game.players.filter((p) => p.status !== "dead" || executedSeats.has(p.seat)).length;
-  const travellerCount = game.players.filter(
-    (p) => (p.status !== "dead" || executedSeats.has(p.seat)) && charMap[p.characterId]?.team === "traveller",
-  ).length;
-  // 처형 커트라인: 생존자 과반(절반 이상, 올림). 8명→4, 7명→4. 여행자도 생존이면 투표권이 있어 포함.
-  const executionCutoff = Math.ceil(aliveCount / 2);
-  // 여행자 추방 커트라인: 생존자 과반 '초과'(절반보다 많이) = floor/2+1. 짝수일 때 처형보다 1표 높다(8명→5).
-  const exileCutoff = Math.floor(aliveCount / 2) + 1;
-  const isTraveller = (seat: number) => charMap[game.players.find((p) => p.seat === seat)?.characterId ?? ""]?.team === "traveller";
-  const cutoffInfo = (nomineeSeat: number | ""): CutoffInfo =>
-    nomineeSeat !== "" && isTraveller(nomineeSeat)
-      ? { value: exileCutoff, word: "추방", tip: `여행자 추방선 ${exileCutoff}표 충족` }
-      : { value: executionCutoff, word: "과반", tip: `생존 과반 ${executionCutoff}표 충족 — 단독 최다일 때만 처형` };
-
-  // 오늘 최다 득표 + 동률 여부. 동률(2명 이상 최다)이면 룰상 아무도 처형되지 않는다.
-  const highestVotes = game.votes.reduce((m, v) => Math.max(m, v.votes), 0);
-  const topNoms = highestVotes > 0 ? game.votes.filter((v) => v.votes === highestVotes) : [];
-  const isTie = topNoms.length >= 2;
-  const tieBlocks = isTie && topNoms.some((v) => v.votes >= cutoffInfo(v.nominee).value); // 커트라인 충족 동률 → 처형 무산
-  const leaderSeat = topNoms[0]?.nominee;
-
-  // 다음 지목이 모을 수 있는 최대표 = 생존 전원(매 지목마다 다시 투표) + 남은 유령표.
-  const maxFutureVotes = aliveCount + ghostLeft;
-  const canExceed = maxFutureVotes > highestVotes; // 넘겨 새 처형 가능
-  const canTieOnly = !canExceed && maxFutureVotes === highestVotes && highestVotes > 0; // 동률로 처형만 무산 가능
-  const hasExecuted = game.votes.some((v) => v.executed); // 처형 확정 → 보통 이 낮 지목 종료
+  // 정산 계산은 lib/voting의 순수 함수로(온라인 DayConsole과 규칙 공유). 처형으로 죽은 좌석은
+  // 그 낮 '투표 당시' 인원이라 생존 수에 도로 포함 — 처형 후 커트라인이 흔들리지 않게.
+  const {
+    aliveCount,
+    travellerCount,
+    ghostLeft,
+    executionCutoff,
+    highestVotes,
+    topCount,
+    isTie,
+    tieBlocks,
+    leaderSeat,
+    maxFutureVotes,
+    canExceed,
+    canTieOnly,
+    hasExecuted,
+    cutoffInfo,
+  } = computeTally(game.players, game.votes, charMap);
 
   return (
     <aside className="flex w-full shrink-0 flex-col md:h-[70vh] md:w-72 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-surface">
@@ -188,7 +173,7 @@ export function VotesSidebar({
                   <span className="shrink-0 text-muted">현재 최다</span>
                   {isTie ? (
                     <span className={`min-w-0 truncate text-right font-semibold tabular-nums ${tieBlocks ? "text-amber-300" : "text-text"}`}>
-                      동률 {topNoms.length}명 · {highestVotes}표{tieBlocks ? " · 처형 없음" : ""}
+                      동률 {topCount}명 · {highestVotes}표{tieBlocks ? " · 처형 없음" : ""}
                     </span>
                   ) : (
                     <span className="min-w-0 truncate text-right font-semibold tabular-nums">

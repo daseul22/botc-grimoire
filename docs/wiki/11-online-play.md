@@ -140,6 +140,48 @@ stateDiagram-v2
   공용 `components/NightHistoryList.tsx`로 요청·응답·전달 정보를 최근순 표시. NightConsole은 **진행/기록 탭**으로
   분리(요청이 쌓여도 새 정보와 안 섞임), 플레이어는 '기록' 버튼+모달로 받은 정보를 다시 본다.
 
+## 낮 지목·투표 (시계바늘 순차) — `lib/nominations.ts`
+
+낮의 지목→공개 투표→처형. 밤 행동이 좌석 단위 핸드셰이크라면, 이건 **게임 단위 순차 스윕**이다.
+핵심은 **2층 구조**다.
+
+- **라이브 레이어**(신규, 임시·per-day): 지목과 시계바늘 투표가 진행되는 동안의 상태(`game_nominations` +
+  `game_nomination_hands`). 투표는 **공개 정보**라 redaction 대상이 아니다 — 누가 손을 들었는지 전원에게 보인다.
+- **committed 레이어**(기존 불변): ST가 스윕 종료 후 정산하면 라이브 찬성표를 기존 `recordVote`로 `VoteRecord`에
+  확정한다. 복기·언더테이커·식인귀는 이 committed만 본다 → 기존 로직 무변경.
+
+```mermaid
+stateDiagram-v2
+  [*] --> pending: 지목(플레이어 직접 / ST 대행)
+  pending --> voting: ST 투표 시작
+  voting --> voting: 좌석별 손 들기/내리기 → 다음(수동 ▶ 또는 타이머 자동)
+  voting --> tallied: 마지막 좌석(지명자) 통과
+  tallied --> committed: ST 정산(처형 / 정산만) → VoteRecord
+  pending --> cancelled: 취소
+  voting --> cancelled
+```
+
+- **순서**: 지명자 **다음 좌석부터 시계방향**(좌석 인덱스 순환), 마지막이 지명자 본인. 좌석 인덱스가 곧
+  시계방향이다([seat-layout.ts](../../lib/seat-layout.ts) `circlePositions`). 투표 불가 좌석(죽었고 유령표 없음)은 스킵.
+- **지목 주체**: 플레이어가 자기 화면에서 직접(`nominateAction`) **또는** ST 대행(`openNominationOnBehalfAction`).
+  하루 1회·생존자만·활성 지목 1개 제한은 **서버에서 강제**(LAN VotesSidebar는 클라만 검사 — 온라인은 신뢰 불가라 필수).
+- **자기 차례에만 손**: `castHandAction`은 `seatForUser===nomination.order[pointer]`인 좌석만 허용(밤요청
+  `seatForUser===req.seat`과 동형). 죽은 좌석은 `ghostVoteUsed`가 남아있을 때만 up.
+- **진행(advance)**: `pointer`를 다음으로 옮기며 현재 좌석 손을 확정한다. **`step` CAS**로 중복 호출을 무해화
+  (자동 타이머와 수동이 겹쳐도 안전). 유령표 up이 확정되면 그 좌석의 `game_players.ghost_vote_used`를 소모한다.
+- **페이싱**: 기본 ST 수동(`▶다음`). `per_seat_sec>0`이면 좌석당 카운트다운 + 만료 시 자동 advance —
+  [useAutoAdvance](../../components/useAutoAdvance.ts)를 **ST 클라(주)·현재 투표자 클라(보조)**가 돌린다(CAS로 중복 무해).
+- **정산**: `commitNominationAction`이 `countUp`→`recordVote({nominator,nominee,votes,executed})` + executed면
+  `setStatus(nominee,'dead','execution')`(=LAN `recordVoteAction` 본체 재사용) + `captureUndo`. 처형 사망을
+  ST 보드(PlayCanvas)에 반영하려 DayConsole이 정산 뒤 `router.refresh`.
+- **정산 규칙 공유**: 처형선(생존 과반)·최다·동률 계산은 [lib/voting.ts](../../lib/voting.ts) `computeTally`로 추출해
+  LAN `VotesSidebar`와 온라인 `DayConsole`이 함께 쓴다(규칙 분기 방지).
+- **UI**: 플레이어 [components/DayVotePanel.tsx](../../components/DayVotePanel.tsx)(내 차례=강제 모달 손들기/내리기+카운트다운,
+  남의 차례=하단 배너 관전, 지목 가능하면 "지목하기"), ST [components/DayConsole.tsx](../../components/DayConsole.tsx)(플로팅 —
+  대행 지목·시작/일시정지/다음/속도/취소·정산/처형). 활성 지목은 게임 SSE로 refetch(액션 기반, PlayCanvas 낙관 상태 보존).
+- **phase 게이팅**: 지목/투표/정산 모두 `phase==='day'`에서만. `getActive`는 `day===game.day`만(오래된 지목 격리),
+  새 지목 생성 시 이전 낮의 미커밋 지목을 `cancelStale`로 정리. 밤 전환 시 플레이어 패널은 자동 소멸.
+
 ## 공통 모달 — `components/Modal.tsx`
 
 가운데 모달은 **백드롭 클릭·Esc·모바일 뒤로가기(`useBackClose`)**로 일관되게 닫힌다(내부 패널은
@@ -151,10 +193,12 @@ stateDiagram-v2
 
 - `lib/realtime.ts` 이벤트 버스(게임/룸 채널) · `lib/rooms.ts` 룸 데이터 레이어 ·
   `lib/role-assign.ts` 직업 배정(게임/룸 시작 공유) · `lib/redact.ts` 좌석 redaction ·
-  `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/night-requests.ts` 밤 행동 요청.
+  `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/night-requests.ts` 밤 행동 요청 ·
+  `lib/nominations.ts` 낮 지목/투표(시계바늘 순차) · `lib/voting.ts` 정산 계산(LAN·온라인 공유).
 - `app/rooms/actions.ts` 룸 서버 액션 · `app/rooms/**` 룸/로비/입장/진행/자리 페이지.
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
-  `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `NightHistoryList.tsx` · `useGameStream.ts`.
+  `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `NightHistoryList.tsx` ·
+  `DayVotePanel.tsx`(플레이어 투표) · `DayConsole.tsx`(ST 투표 콘솔) · `useGameStream.ts` · `useAutoAdvance.ts`.
 - 공통 UI: `components/Select.tsx`(드롭다운, native `<select>` 대체) · `components/Modal.tsx`(가운데 모달 일관 닫기) ·
   `components/RoomRedirect.tsx`(클라이언트 라우트 교체) ·
   `PlayerPicker`/`RolePickerModal`(좌석·직업 토큰 picker). 네이티브 폼 요소를 앱 톤으로 대체하는 공통 컴포넌트들.
@@ -177,10 +221,11 @@ stateDiagram-v2
 
 ## 다듬을 거리
 
-- ST 콘솔 정보 작성 프리셋(직업별 ActionSpec 자동),
-  이야기꾼 보드 SSE 구독(플레이어발 변경 즉시 반영 — 현재는 콘솔/위젯만 구독).
-- 이야기꾼 보드(PlayCanvas)는 아직 SSE 미구독 — 플레이어발 변경을 ST가 봐야 하는 요청/응답 단계에서
-  `getGameAction` refetch+`setGame`을 붙인다.
+- ST 콘솔 정보 작성 프리셋([lib/action-suggest.ts](../../lib/action-suggest.ts) 직업별 자동 추천을 InfoComposer에 연결).
+- 이야기꾼 보드(PlayCanvas)는 아직 SSE **직접** 미구독 — 밤 `NightConsole`·낮 `DayConsole`은 게임 SSE로 자기
+  데이터를 refetch하고, 낮 처형 정산 뒤 `DayConsole`이 `router.refresh`로 보드에 사망을 반영한다. 그 외
+  플레이어발 변경(예: 투표 진행)을 PlayCanvas 토큰에 즉시 반영하려면 `getGameAction` refetch+`setGame`을 붙인다.
+- 낮 투표 후속: 여행자 추방(exile) 별도 UI, 투표 로그의 복기 타임라인 통합, 낮 토론 타이머(PhaseTimers) 연동.
 
 ---
 [← 인증·인가](10-auth.md) · [홈](README.md)

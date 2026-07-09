@@ -138,6 +138,33 @@ CREATE TABLE IF NOT EXISTS game_night_requests (
   updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_night_requests_game ON game_night_requests(game_id, seat);
+-- 낮 지목·투표(온라인, 시계바늘 순차). committed VoteRecord(game_phases.votes)와 별개인 라이브 레이어.
+-- status: pending(시작 전) → voting(스윕 중) → tallied(집계 완료) → committed(VoteRecord로 확정) / cancelled.
+CREATE TABLE IF NOT EXISTS game_nominations (
+  id TEXT PRIMARY KEY,
+  game_id TEXT NOT NULL,
+  day INTEGER NOT NULL,                     -- 소속 낮(day 번호가 각 낮을 유일 식별 → 오래된 지목 격리)
+  nominator_seat INTEGER NOT NULL,
+  nominee_seat INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  order_json TEXT NOT NULL DEFAULT '[]',    -- 투표 순서 좌석 배열(지명자 다음부터 시계방향, 마지막이 지명자)
+  pointer INTEGER NOT NULL DEFAULT -1,      -- order_json 인덱스(현재 투표 좌석). -1=시작 전
+  step INTEGER NOT NULL DEFAULT 0,          -- advance CAS 가드(단조 증가) — 중복 자동 advance 무해화
+  per_seat_sec INTEGER NOT NULL DEFAULT 0,  -- 좌석당 제한시간. 0=수동(ST가 ▶다음)
+  turn_started_at TEXT,                     -- 현재 턴 시작 ISO(일시정지/비투표 시 null)
+  paused INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_nominations_game ON game_nominations(game_id, day);
+-- 각 좌석의 손(공개 정보). nomination별 좌석당 1행 — JSON blob 대신 행 단위로 동시 쓰기 레이스 방지.
+CREATE TABLE IF NOT EXISTS game_nomination_hands (
+  nomination_id TEXT NOT NULL,
+  voter_seat INTEGER NOT NULL,
+  hand INTEGER NOT NULL DEFAULT 0,          -- 0 down / 1 up
+  is_ghost INTEGER NOT NULL DEFAULT 0,      -- 죽은 좌석이 유령표를 소모하며 든 손
+  PRIMARY KEY (nomination_id, voter_seat)
+);
 `);
 // 구버전 db 컬럼 보강 (idempotent)
 for (const sql of [

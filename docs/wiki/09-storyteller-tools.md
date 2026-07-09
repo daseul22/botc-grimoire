@@ -235,8 +235,14 @@ heading/subheading에 placeholder(`{role}{actor}{target}{count}{yn}{team}{result
   나열하고, 남은 유령표 수(`ghostLeft/dead`)를 표시한다. 각 행을 탭하면 `onToggleGhostVote`로
   유령표 사용/복구를 토글(금색 = 사용 가능, 흐림 = 사용함). 투표 정산 중 누가 죽었고 데드보트가
   몇 개 남았는지 한눈에 본다.
+- **투표 정산 도우미**: 처형 커트라인(생존 과반)·여행자 추방선·현재 최다·동률·다음 지목으로 뒤집을 수 있는지를
+  계산해 각 지목 카드와 상단에 표시. 이 계산은 [lib/voting.ts](../../lib/voting.ts) `computeTally`로 추출돼
+  **온라인 낮 투표([DayConsole](../../components/DayConsole.tsx))와 규칙을 공유**한다(분기 방지). 처형은 조건 충족
+  시에도 '아무 일도 안 일어나는' 능력이 있어 ST가 명시적으로 눌러야 한다.
 - **플레이어 선택**: 지목자·대상 선택은 native `<select>` 대신 [PlayerPicker](../../components/PlayerPicker.tsx)
   (트리거 버튼 + 토큰 그리드 portal 모달 — 닉네임·좌석번호·사망 여부를 큰 칸으로). 모바일에서 고르기 쉽다.
+- **온라인 낮 투표**: 온라인 방에서는 플레이어가 자기 화면에서 직접 지목·투표하는 시계바늘 순차 방식이 별도로 있다
+  → deep wiki [11 · 온라인 플레이](11-online-play.md)의 "낮 지목·투표". LAN VotesSidebar는 ST가 집계 수를 직접 입력하는 경로로 유지.
 
 ## 첫밤 셋업 — [FirstNightSetup](../../components/FirstNightSetup.tsx)
 

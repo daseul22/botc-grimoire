@@ -9,7 +9,24 @@ import {
   userIdByNickname,
   type AuthUser,
 } from "@/lib/auth";
-import { createGame, getGame, seatForUser } from "@/lib/games";
+import { captureUndo, createGame, getGame, recordVote, seatForUser, setStatus } from "@/lib/games";
+import {
+  advance,
+  cancel as cancelNomination,
+  cancelStale,
+  countUp,
+  getActive as getActiveNomination,
+  getById as getNomination,
+  listForDay,
+  markCommitted,
+  openNomination,
+  pause as pauseNomination,
+  resume as resumeNomination,
+  setHand,
+  setPace,
+  startVote,
+  type Nomination,
+} from "@/lib/nominations";
 import {
   acknowledge,
   cancelRequest,
@@ -419,4 +436,187 @@ export async function getMyRequestHistoryAction(roomId: string): Promise<NightRe
   const seat = seatForUser(room.gameId, user.id);
   if (seat == null) return [];
   return listAllForSeat(room.gameId, seat);
+}
+
+// ── 낮 지목·투표(시계바늘 순차) ──
+
+/**
+ * 지목 생성 공통 — 지명자/피지명자 좌석 검증 + 하루 한도(각 1회) + 활성 지목 1개 제한.
+ * 라이브 레이어만 만든다(committed VoteRecord는 정산 시). 투표는 공개라 redaction 없음.
+ */
+function doOpenNomination(
+  gameId: string,
+  nominator: number,
+  nominee: number,
+): { error: string } | { id: string } {
+  const game = getGame(gameId);
+  if (!game) return { error: "게임을 찾을 수 없습니다." };
+  if (game.status === "finished") return { error: "종료된 게임입니다." };
+  if (game.phase !== "day") return { error: "낮에만 지목할 수 있습니다." };
+  if (nominator === nominee) return { error: "자기 자신은 지목할 수 없습니다." };
+  const by = game.players.find((p) => p.seat === nominator);
+  const target = game.players.find((p) => p.seat === nominee);
+  if (!by || !target) return { error: "좌석을 찾을 수 없습니다." };
+  if (by.status !== "alive") return { error: "죽은 플레이어는 지목할 수 없습니다." };
+  if (getActiveNomination(gameId, game.day)) return { error: "이미 진행 중인 지목이 있습니다." };
+  const today = listForDay(gameId, game.day);
+  if (today.some((n) => n.nominator === nominator)) return { error: "이미 지목했습니다(하루 1회)." };
+  if (today.some((n) => n.nominee === nominee)) return { error: "이미 지목된 대상입니다(하루 1회)." };
+  cancelStale(gameId, game.day); // 지난 낮의 미커밋 지목 정리
+  const id = openNomination({
+    gameId,
+    day: game.day,
+    nominator,
+    nominee,
+    seats: game.players.map((p) => ({ seat: p.seat, status: p.status, ghostVoteUsed: p.ghostVoteUsed })),
+  });
+  emitGameUpdate(gameId);
+  return { id };
+}
+
+/** 플레이어 지목 — 본인이 지명자. 하루 1회·생존자만(서버 강제). */
+export async function nominateAction(
+  roomId: string,
+  nomineeSeat: number,
+): Promise<{ error: string } | { id: string }> {
+  const { user, room } = await requireRoomMember(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const seat = seatForUser(room.gameId, user.id);
+  if (seat == null) return { error: "좌석이 배정되지 않았습니다(관전자는 지목 불가)." };
+  return doOpenNomination(room.gameId, seat, nomineeSeat);
+}
+
+/** ST 대행 지목 — 지명자·피지명자 좌석을 직접 지정. */
+export async function openNominationOnBehalfAction(
+  roomId: string,
+  nominator: number,
+  nominee: number,
+): Promise<{ error: string } | { id: string }> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  return doOpenNomination(room.gameId, nominator, nominee);
+}
+
+/** ST: 투표 스윕 시작(첫 좌석부터). */
+export async function startVoteAction(roomId: string, id: string): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  startVote(id);
+  if (room.gameId) emitGameUpdate(room.gameId);
+}
+
+/** 플레이어: 자기 차례에 손 들기/내리기. pointer 좌석만, 죽었으면 유령표 있을 때만 up. */
+export async function castHandAction(
+  roomId: string,
+  id: string,
+  hand: number,
+): Promise<{ error: string } | void> {
+  const { user, room } = await requireRoomMember(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  if (nom.status !== "voting") return { error: "투표 중이 아닙니다." };
+  const seat = seatForUser(room.gameId, user.id);
+  if (seat == null) return { error: "좌석이 배정되지 않았습니다." };
+  if (seat !== nom.order[nom.pointer]) return { error: "당신의 차례가 아닙니다." };
+  const me = getGame(room.gameId)?.players.find((p) => p.seat === seat);
+  if (!me) return { error: "좌석을 찾을 수 없습니다." };
+  const up = hand === 1;
+  const isDead = me.status === "dead";
+  if (isDead && up && me.ghostVoteUsed) return { error: "유령표를 이미 사용했습니다." };
+  setHand(id, seat, up ? 1 : 0, isDead && up);
+  emitGameUpdate(room.gameId);
+}
+
+/**
+ * 다음 좌석으로. ST는 항상 가능(수동 ▶다음), 비-ST 멤버는 턴 만료 시에만(자동 advance 백업).
+ * step CAS로 중복 호출은 무해. tallied면 스윕 종료.
+ */
+export async function advanceNominationAction(
+  roomId: string,
+  id: string,
+  expectedStep: number,
+): Promise<{ error: string } | { result: string }> {
+  const { user, room } = await requireRoomMember(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  const isOwner = room.ownerId === user.id || isAdmin(user);
+  if (!isOwner) {
+    // 자동 advance 백업: 좌석 타이머가 실제로 만료됐을 때만 허용.
+    if (nom.perSeatSec <= 0 || nom.paused || !nom.turnStartedAt) return { error: "권한이 없습니다." };
+    if (Date.now() - Date.parse(nom.turnStartedAt) < nom.perSeatSec * 1000)
+      return { error: "아직 시간이 남았습니다." };
+  }
+  const result = advance(id, expectedStep);
+  emitGameUpdate(room.gameId);
+  return { result };
+}
+
+/** ST: 일시정지/재개/속도/취소. */
+export async function pauseNominationAction(roomId: string, id: string): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  pauseNomination(id);
+  if (room.gameId) emitGameUpdate(room.gameId);
+}
+
+export async function resumeNominationAction(roomId: string, id: string): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  resumeNomination(id);
+  if (room.gameId) emitGameUpdate(room.gameId);
+}
+
+export async function setNominationPaceAction(
+  roomId: string,
+  id: string,
+  perSeatSec: number,
+): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  setPace(id, perSeatSec);
+  if (room.gameId) emitGameUpdate(room.gameId);
+}
+
+export async function cancelNominationAction(roomId: string, id: string): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  cancelNomination(id);
+  if (room.gameId) emitGameUpdate(room.gameId);
+}
+
+/**
+ * ST 정산 — 라이브 찬성표를 기존 VoteRecord로 확정한다(복기·언더테이커·식인귀는 이 committed만 봄).
+ * executed면 좌석 처형. captureUndo로 되돌리기 지원(LAN recordVoteAction과 동일 경로).
+ */
+export async function commitNominationAction(
+  roomId: string,
+  id: string,
+  executed: boolean,
+): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  const votes = countUp(id);
+  captureUndo(room.gameId, "낮 투표 정산");
+  recordVote(room.gameId, { nominator: nom.nominator, nominee: nom.nominee, votes, executed });
+  if (executed) setStatus(room.gameId, nom.nominee, "dead", "execution");
+  markCommitted(id);
+  emitGameUpdate(room.gameId);
+}
+
+/** 활성 지목 조회 — 플레이어·ST 공용(멤버면 누구나, 공개 정보). 낮이 아니면 null. */
+export async function getActiveNominationAction(roomId: string): Promise<Nomination | null> {
+  const { room } = await requireRoomMember(roomId);
+  if (!room.gameId) return null;
+  const game = getGame(room.gameId);
+  if (!game || game.phase !== "day") return null;
+  return getActiveNomination(room.gameId, game.day) ?? null;
 }
