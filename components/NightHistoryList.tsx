@@ -1,6 +1,7 @@
 "use client";
 
 import type { Character } from "@/lib/types";
+import { showcaseSummary } from "@/lib/showcase";
 import { CharacterIcon } from "./CharacterIcon";
 import type { NightRequestView } from "./NightRequestPanel";
 
@@ -63,28 +64,31 @@ export function NightHistoryList({
               {r.playerChoice ? `${r.playerTargets.length ? " / " : ""}${charMap[r.playerChoice]?.name.ko ?? r.playerChoice}` : ""}
             </p>
           )}
-          {r.info && (
-            <div className="mt-1">
-              <span className="font-medium text-gold">{r.info.heading}</span>
-              {r.info.subheading && <span className="text-muted"> — {r.info.subheading}</span>}
-              {(r.info.roleTokens.length > 0 || r.info.nameTokens.length > 0) && (
-                <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  {r.info.roleTokens.map((id, i) => {
-                    const ch = charMap[id];
-                    return ch ? (
-                      <span key={`r${i}`} className="flex items-center gap-1 rounded-full border border-border px-1.5 py-0.5">
-                        <CharacterIcon character={ch} size={16} />
-                        {ch.name.ko}
-                      </span>
-                    ) : null;
-                  })}
-                  {r.info.nameTokens.map((n, i) => (
-                    <span key={`n${i}`} className="rounded-full border border-border px-2 py-0.5">{n}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {r.info && (() => {
+            const s = showcaseSummary(r.info, (id) => charMap[id]?.name.ko ?? id);
+            return (
+              <div className="mt-1">
+                <span className="font-medium text-gold">{s.heading}</span>
+                {s.subheading && <span className="text-muted"> — {s.subheading}</span>}
+                {(s.roleTokens.length > 0 || s.nameTokens.length > 0) && (
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {s.roleTokens.map((id, i) => {
+                      const ch = charMap[id];
+                      return ch ? (
+                        <span key={`r${i}`} className="flex items-center gap-1 rounded-full border border-border px-1.5 py-0.5">
+                          <CharacterIcon character={ch} size={16} />
+                          {ch.name.ko}
+                        </span>
+                      ) : null;
+                    })}
+                    {s.nameTokens.map((n, i) => (
+                      <span key={`n${i}`} className="rounded-full border border-border px-2 py-0.5">{n}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </li>
       ))}
     </ul>

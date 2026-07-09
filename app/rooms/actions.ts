@@ -31,17 +31,18 @@ import {
   acknowledge,
   cancelRequest,
   createRequest,
-  deliver,
   getActiveForSeat,
   getRequest,
   listActive,
   listAllForGame,
   listAllForSeat,
   respond,
-  type InfoPayload,
   type NightRequest,
   type NightRequestKind,
 } from "@/lib/night-requests";
+import { resolveShowcase } from "@/lib/showcase";
+import { characterMapForGame } from "@/lib/game-characters";
+import { specForPhase } from "@/lib/night-actions";
 import { assignRoles, resolveSheet } from "@/lib/role-assign";
 import { circlePositions } from "@/lib/seat-layout";
 import { ratioTotal, type Ratio } from "@/lib/ratio";
@@ -335,32 +336,63 @@ export async function sendChatAction(
 }
 
 // ── 밤 행동 요청/응답(P5) ──
-function sanitizeInfo(info: InfoPayload): InfoPayload {
-  return {
-    heading: String(info.heading ?? "").slice(0, 300),
-    subheading: info.subheading ? String(info.subheading).slice(0, 300) : undefined,
-    roleTokens: (info.roleTokens ?? []).slice(0, 8).map((s) => String(s).slice(0, 64)),
-    nameTokens: (info.nameTokens ?? []).slice(0, 12).map((s) => String(s).slice(0, 60)),
-  };
-}
-
-/** ST가 좌석에 밤 행동 요청 생성(정보 즉시 전달 또는 행동 요청). */
-export async function createNightRequestAction(
+/**
+ * ST '보여주기' — seat 좌석 능력의 결과를 resolveShowcase로 계산해 받는 사람 폰에 push(즉시 전달).
+ * 무엇을 드러낼지는 lib/showcase 단일 출처(LAN show 페이지와 동일). ST는 행 버튼만 누른다.
+ * toSeat: recipient=none(제3자에게 보여주는 화면)일 때 지정. 그 외는 payload가 받는 좌석을 계산.
+ */
+export async function pushShowcaseAction(
   roomId: string,
-  input: { seat: number; kind: NightRequestKind; prompt?: string; maxTargets?: number; info?: InfoPayload },
+  seat: number,
+  characterId: string,
+  opts: { variant?: number; mode?: string; toSeat?: number } = {},
 ): Promise<{ error: string } | { id: string }> {
   const { room } = await requireRoomOwner(roomId);
   if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
-  // info(즉시 전달)는 반드시 표시할 내용이 있어야 한다 — 빈 info면 플레이어가 막힌 모달에 갇힐 수 있다.
-  if (input.kind === "info" && (!input.info || !input.info.heading?.trim()))
-    return { error: "보낼 정보(큰 메시지)를 입력하세요." };
+  const game = getGame(room.gameId);
+  if (!game) return { error: "게임을 찾을 수 없습니다." };
+  const map = characterMapForGame(game);
+  const payload = resolveShowcase(
+    game,
+    seat,
+    { as: characterId, variant: opts.variant, mode: opts.mode },
+    (id) => map.get(id)?.team,
+  );
+  if (!payload) return { error: "행동 좌석을 찾을 수 없습니다." };
+  // 표준 화면이 기록을 요구하는데 없으면(빈 모달 방지) 막는다.
+  if (payload.kind === "standard" && !payload.hasRecord && !payload.emptyAllowed)
+    return { error: "먼저 행동을 기록한 뒤 보여주세요." };
+  const toSeat = opts.toSeat ?? (payload.kind === "standard" ? payload.recipientSeat : null);
+  if (toSeat == null) return { error: "받는 좌석을 지정하세요." };
+  if (!game.players.some((p) => p.seat === toSeat)) return { error: "받는 좌석이 올바르지 않습니다." };
+  const id = createRequest({ gameId: room.gameId, seat: toSeat, kind: "info", info: payload });
+  emitGameUpdate(room.gameId);
+  return { id };
+}
+
+/**
+ * ST '직업 고르게 하기' — playerPicks 직업(철학자·도박꾼 등)에게 폰으로 선택 요청.
+ * spec으로 요청 종류 결정(targets>0=좌석+직업, 아니면 직업만). 플레이어 응답은 행에 표시되고,
+ * ST가 그 선택으로 행동을 기록한 뒤 보여준다.
+ */
+export async function requestPlayerPickAction(
+  roomId: string,
+  seat: number,
+  characterId: string,
+): Promise<{ error: string } | { id: string }> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const game = getGame(room.gameId);
+  if (!game) return { error: "게임을 찾을 수 없습니다." };
+  if (!game.players.some((p) => p.seat === seat)) return { error: "좌석이 올바르지 않습니다." };
+  const spec = specForPhase(characterId, game.phase ?? "night", game.day);
+  const kind: NightRequestKind = spec.targets > 0 ? "pick-player-character" : "pick-character";
   const id = createRequest({
     gameId: room.gameId,
-    seat: input.seat,
-    kind: input.kind,
-    prompt: (input.prompt ?? "").slice(0, 300),
-    maxTargets: Math.max(0, Math.min(10, input.maxTargets ?? 1)),
-    info: input.kind === "info" && input.info ? sanitizeInfo(input.info) : undefined,
+    seat,
+    kind,
+    prompt: (spec.hint ? `${spec.hint} 선택` : "직업을 선택하세요").slice(0, 300),
+    maxTargets: Math.max(1, Math.min(3, spec.targets || 1)),
   });
   emitGameUpdate(room.gameId);
   return { id };
@@ -385,20 +417,6 @@ export async function respondNightRequestAction(
     .map((n) => Number(n) | 0)
     .filter((s) => validSeats.has(s));
   respond(requestId, safeTargets, String(choice ?? "").slice(0, 64));
-  emitGameUpdate(room.gameId);
-}
-
-/** ST 최종 정보 전달. */
-export async function deliverNightRequestAction(
-  roomId: string,
-  requestId: string,
-  info: InfoPayload,
-): Promise<{ error: string } | void> {
-  const { room } = await requireRoomOwner(roomId);
-  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
-  const req = getRequest(requestId);
-  if (!req || req.gameId !== room.gameId) return { error: "요청을 찾을 수 없습니다." };
-  deliver(requestId, sanitizeInfo(info));
   emitGameUpdate(room.gameId);
 }
 

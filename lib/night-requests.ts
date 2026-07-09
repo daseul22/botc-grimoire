@@ -6,20 +6,14 @@
 //   pick-character : 플레이어가 직업 1개 선택(philosopher 등).
 //   pick-player-character : 플레이어가 좌석 1 + 직업 1 둘 다 선택(도박꾼 등). targets[0]=좌석, choice=직업.
 //
-// 보안: info_payload는 자기완결 표시 데이터(heading/subheading/roleTokens charId/nameTokens 닉네임)다.
-// 플레이어에겐 *자기 좌석 요청만* 내려가고, ST가 드러내기로 한 정보만 담긴다 → 전체 게임이 새지 않는다.
+// 보안: info_payload는 자기완결 보여주기 데이터(lib/showcase의 ShowcasePayload)다. 능력이 정당하게
+// 드러내는 것만 담긴다(이름만 슬롯=닉네임, 정체 슬롯만 charId). 플레이어에겐 *자기 좌석 요청만*
+// 내려가므로 전체 게임이 새지 않는다.
 import { db, now } from "./games/schema";
+import type { ShowcasePayload } from "./showcase";
 
 export type NightRequestKind = "info" | "pick-players" | "pick-character" | "pick-player-character";
 export type NightRequestStatus = "awaiting" | "responded" | "delivered" | "done" | "cancelled";
-export type InfoPayload = {
-  heading: string;
-  subheading?: string;
-  /** 보여줄 직업 토큰(스크립트 공개 직업 id). */
-  roleTokens: string[];
-  /** 보여줄 이름 토큰(닉네임). */
-  nameTokens: string[];
-};
 
 export type NightRequest = {
   id: string;
@@ -31,7 +25,8 @@ export type NightRequest = {
   status: NightRequestStatus;
   playerTargets: number[];
   playerChoice: string;
-  info: InfoPayload | null;
+  /** 전달된 보여주기 내용(ShowcasePayload). 미전달이면 null. */
+  info: ShowcasePayload | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -64,7 +59,7 @@ function toReq(r: Row): NightRequest {
     status: r.status,
     playerTargets: JSON.parse(r.player_targets) as number[],
     playerChoice: r.player_choice,
-    info: r.info_payload ? (JSON.parse(r.info_payload) as InfoPayload) : null,
+    info: r.info_payload ? (JSON.parse(r.info_payload) as ShowcasePayload) : null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -77,7 +72,7 @@ export function createRequest(input: {
   kind: NightRequestKind;
   prompt?: string;
   maxTargets?: number;
-  info?: InfoPayload;
+  info?: ShowcasePayload;
 }): string {
   const id = "nr-" + crypto.randomUUID().slice(0, 8);
   const t = now();
@@ -160,7 +155,7 @@ export function respond(id: string, targets: number[], choice: string): void {
 }
 
 /** ST 최종 정보 전달. */
-export function deliver(id: string, info: InfoPayload): void {
+export function deliver(id: string, info: ShowcasePayload): void {
   db.prepare(
     "UPDATE game_night_requests SET status='delivered', info_payload=?, updated_at=? WHERE id=? AND status IN ('awaiting','responded')",
   ).run(JSON.stringify(info), now(), id);

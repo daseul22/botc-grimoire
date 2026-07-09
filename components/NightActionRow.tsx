@@ -5,8 +5,22 @@ import { MARKER_MAP } from "@/lib/markers";
 import { formatResult, INFO_KINDS, infoTargetWarn, markerForAction, showcaseVariants, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer, NightActionRecord, VoteRecord } from "@/lib/types";
 import { ActionFields } from "./ActionFields";
+import type { NightRequestView } from "./NightRequestPanel";
 
 const short = (s: string) => (s.length > 7 ? s.slice(0, 6) + "…" : s);
+
+/**
+ * 온라인 밤 컨텍스트 — 있으면 '보여주기/직업 목록'이 LAN 링크(새 창 풀스크린) 대신 플레이어 폰으로 push된다.
+ * requestBySeat: 좌석별 활성 요청(전송/응답/확인 상태 인라인 표시용). 콜백은 룸 서버 액션을 감싼다.
+ */
+export type OnlineNightCtx = {
+  roomId: string;
+  requestBySeat: Map<number, NightRequestView>;
+  busy: boolean;
+  pushShowcase: (seat: number, characterId: string, opts?: { variant?: number; mode?: string; toSeat?: number }) => void;
+  requestPick: (seat: number, characterId: string) => void;
+  cancelRequest: (id: string) => void;
+};
 
 export function NightActionRow({
   actor,
@@ -25,10 +39,11 @@ export function NightActionRow({
   votes,
   lastExecution,
   isFirstNight,
+  online,
 }: {
   actor: GamePlayer;
   spec: ActionSpec;
-  /** 이 행이 다루는 직업 id(가짜/실제). showcase URL에 핀해 같은 좌석의 다른 노드와 구분. */
+  /** 이 행이 다루는 직업 id(가짜/실제). showcase URL/ push에 핀해 같은 좌석의 다른 노드와 구분. */
   characterId: string;
   players: GamePlayer[];
   charMap: Record<string, Character>;
@@ -47,10 +62,14 @@ export function NightActionRow({
   /** 직전 낮 처형 좌석+직업 — 장의사 자동 추천용. */
   lastExecution?: { seat: number; characterId: string } | null;
   isFirstNight?: boolean;
+  /** 온라인이면 보여주기/직업목록이 폰으로 push된다(LAN이면 undefined → 새 창 링크). */
+  online?: OnlineNightCtx;
 }) {
   const [editing, setEditing] = useState(false);
   const [targets, setTargets] = useState<number[]>(record?.targets ?? []);
   const [result, setResult] = useState<string>(record?.result ?? "");
+  // 받는 좌석 선택 대기 중인 showcase 변형(recipient=none일 때만 — 마술사·꼭두각시·미치광이 가짜 공격).
+  const [recipPick, setRecipPick] = useState<number | null>(null);
 
   const marker = spec.marker ? MARKER_MAP[spec.marker] : undefined;
   const markerSeats = spec.targets === 0 ? [actor.seat] : targets;
@@ -65,7 +84,10 @@ export function NightActionRow({
   const nothingToRecord = spec.targets === 0 && spec.result === "none" && !marker;
   if (nothingToRecord && !record && !hasShowcase) return null;
 
-  // showcase URL 빌더 — as=직업 핀(같은 좌석 다른 노드 구분), mode 있으면 ?mode=, 배열이면 ?v=.
+  // 이 좌석의 활성 온라인 요청(전송/응답 상태 표시).
+  const req = online?.requestBySeat.get(actor.seat) ?? null;
+
+  // showcase URL 빌더(LAN) — as=직업 핀, mode 있으면 ?mode=, 배열이면 ?v=.
   const showcaseHref = (i: number) => {
     const s = showcaseArr[i];
     const qs: string[] = [`as=${characterId}`];
@@ -74,22 +96,143 @@ export function NightActionRow({
     return `/play/${gameId}/show/${actor.seat}?${qs.join("&")}`;
   };
 
+  // 보여주기 트리거(온라인 push). recipient=none이면 받는 좌석부터 고른다.
+  const doPush = (i: number, toSeat?: number) => {
+    if (!online) return;
+    const needsRecipient = showcaseArr[i]?.recipient === "none";
+    if (needsRecipient && toSeat == null) {
+      setRecipPick(i);
+      return;
+    }
+    online.pushShowcase(actor.seat, characterId, { variant: i, mode: showcaseArr[i]?.mode, toSeat });
+    setRecipPick(null);
+  };
+
+  // 보여주기: 온라인=버튼(폰 push) / LAN=새 창 링크.
+  const showcaseAction = (i: number, label: string) =>
+    online ? (
+      <button
+        key={`sc${i}`}
+        type="button"
+        disabled={online.busy}
+        onClick={() => doPush(i)}
+        title="플레이어 폰에 보여주기"
+        className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25 disabled:opacity-50"
+      >
+        📲 {label}
+      </button>
+    ) : (
+      <a
+        key={`sc${i}`}
+        href={showcaseHref(i)}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="결과를 새 창에 풀스크린으로 — 플레이어에게 보여주기"
+        className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25"
+      >
+        {label}
+      </a>
+    );
+
+  // 직업 목록: 온라인=폰에 선택 요청 / LAN=새 창 그리드.
+  const pickAction = () =>
+    online ? (
+      <button
+        type="button"
+        disabled={online.busy}
+        onClick={() => online.requestPick(actor.seat, characterId)}
+        title="플레이어 폰에서 직업을 직접 고르게 하기"
+        className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text disabled:opacity-50"
+      >
+        📲 직업 고르게 하기
+      </button>
+    ) : (
+      <a
+        href={`/play/${gameId}/pick/${actor.seat}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
+        className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text"
+      >
+        직업 목록
+      </a>
+    );
+
+  const nameOf = (seat: number) => players.find((p) => p.seat === seat)?.nickname ?? `${seat}`;
+
+  // 받는 좌석 picker(recipient=none showcase) — 데몬 등 제3자에게 보여줄 좌석을 고른다.
+  const recipientPicker = () =>
+    online && recipPick != null ? (
+      <div className="mt-1 flex flex-wrap items-center gap-1">
+        <span className="text-[11px] text-muted">받는 좌석:</span>
+        {players.map((p) => (
+          <button
+            key={p.seat}
+            type="button"
+            disabled={online.busy}
+            onClick={() => doPush(recipPick, p.seat)}
+            className="rounded bg-surface px-1.5 py-0.5 text-[11px] hover:bg-surface-2 disabled:opacity-50"
+          >
+            {short(p.nickname)}
+          </button>
+        ))}
+        <button type="button" onClick={() => setRecipPick(null)} className="text-[11px] text-muted hover:text-text">
+          취소
+        </button>
+      </div>
+    ) : null;
+
+  // 온라인 전송/응답 상태(정보=전송·확인 / 선택=대기·응답→기록).
+  const onlineStatus = () => {
+    if (!online || !req) return null;
+    if (req.kind === "info") {
+      return (
+        <span className={`text-[11px] ${req.status === "done" ? "text-green-400" : "text-gold"}`}>
+          {req.status === "done" ? "✓ 플레이어 확인함" : "📤 전송됨 · 확인 대기"}
+        </span>
+      );
+    }
+    if (req.status === "awaiting") {
+      return (
+        <span className="flex items-center gap-1.5 text-[11px] text-muted">
+          플레이어 선택 대기 중…
+          <button type="button" onClick={() => online.cancelRequest(req.id)} className="hover:text-red-400">취소</button>
+        </span>
+      );
+    }
+    if (req.status === "responded") {
+      const nm = req.playerTargets.map(nameOf).join(", ");
+      const role = req.playerChoice ? charMap[req.playerChoice]?.name.ko ?? req.playerChoice : "";
+      return (
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="text-gold">플레이어 선택:</span>
+          <span className="font-medium">{[nm, role].filter(Boolean).join(" / ") || "(빈 응답)"}</span>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onRecord(req.playerTargets, req.playerChoice)}
+            className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50"
+          >
+            이 선택으로 기록
+          </button>
+        </div>
+      );
+    }
+    return null;
+  };
+
   // 기록할 게 없지만 showcase는 있는 케이스(마술사/꼭두각시): record 없이도 보여주기만 노출.
   const showcaseOnly = nothingToRecord && hasShowcase;
   if (showcaseOnly) {
     return (
-      <div className="mt-1.5 ml-6 flex flex-wrap items-center gap-2 text-xs">
-        {showcaseArr.map((_, i) => (
-          <a
-            key={i}
-            href={showcaseHref(i)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25"
-          >
-            보여주기{showcaseArr.length > 1 ? ` · ${showcaseLabels[i] ?? `#${i + 1}`}` : ""}
-          </a>
-        ))}
+      <div className="mt-1.5 ml-6 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          {showcaseArr.map((_, i) =>
+            showcaseAction(i, `보여주기${showcaseArr.length > 1 ? ` · ${showcaseLabels[i] ?? `#${i + 1}`}` : ""}`),
+          )}
+          {onlineStatus()}
+        </div>
+        {recipientPicker()}
       </div>
     );
   }
@@ -104,8 +247,6 @@ export function NightActionRow({
     onRecord(targets, result);
     setEditing(false);
   };
-
-  const nameOf = (seat: number) => players.find((p) => p.seat === seat)?.nickname ?? `${seat}`;
 
   // ── 기록 요약 (편집 중 아님) ──
   if (record && !editing) {
@@ -142,42 +283,11 @@ export function NightActionRow({
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <button type="button" onClick={startEdit} className="text-muted hover:text-text">수정</button>
           <button type="button" disabled={busy} onClick={onClear} className="text-muted hover:text-red-400 disabled:opacity-50">지우기</button>
-          {spec.playerPicks && (
-            <a
-              href={`/play/${gameId}/pick/${actor.seat}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
-              className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 text-muted hover:text-text"
-            >
-              직업 목록
-            </a>
-          )}
+          {spec.playerPicks && pickAction()}
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {/* result 없는 직업도 명시적 showcase가 있으면 노출(미치광이 가짜 공격 → 데몬에게). */}
-            {showcaseArr.length <= 1 && (spec.result !== "none" || hasShowcase) && (
-              <a
-                href={showcaseHref(0)}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="결과를 새 창에 풀스크린으로 — 플레이어에게 보여주기"
-                className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25"
-              >
-                보여주기
-              </a>
-            )}
-            {showcaseArr.length > 1 &&
-              showcaseArr.map((_, i) => (
-                <a
-                  key={i}
-                  href={showcaseHref(i)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25"
-                >
-                  {showcaseLabels[i] ?? `#${i + 1}`}
-                </a>
-              ))}
+            {showcaseArr.length <= 1 && (spec.result !== "none" || hasShowcase) && showcaseAction(0, "보여주기")}
+            {showcaseArr.length > 1 && showcaseArr.map((_, i) => showcaseAction(i, showcaseLabels[i] ?? `#${i + 1}`))}
             {canApplyMarker && (
               <button
                 type="button"
@@ -198,6 +308,12 @@ export function NightActionRow({
             )}
           </div>
         </div>
+        {(onlineStatus() || recipPick != null) && (
+          <div className="mt-1.5 border-t border-border/60 pt-1.5">
+            {onlineStatus()}
+            {recipientPicker()}
+          </div>
+        )}
       </div>
     );
   }
@@ -205,25 +321,19 @@ export function NightActionRow({
   // ── 행동 없음 + 미편집: 기록 버튼 ──
   if (!editing) {
     return (
-      <div className="mt-1.5 ml-6 flex flex-wrap items-center gap-2 text-xs">
-        <button
-          type="button"
-          onClick={startEdit}
-          className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-muted hover:border-gold/50 hover:text-gold"
-        >
-          ＋ 행동 기록
-        </button>
-        {spec.playerPicks && (
-          <a
-            href={`/play/${gameId}/pick/${actor.seat}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
-            className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text"
+      <div className="mt-1.5 ml-6 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={startEdit}
+            className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-muted hover:border-gold/50 hover:text-gold"
           >
-            직업 목록
-          </a>
-        )}
+            ＋ 행동 기록
+          </button>
+          {spec.playerPicks && pickAction()}
+          {onlineStatus()}
+        </div>
+        {recipientPicker()}
       </div>
     );
   }

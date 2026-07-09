@@ -151,33 +151,53 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 읽기만). 진행 중이 없으면 숨고, 밤 전환 시 새 스냅샷 타이머가 비어 자동으로 사라진다. `startedAt`(서버 ms)
 기준 클라 시계로 남은 시간 계산(TimerPanel과 동일 모델). 보드를 안 가리는 상단 중앙 위치.
 
-## 밤 행동 요청/응답 프로토콜 — `lib/night-requests.ts`
+## 밤·낮 행동 보여주기 — 순서 패널 push · `lib/showcase.ts`
 
-이야기꾼↔플레이어 실시간 핸드셰이크. 능력은 자동화하지 않고 ST가 좌석에 요청을 보내면 플레이어가
-매칭 UI로 응답하고, ST가 응답을 보고 최종 정보를 전달한다.
+온라인 ST는 **오프라인과 같은 행동 순서 사이드바**([NightSidebar](../../components/NightSidebar.tsx)/[DaySidebar](../../components/DaySidebar.tsx)
+— `PlayCanvas`가 LAN·온라인 공유)로 밤/낮 능력을 운영한다. LAN에선 "보여주기"가 새 창 풀스크린(`/play/[id]/show/[seat]`)으로
+열려 ST가 폰을 들이미는데, **온라인(`online` 컨텍스트 주입)에선 같은 버튼이 결과를 그 플레이어 폰으로 push**한다.
+과거의 수동 빌더(`NightConsole` — 좌석 드롭다운·heading/토큰 손입력)는 **제거**했다. 순서 패널이 유일한 도구다.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> awaiting: ST 요청(pick-players / pick-character / pick-player-character)
-  [*] --> delivered: ST 요청(info, 입력 불필요)
+  [*] --> delivered: ST 📲보여주기 (정보 push)
+  [*] --> awaiting: ST 📲직업 고르게 하기 (playerPicks)
   awaiting --> responded: 플레이어 선택 제출
-  responded --> delivered: ST 최종 정보 전달
-  delivered --> done: 플레이어 확인
+  responded --> delivered: ST '이 선택으로 기록' 후 보여주기
+  delivered --> done: 플레이어 '확인했습니다'
 ```
 
-- 데이터: `game_night_requests(id, game_id, seat, kind, prompt, max_targets, status, player_targets, player_choice, info_payload)`.
-  좌석당 활성 1개(새 요청이 기존을 cancelled로 슈퍼시드). 액션: `createNightRequest`(ST)·`respond`(본인 좌석)·
-  `deliver`(ST)·`acknowledge`(본인 좌석)·`cancel`(ST)·`getMyRequest`(본인)·`listNightRequests`(ST). 전부 `emitGameUpdate`.
-- **보안**: 플레이어 좌석 페이지는 `getActiveForSeat(gameId, boundSeat)`로 **본인 좌석 요청만** 받는다.
-  `info_payload`는 자기완결 표시 데이터(heading/subheading/roleTokens charId/nameTokens 닉네임)라 전체 게임이
-  새지 않는다. respond/acknowledge는 `seatForUser===req.seat` 검사로 남의 좌석 요청을 못 건드린다.
-- 행동 요청 종류(`kind`): `pick-players`(좌석 N개, `max_targets`로 개수) · `pick-character`(직업 1) ·
-  `pick-player-character`(좌석 1 + 직업 1, 도박꾼류 — `player_targets[0]`=좌석, `player_choice`=직업).
-- UI: 플레이어 `components/NightRequestPanel.tsx`(좌석 그리드/`RolePickerModal`/정보 표시+확인) ·
-  이야기꾼 `components/NightConsole.tsx`(플로팅 — 종류별 요청·응답 확인·`InfoComposer`로 정보 작성·전달).
-- 기록: `listAllForGame`/`listAllForSeat` + `listNightRequestHistory`(ST)/`getMyRequestHistory`(플레이어).
-  공용 `components/NightHistoryList.tsx`로 요청·응답·전달 정보를 최근순 표시. NightConsole은 **진행/기록 탭**으로
-  분리(요청이 쌓여도 새 정보와 안 섞임), 플레이어는 '기록' 버튼+모달로 받은 정보를 다시 본다.
+- **정보 직업**(공감자·세탁부 등): 행에서 대상 버튼 선택 + 자동추천 결과 → 저장 → **📲 보여주기** → 그 좌석 폰에
+  showcase가 뜨고 → **확인했습니다** → 행이 "✓ 플레이어 확인함".
+- **직접 선택 직업**(`playerPicks` — 철학자·도박꾼·세레노버스): **📲 직업 고르게 하기** → 폰에 직업/좌석 picker →
+  제출 → 행에 선택 인라인 표시 → "이 선택으로 기록" → 보여주기.
+- **첫밤 특수 정보**(악마 블러핑·하수인 정보): 정보 노드에서 각 데몬/하수인 좌석에 개별 push.
+
+핵심 — **단일 출처**:
+- [lib/showcase.ts](../../lib/showcase.ts) `resolveShowcase(game, seat, {as,variant,mode}, getTeam)` → `ShowcasePayload`
+  (discriminated: `standard`/`roleTokens`/`nameTokens`). **LAN show 페이지와 온라인 push가 같은 함수**로 "무엇을
+  드러낼지"를 계산해 두 경로가 갈라지지 않는다. show 페이지의 특수 모드(demon/bluffs/minions/lunatic-*)도 여기로 옮겼다.
+- [components/ShowcasePayloadView.tsx](../../components/ShowcasePayloadView.tsx)가 payload를 그린다 — **LAN show
+  페이지·온라인 `NightRequestPanel`·능력 미리보기가 같은 렌더러**(표준은 기존 `ShowcaseView` 재사용). 알 수 없는/
+  레거시(구 InfoPayload) payload는 뷰·요약(`showcaseSummary`)이 방어적으로 폴백(막힌 화면 방지).
+- **보안**: payload는 *능력이 정당하게 드러내는 것*만 담는다 — 이름만 슬롯(점쟁이·귀족 등)은 닉네임만, 정체 슬롯
+  (target/targets)만 characterId. 다른 좌석 직업이 새지 않는다(좌석 redaction과 동형·자기완결).
+
+전송 인프라 — 기존 [lib/night-requests.ts](../../lib/night-requests.ts) 재사용:
+- `game_night_requests(...)`의 `info_payload`가 이제 `ShowcasePayload`를 담는다(**스키마 무변경**, JSON 재활용).
+  좌석당 활성 1개(새 요청이 기존을 cancelled로 슈퍼시드).
+- 액션([app/rooms/actions.ts](../../app/rooms/actions.ts)): `pushShowcaseAction(roomId, seat, characterId, {variant,mode,toSeat})`
+  (resolve→`createRequest`로 delivered 즉시 생성) · `requestPlayerPickAction`(spec→`pick-character`/`pick-player-character`)
+  · 기존 `respond`/`acknowledge`/`cancel` 재사용. 전부 `emitGameUpdate`.
+- 온라인 컨텍스트: `PlayCanvas`가 `online={{roomId}}`면 `listNightRequestsAction`로 좌석별 요청을 조회(게임 SSE로 갱신)해
+  `OnlineNightCtx`를 사이드바→[NightActionRow](../../components/NightActionRow.tsx)에 내려, 보여주기/직업목록을 push 버튼으로
+  바꾸고 전송·응답·확인 상태를 행에 인라인 표시. `recordActionAction`(행동 기록)은 LAN과 공유.
+- 플레이어 [components/NightRequestPanel.tsx](../../components/NightRequestPanel.tsx): delivered면 `ShowcasePayloadView`로
+  1:1 렌더 + '확인했습니다', awaiting이면 좌석/직업 picker. **본인 좌석 요청만**(`getActiveForSeat`), respond/ack는
+  `seatForUser===req.seat` 검사.
+- **recipient 라우팅**: showcase의 recipient가 `actor`→본인 좌석, `target`→첫 지목 좌석(세레노버스·마귀할멈),
+  `none`→ST가 받는 좌석을 직접 지정(마술사·꼭두각시·미치광이 가짜 공격 — 데몬에게 보여줌).
+- 기록 열람: `components/NightHistoryList.tsx`(`showcaseSummary`로 요약), 플레이어 '기록' 버튼.
 
 ## 낮 지목·투표 (시계바늘 순차) — `lib/nominations.ts`
 
@@ -232,14 +252,17 @@ stateDiagram-v2
 
 - `lib/realtime.ts` 이벤트 버스(게임/룸 채널) · `lib/rooms.ts` 룸 데이터 레이어 ·
   `lib/role-assign.ts` 직업 배정(게임/룸 시작 공유) · `lib/redact.ts` 좌석 redaction ·
-  `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/night-requests.ts` 밤 행동 요청 ·
+  `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/night-requests.ts` 밤 행동 요청(전송 인프라) ·
+  `lib/showcase.ts` 보여주기 해석(LAN·온라인 단일 출처) ·
   `lib/nominations.ts` 낮 지목/투표(시계바늘 순차) · `lib/voting.ts` 정산 계산(LAN·온라인 공유) ·
   `lib/player-colors.ts` 닉네임 구분 15색(채팅·보드).
 - `app/rooms/actions.ts` 룸 서버 액션 · `app/rooms/**` 룸/로비/입장/진행/자리 페이지.
 - `components/Lobby.tsx` · `RoomsHome.tsx` · `JoinConfirm.tsx` · `PlayerGame.tsx` ·
-  `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightConsole.tsx` · `NightHistoryList.tsx` ·
+  `ChatWidget.tsx` · `NightRequestPanel.tsx` · `NightHistoryList.tsx` · `ShowcasePayloadView.tsx`(보여주기 렌더) ·
   `DayVotePanel.tsx`(플레이어 투표) · `DayConsole.tsx`(ST 투표 콘솔) · `DayTimers.tsx`(플레이어 타이머) ·
   `useGameStream.ts` · `useAutoAdvance.ts`.
+- LAN·온라인 공유: `components/NightSidebar.tsx`/`DaySidebar.tsx`/`NightActionRow.tsx`(`online` 컨텍스트로 보여주기 push) ·
+  `components/ShowcaseView.tsx`(표준 보여주기 본문) · `app/play/[gameId]/show/[seat]`(LAN 풀스크린).
 - 공통 UI: `components/Select.tsx`(드롭다운, native `<select>` 대체) · `components/Modal.tsx`(가운데 모달 일관 닫기) ·
   `components/RoomRedirect.tsx`(클라이언트 라우트 교체) ·
   `PlayerPicker`/`RolePickerModal`(좌석·직업 토큰 picker). 네이티브 폼 요소를 앱 톤으로 대체하는 공통 컴포넌트들.
@@ -262,10 +285,11 @@ stateDiagram-v2
 
 ## 다듬을 거리
 
-- ST 콘솔 정보 작성 프리셋([lib/action-suggest.ts](../../lib/action-suggest.ts) 직업별 자동 추천을 InfoComposer에 연결).
-- 이야기꾼 보드(PlayCanvas)는 아직 SSE **직접** 미구독 — 밤 `NightConsole`·낮 `DayConsole`은 게임 SSE로 자기
-  데이터를 refetch하고, 낮 처형 정산 뒤 `DayConsole`이 `router.refresh`로 보드에 사망을 반영한다. 그 외
-  플레이어발 변경(예: 투표 진행)을 PlayCanvas 토큰에 즉시 반영하려면 `getGameAction` refetch+`setGame`을 붙인다.
+- 이야기꾼 보드(PlayCanvas)의 SSE 구독은 **밤 행동 요청**(`listNightRequestsAction` refetch)·낮 `DayConsole`까지 왔다.
+  낮 처형 정산 뒤 `DayConsole`이 `router.refresh`로 보드에 사망을 반영한다. 그 외 플레이어발 변경(예: 투표 진행)을
+  PlayCanvas 토큰에 즉시 반영하려면 `getGameAction` refetch+`setGame`을 붙인다.
+- 밤 행동 push 후속: `recipient:none` 좌석 지정을 seat picker 대신 자동 추론(마술사·꼭두각시 등 소수 케이스),
+  push 실패/오프라인 플레이어에 대한 재전송 표시.
 - 낮 투표 후속: 여행자 추방(exile) 별도 UI, 투표 로그의 복기 타임라인 통합, 낮 토론 타이머(PhaseTimers) 연동.
 
 ---

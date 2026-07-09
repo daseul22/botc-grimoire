@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import type { Character } from "@/lib/types";
+import type { ShowcasePayload } from "@/lib/showcase";
 import { CharacterIcon } from "./CharacterIcon";
 import { RolePickerModal } from "./RolePickerModal";
+import { ShowcasePayloadView } from "./ShowcasePayloadView";
 import { useBackClose } from "./useBackClose";
 import {
   acknowledgeNightRequestAction,
@@ -11,7 +13,6 @@ import {
 } from "@/app/rooms/actions";
 
 // lib/night-requests의 타입과 동일 구조(클라가 서버 모듈 import 안 하도록 로컬 정의).
-export type InfoPayload = { heading: string; subheading?: string; roleTokens: string[]; nameTokens: string[] };
 export type NightRequestView = {
   id: string;
   seat: number;
@@ -21,7 +22,7 @@ export type NightRequestView = {
   status: "awaiting" | "responded" | "delivered" | "done" | "cancelled";
   playerTargets: number[];
   playerChoice: string;
-  info: InfoPayload | null;
+  info: ShowcasePayload | null;
   createdAt: string;
 };
 
@@ -114,38 +115,25 @@ export function NightRequestPanel({
     </div>
   );
 
-  // 전달된 정보 표시 — info가 비어 있어도 확인 버튼으로 빠져나갈 수 있게(막힌 모달 방지).
+  // 전달된 보여주기 표시 — LAN show 페이지와 같은 ShowcasePayloadView로 1:1 렌더.
+  // info가 비어 있어도 확인 버튼으로 빠져나갈 수 있게(막힌 모달 방지).
   if (request.status === "delivered") {
-    const info = request.info;
     return (
       <Shell>
-        <h2 className="mb-1 text-xl font-bold leading-snug">{info?.heading ?? "정보가 도착했습니다"}</h2>
-        {info?.subheading && <p className="mb-3 text-sm text-muted">{info.subheading}</p>}
-        {info && (info.roleTokens.length > 0 || info.nameTokens.length > 0) && (
-          <div className="my-4 flex flex-wrap items-center justify-center gap-3">
-            {info.roleTokens.map((id, i) => {
-              const ch = charMap[id];
-              return ch ? (
-                <div key={`r${i}`} className="flex flex-col items-center gap-1">
-                  <CharacterIcon character={ch} size={56} />
-                  <span className="text-xs font-medium">{ch.name.ko}</span>
-                </div>
-              ) : null;
-            })}
-            {info.nameTokens.map((n, i) => (
-              <span key={`n${i}`} className="rounded-full border border-border bg-bg px-3 py-1.5 text-sm font-medium">
-                {n}
-              </span>
-            ))}
+        {request.info ? (
+          <div className="flex flex-col items-center gap-4 py-2 text-center">
+            <ShowcasePayloadView payload={request.info} getChar={(id) => charMap[id]} />
           </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted">정보가 도착했습니다.</p>
         )}
         <button
           type="button"
           onClick={ack}
           disabled={pending}
-          className="mt-2 w-full rounded-lg bg-gold py-2.5 text-sm font-semibold text-bg disabled:opacity-40"
+          className="mt-4 w-full rounded-lg bg-gold py-2.5 text-sm font-semibold text-bg disabled:opacity-40"
         >
-          확인
+          확인했습니다
         </button>
       </Shell>
     );

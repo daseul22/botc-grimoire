@@ -3,7 +3,7 @@
 import { TEAM_MAP, TEAMS } from "@/lib/constants";
 import { dayActionSpec, isAbilityUsedUp } from "@/lib/night-actions";
 import type { Character, Game, GameActionRun } from "@/lib/types";
-import { NightActionRow } from "./NightActionRow";
+import { NightActionRow, type OnlineNightCtx } from "./NightActionRow";
 import { TaintWarning } from "./TaintWarning";
 import { ActionCardHeader, type HeaderTag } from "./ActionCardHeader";
 import {
@@ -24,6 +24,7 @@ export function DaySidebar({
   run,
   onApplyMarker,
   onClose,
+  online,
 }: {
   game: Game;
   charMap: Record<string, Character>;
@@ -31,6 +32,8 @@ export function DaySidebar({
   run: Run;
   onApplyMarker: (seats: number[], markerStr: string) => void;
   onClose: () => void;
+  /** 온라인이면 보여주기가 플레이어 폰으로 push된다(LAN이면 undefined). */
+  online?: OnlineNightCtx;
 }) {
   const dayRoles = game.players
     .map((p) => ({ p, ch: charMap[p.characterId], spec: dayActionSpec(p.characterId) }))
@@ -102,6 +105,7 @@ export function DaySidebar({
                   onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, p.characterId, targets, result))}
                   onClear={() => run(() => clearActionAction(game.id, p.seat, p.characterId))}
                   onApplyMarker={onApplyMarker}
+                  online={online}
                 />
               </li>
             );

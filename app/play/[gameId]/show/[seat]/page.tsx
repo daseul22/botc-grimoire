@@ -3,20 +3,18 @@ import Link from "next/link";
 import { getGame } from "@/lib/games";
 import { getRoomByGameId } from "@/lib/rooms";
 import { characterMapForGame } from "@/lib/game-characters";
-import { specForPhase, pickShowcase, showsWithoutRecord } from "@/lib/night-actions";
-import { seatsShownAsDemons, seatsShownAsMinions } from "@/lib/roles";
-import { ShowcaseView, RoleTokenBig, NameOnlyBig } from "@/components/ShowcaseView";
+import { resolveShowcase } from "@/lib/showcase";
+import { ShowcasePayloadView } from "@/components/ShowcasePayloadView";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "결과 보이기" };
 
-// RoleTokenBig·NameOnlyBig·표준 보여주기 렌더 → components/ShowcaseView로 이동(공유).
-// 직업 상세의 "능력 미리보기"가 같은 렌더러를 써서 실제 보여주기와 1:1로 일치한다.
-
 /**
- * 행동 결과 풀스크린 페이지 — ST가 폰/화면을 들이밀어 *받는 사람*에게 정보를 전달.
+ * 행동 결과 풀스크린 페이지 — ST가 폰/화면을 들이밀어 *받는 사람*에게 정보를 전달(LAN).
+ * 무엇을 드러낼지는 lib/showcase의 resolveShowcase가 계산하고(온라인 push와 단일 출처),
+ * 렌더는 components/ShowcasePayloadView가 담당(온라인 플레이어 패널과 동일 화면).
+ * spec.showcase 배열이면 ?v=N으로 변형 선택(마술사), ?mode=로 특수 화면(블러핑/하수인/악마 정보).
  * 액터 정체는 절대 노출 안 함(룰: 정보 직업의 정체는 받는 사람에게 비밀).
- * spec.showcase 배열이면 ?v=N으로 변형 선택(마술사: 악마용/하수인용).
  */
 export default async function ShowPage({
   params,
@@ -31,8 +29,7 @@ export default async function ShowPage({
   const variant = Math.max(0, Number(vStr ?? 0) | 0);
   const game = getGame(gameId);
   if (!game) notFound();
-  const actor = game.players.find((p) => p.seat === seat);
-  if (!actor) notFound();
+  if (!game.players.some((p) => p.seat === seat)) notFound();
 
   // 온라인(룸) 게임이면 그리모어 백링크는 온라인 보드로 직접 보낸다.
   // LAN 그리모어(/play/[gameId])는 온라인 게임을 서버 redirect()로 되돌리는데,
@@ -41,174 +38,14 @@ export default async function ShowPage({
   const grimoireHref = room ? `/rooms/${room.id}/play` : `/play/${gameId}`;
 
   const map = characterMapForGame(game);
-
-  // 어떤 직업의 행동카드로 보여줄지 결정.
-  // 한 좌석이 실제 직업과 가짜 직업(disguise) 두 행동 노드를 동시에 갖는 경우(꼭두각시 등)가
-  // 있어, 링크에 ?as=<characterId>로 핀해 정확히 그 노드의 showcase를 렌더한다(행동 순서의 effId).
-  // as가 없으면(레거시/직접 링크) disguise → 실제 순으로 폴백.
-  const effId = as || game.disguises?.[seat] || actor.characterId;
-  const actorChar = map.get(effId);
-  const record = game.actions.find((a) => a.actorSeat === seat && a.characterId === effId && !a.bluff);
-  const spec = specForPhase(effId, game.phase ?? "night", game.day);
-
-  // ─── 특수 모드: 미치광이의 가짜 공격 지목을 *진짜 데몬*에게 보여주기 ───
-  // seat = 미치광이 좌석. 받는 사람은 데몬이라 "님께" 안내는 띄우지 않는다.
-  if (mode === "lunatic-choice") {
-    const choiceTargets = (record?.targets ?? [])
-      .map((s) => game.players.find((p) => p.seat === s))
-      .filter((p): p is NonNullable<typeof p> => !!p);
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-bg px-6 py-8">
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6">
-            {choiceTargets.length === 0 ? (
-              <p className="text-base text-muted">아직 지목이 기록되지 않았습니다.</p>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  {choiceTargets.map((p) => (
-                    <NameOnlyBig key={p.seat} nickname={p.nickname} />
-                  ))}
-                </div>
-                <h1 className="break-keep text-center text-3xl font-bold leading-snug text-text">
-                  미치광이가 지목한 가짜 공격 대상입니다
-                </h1>
-                <p className="break-keep text-center text-sm leading-relaxed text-muted">
-                  미치광이(가짜 악마)의 선택입니다 — 실제로 따를지는 당신이 결정합니다
-                </p>
-              </>
-            )}
-          </div>
-          <div className="mt-6 flex items-center justify-between text-sm">
-            <Link href={grimoireHref} className="text-muted hover:text-text">← 그리모어</Link>
-            <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── 특수 모드: 하수인 정보 단계 — 하수인 전원에게 "악마가 누구인지" 보여주기 ───
-  // 하수인은 모두 함께 깨어나 서로 확인하므로 특정 "님께" 없는 단체 화면.
-  // 마술사 인플레이 시 마술사도 (가짜) 악마로 함께 노출(룰: 하수인은 마술사를 데몬으로 본다).
-  if (mode === "demon") {
-    const demons = seatsShownAsDemons(game.players, (id) => map.get(id)?.team)
-      .map((s) => game.players.find((p) => p.seat === s))
-      .filter((p): p is NonNullable<typeof p> => !!p);
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-bg px-6 py-8">
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6">
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {demons.length === 0 ? (
-                <p className="text-base text-muted">악마가 지정되지 않았습니다.</p>
-              ) : (
-                demons.map((p) => <NameOnlyBig key={p.seat} nickname={p.nickname} />)
-              )}
-            </div>
-            <h1 className="break-keep text-center text-3xl font-bold leading-snug text-text">
-              {demons.length > 1 ? "이들이 악마입니다" : "이 사람이 악마입니다"}
-            </h1>
-          </div>
-          <div className="mt-6 flex items-center justify-between text-sm">
-            <Link href={grimoireHref} className="text-muted hover:text-text">← 그리모어</Link>
-            <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── 특수 모드: 데몬/미치광이에게 첫밤 정보 보여주기 ───
-  const isBluffs = mode === "bluffs" || mode === "lunatic-bluffs";
-  const isMinions = mode === "minions" || mode === "lunatic-minions";
-  const isLunaticMode = mode === "lunatic-bluffs" || mode === "lunatic-minions";
-  if (isBluffs || isMinions) {
-    // 데몬 모드는 lib/roles.seatsShownAsMinions로 하수인 좌석 계산(마술사 포함, 꼭두각시 제외).
-    // 미치광이 모드는 ST가 지정한 가짜 데이터 그대로.
-    const bluffsIds = isLunaticMode ? game.lunaticBluffs : game.bluffs;
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-bg px-6 py-8">
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6">
-            <p className="text-center text-base text-muted">{actor.nickname} 님께</p>
-
-            {isBluffs ? (
-              <>
-                {bluffsIds.length === 0 ? (
-                  <p className="text-base text-muted">블러핑이 아직 선택되지 않았습니다.</p>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-center gap-4">
-                    {bluffsIds.map((id) => (
-                      <RoleTokenBig key={id} ch={map.get(id)} />
-                    ))}
-                  </div>
-                )}
-                <h1 className="text-center text-3xl font-bold leading-snug text-text">
-                  당신의 블러핑 직업입니다
-                </h1>
-              </>
-            ) : (
-              <>
-                {(() => {
-                  // 데몬 모드: 하수인은 team === "minion"만. 꼭두각시(outsider, marionette)는 별도 보여주기.
-                  // 미치광이 모드: ST 지정 좌석(lunaticMinions) 그대로.
-                  const minionSeats = isLunaticMode
-                    ? game.lunaticMinions
-                    : seatsShownAsMinions(game.players, (id) => map.get(id)?.team);
-                  const all = minionSeats
-                    .map((s) => game.players.find((p) => p.seat === s))
-                    .filter((p): p is NonNullable<typeof p> => !!p);
-                  return (
-                    <>
-                      <div className="flex flex-wrap items-center justify-center gap-3">
-                        {all.length === 0 ? (
-                          <p className="text-base text-muted">하수인이 지정되지 않았습니다.</p>
-                        ) : (
-                          all.map((p) => <NameOnlyBig key={p.seat} nickname={p.nickname} />)
-                        )}
-                      </div>
-                      <h1 className="break-keep text-center text-3xl font-bold leading-snug text-text">
-                        이들은 하수인입니다
-                      </h1>
-                    </>
-                  );
-                })()}
-              </>
-            )}
-          </div>
-          <div className="mt-6 flex items-center justify-between text-sm">
-            <Link href={grimoireHref} className="text-muted hover:text-text">← 그리모어</Link>
-            <span className="text-xs text-muted">{game.day}일차 {game.phase === "night" ? "밤" : "낮"}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── 표준 보여주기: 행동 기록(record) 기반 + 폴백 ───
-  const showcase = pickShowcase(spec, variant);
-  const targetPlayers = (record?.targets ?? []).map((s) =>
-    game.players.find((p) => p.seat === s),
-  );
-  const resultStr = record?.result ?? "";
-  const emptyAllowed = showsWithoutRecord(actor.characterId);
+  const payload = resolveShowcase(game, seat, { as, variant, mode }, (id) => map.get(id)?.team);
+  if (!payload) notFound();
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-bg px-6 py-8">
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6">
-          <ShowcaseView
-            actorNickname={actor.nickname}
-            actorChar={actorChar}
-            targetPlayers={targetPlayers}
-            resultStr={resultStr}
-            spec={spec}
-            showcase={showcase}
-            getChar={(id) => map.get(id)}
-            hasRecord={!!record}
-            emptyAllowed={emptyAllowed}
-          />
+          <ShowcasePayloadView payload={payload} getChar={(id) => map.get(id)} />
         </div>
 
         <div className="mt-6 flex items-center justify-between text-sm">

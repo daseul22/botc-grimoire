@@ -7,7 +7,7 @@ import { nightInfoNode } from "@/lib/night-info";
 import { TaintWarning } from "./TaintWarning";
 import { ActionCardHeader, type HeaderTag } from "./ActionCardHeader";
 import type { Character, Game, GameActionRun, NightAction } from "@/lib/types";
-import { NightActionRow } from "./NightActionRow";
+import { NightActionRow, type OnlineNightCtx } from "./NightActionRow";
 import { LunaticActionRow } from "./LunaticActionRow";
 import {
   clearActionAction,
@@ -46,6 +46,7 @@ export function NightSidebar({
   run,
   onApplyMarker,
   onClose,
+  online,
 }: {
   game: Game;
   charMap: Record<string, Character>;
@@ -55,6 +56,8 @@ export function NightSidebar({
   run: Run;
   onApplyMarker: (seats: number[], markerStr: string) => void;
   onClose: () => void;
+  /** 온라인이면 보여주기가 플레이어 폰으로 push된다(LAN이면 undefined). */
+  online?: OnlineNightCtx;
 }) {
   // 좌석마다 실제 운영상 어떤 직업으로 다루는지(disguise / gained / became 마커 반영).
   // 미치광이는 데몬처럼, 식인종은 처형된 town 능력처럼, 임프 자살자는 새 직업으로 노출.
@@ -133,8 +136,25 @@ export function NightSidebar({
                   </div>
                   <p className="mt-1 break-words pl-6 text-xs text-muted">{node.reminder}</p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5 pl-6">
-                    {isMinion
-                      ? minionInfoSeat != null && (
+                    {isMinion ? (
+                      online ? (
+                        // 온라인: 각 하수인 폰에 '악마가 누구인지'(mode=demon) push.
+                        game.players
+                          .filter((x) => charMap[x.characterId]?.team === "minion")
+                          .map((m) => (
+                            <button
+                              key={m.seat}
+                              type="button"
+                              disabled={online.busy}
+                              onClick={() => online.pushShowcase(m.seat, m.characterId, { mode: "demon", toSeat: m.seat })}
+                              className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-0.5 text-xs disabled:opacity-50"
+                            >
+                              <span className="text-muted">{m.nickname}</span>
+                              <span className="rounded bg-gold/15 px-1.5 py-0.5 text-gold">📲 악마 정보</span>
+                            </button>
+                          ))
+                      ) : (
+                        minionInfoSeat != null && (
                           <a
                             href={`/play/${game.id}/show/${minionInfoSeat}?mode=demon`}
                             target="_blank"
@@ -144,13 +164,25 @@ export function NightSidebar({
                             보여주기
                           </a>
                         )
-                      : demonSeats.map((d) => (
-                          <span key={d.seat} className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-0.5 text-xs">
-                            <span className="text-muted">{d.nickname}</span>
-                            <a href={`/play/${game.id}/show/${d.seat}?mode=bluffs`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">블러핑</a>
-                            <a href={`/play/${game.id}/show/${d.seat}?mode=minions`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">하수인</a>
-                          </span>
-                        ))}
+                      )
+                    ) : (
+                      demonSeats.map((d) => (
+                        <span key={d.seat} className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-0.5 text-xs">
+                          <span className="text-muted">{d.nickname}</span>
+                          {online ? (
+                            <>
+                              <button type="button" disabled={online.busy} onClick={() => online.pushShowcase(d.seat, d.characterId, { mode: "bluffs", toSeat: d.seat })} className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50">📲 블러핑</button>
+                              <button type="button" disabled={online.busy} onClick={() => online.pushShowcase(d.seat, d.characterId, { mode: "minions", toSeat: d.seat })} className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50">📲 하수인</button>
+                            </>
+                          ) : (
+                            <>
+                              <a href={`/play/${game.id}/show/${d.seat}?mode=bluffs`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">블러핑</a>
+                              <a href={`/play/${game.id}/show/${d.seat}?mode=minions`} target="_blank" rel="noopener noreferrer" className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25">하수인</a>
+                            </>
+                          )}
+                        </span>
+                      ))
+                    )}
                   </div>
                 </li>
               );
@@ -247,6 +279,7 @@ export function NightSidebar({
                         onRecord={(targets, result) => run(() => recordActionAction(game.id, p.seat, fakeId, targets, result))}
                         onClear={() => run(() => clearActionAction(game.id, p.seat, fakeId))}
                         onApplyMarker={onApplyMarker}
+                        online={online}
                       />
                     )}
                   </>
@@ -269,6 +302,7 @@ export function NightSidebar({
                       votes={game.votes}
                       lastExecution={game.lastExecution}
                       isFirstNight={isFirstNight}
+                      online={online}
                     />
                     {/* 점쟁이 첫밤: 레드헤링(데몬으로 보일 선한 1명) 지정 편의 — 깜빡하지 않게 카드에서 바로. */}
                     {effId === "fortuneteller" && isFirstNight && (

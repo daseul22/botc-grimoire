@@ -7,7 +7,6 @@ import { colorHex } from "@/lib/player-colors";
 import { PlayCanvas } from "@/components/PlayCanvas";
 import { GameReplay } from "@/components/GameReplay";
 import { ChatWidget } from "@/components/ChatWidget";
-import { NightConsole } from "@/components/NightConsole";
 import { DayConsole } from "@/components/DayConsole";
 
 export const dynamic = "force-dynamic";
@@ -54,8 +53,8 @@ export default async function RoomPlayPage({
         sheetChars={sheetChars}
         knownNicknames={listKnownNicknames().map((k) => k.nickname)}
         seatColors={seatColors}
+        online={{ roomId }}
       />
-      <NightConsole game={game} sheetChars={sheetChars} roomId={roomId} />
       <DayConsole game={game} sheetChars={sheetChars} roomId={roomId} />
       <ChatWidget
         roomId={roomId}

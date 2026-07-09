@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ALIGN_COLOR, TEAM_MAP } from "@/lib/constants";
 import { dayActionSpec } from "@/lib/night-actions";
 import { autoRectSides, circlePositions, rectPositions, sidesTotal, type RectSides } from "@/lib/seat-layout";
@@ -36,6 +36,15 @@ import {
   toggleGhostVoteAction,
   toggleMarkerAction,
 } from "@/app/play/actions";
+import {
+  cancelNightRequestAction,
+  listNightRequestsAction,
+  pushShowcaseAction,
+  requestPlayerPickAction,
+} from "@/app/rooms/actions";
+import { useGameStream } from "./useGameStream";
+import type { NightRequestView } from "./NightRequestPanel";
+import type { OnlineNightCtx } from "./NightActionRow";
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -44,12 +53,15 @@ export function PlayCanvas({
   sheetChars,
   knownNicknames = [],
   seatColors = {},
+  online,
 }: {
   game: Game;
   sheetChars: Character[];
   knownNicknames?: string[];
   /** seat → hex. 온라인 이야기꾼이 지정한 닉네임 구분 색(LAN이면 빈 맵). */
   seatColors?: Record<number, string>;
+  /** 온라인(룸) 게임이면 roomId. 있으면 밤 행동 사이드바의 보여주기/직업선택이 플레이어 폰으로 push된다. */
+  online?: { roomId: string };
 }) {
   const [game, setGame] = useState(initial);
   const [selected, setSelected] = useState<number | null>(null);
@@ -184,6 +196,51 @@ export function PlayCanvas({
       }
     });
   };
+
+  // ── 온라인 밤: 좌석별 활성 요청 조회 + 보여주기/직업선택을 플레이어 폰으로 push ──
+  const roomId = online?.roomId;
+  const [nightRequests, setNightRequests] = useState<NightRequestView[]>([]);
+  const loadRequests = useCallback(() => {
+    if (!roomId) return;
+    listNightRequestsAction(roomId)
+      .then((r) => setNightRequests(r as NightRequestView[]))
+      .catch(() => {});
+  }, [roomId]);
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
+  // 플레이어 응답(선택·확인)을 게임 SSE로 즉시 반영(온라인일 때만 구독).
+  useGameStream(roomId ? game.id : undefined, loadRequests);
+
+  // 룸 액션({error}|{id}|void)을 감싸 실행 — 반환값으로 setGame하지 않고(게임 불변) 요청 목록만 갱신.
+  const runRoom = (fn: () => Promise<unknown>, after?: () => void) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    startTransition(async () => {
+      try {
+        const r = await fn();
+        if (r && typeof r === "object" && "error" in r) alert(String((r as { error: unknown }).error));
+        else after?.();
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "요청이 실패했습니다.");
+      } finally {
+        inFlight.current = false;
+      }
+    });
+  };
+
+  const onlineNight: OnlineNightCtx | undefined = roomId
+    ? {
+        roomId,
+        requestBySeat: new Map(nightRequests.map((r) => [r.seat, r])),
+        busy,
+        pushShowcase: (seat, characterId, opts) =>
+          runRoom(() => pushShowcaseAction(roomId, seat, characterId, opts), loadRequests),
+        requestPick: (seat, characterId) =>
+          runRoom(() => requestPlayerPickAction(roomId, seat, characterId), loadRequests),
+        cancelRequest: (id) => runRoom(() => cancelNightRequestAction(roomId, id), loadRequests),
+      }
+    : undefined;
 
   // 마커를 여러 좌석에 순차 적용(add-only). state가 페이즈당 단일 JSON이라
   // 동시 호출 시 lost-update가 나므로 await로 직렬 처리한다.
@@ -502,6 +559,7 @@ export function PlayCanvas({
             run={run}
             onApplyMarker={applyMarkers}
             onClose={() => setSidebar(null)}
+            online={onlineNight}
           />
         )}
 
@@ -514,6 +572,7 @@ export function PlayCanvas({
             run={run}
             onApplyMarker={applyMarkers}
             onClose={() => setSidebar(null)}
+            online={onlineNight}
           />
         )}
 
