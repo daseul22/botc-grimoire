@@ -195,8 +195,9 @@ stateDiagram-v2
   `OnlineNightCtx`를 사이드바→[NightActionRow](../../components/NightActionRow.tsx)에 내려, 보여주기/직업목록을 push 버튼으로
   바꾸고 전송·응답·확인 상태를 행에 인라인 표시. `recordActionAction`(행동 기록)은 LAN과 공유.
 - **상태 뱃지**([RequestStatusBadge](../../components/RequestStatusBadge.tsx)): ST가 "내가 보냈는지"와 "플레이어가 확인했는지"를
-  색으로 구분 — 📤 전송함·확인 대기(amber) → ✅ 확인함(green). 선택 요청은 ⏳ 대기 → ↩ 응답 옴. 행·정보 노드 공용. 요청이 있으면
-  push 버튼은 "다시 보내기"로 바뀐다. 플레이어 확인(acknowledge)이 게임 SSE로 ST 뱃지를 green으로 갱신.
+  **색 알약**으로 구분 — "전송함·확인 대기"(amber) → "✓ 확인함"(green). 선택 요청은 "선택 대기 중"(muted) → "응답 옴"(gold).
+  행·정보 노드 공용. 요청이 있으면 push 버튼은 "다시 보내기"로 바뀐다. 플레이어 확인(acknowledge)이 게임 SSE로 ST 뱃지를 green으로 갱신.
+  (톤앤매너: 컬러 이모지 대신 색·텍스트로 위계를 주고, 확인 체크만 `✓`(모노크롬)을 쓴다.)
 - 플레이어 [components/NightRequestPanel.tsx](../../components/NightRequestPanel.tsx): delivered면 `ShowcasePayloadView`로
   1:1 렌더 + '확인했습니다', awaiting이면 좌석/직업 picker. **본인 좌석 요청만**(`getActiveForSeat`), respond/ack는
   `seatForUser===req.seat` 검사.
