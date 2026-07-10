@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS game_nominations (
   turn_started_at TEXT,                     -- 현재 턴 시작 ISO(일시정지/비투표 시 null)
   paused INTEGER NOT NULL DEFAULT 0,
   is_exile INTEGER NOT NULL DEFAULT 0,      -- 여행자 추방(처형과 다른 규칙): 전원 투표·유령표 무소모·추방선(과반 초과)
+  hidden INTEGER NOT NULL DEFAULT 0,        -- 비공개 투표(오르간 그라인더): 플레이어는 손·집계를 못 보고 ST만 봄
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -190,6 +191,8 @@ for (const sql of [
   "ALTER TABLE game_night_requests ADD COLUMN idx INTEGER NOT NULL DEFAULT 0",
   // 여행자 추방 지목 — 처형과 다른 규칙(전원 투표·유령표 무소모·추방선). 기존 지목은 처형(0)으로 귀속.
   "ALTER TABLE game_nominations ADD COLUMN is_exile INTEGER NOT NULL DEFAULT 0",
+  // 비공개 투표(오르간 그라인더): 플레이어에게 손·집계를 숨긴다(ST만 열람). 기존 지목은 공개(0).
+  "ALTER TABLE game_nominations ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE games ADD COLUMN label TEXT NOT NULL DEFAULT ''",
   // 인증 도입: 게임을 시작한 이야기꾼(소유자). 레거시 게임은 null(진행 중이면 관리자만 열람).
   "ALTER TABLE games ADD COLUMN owner_id INTEGER",

@@ -38,6 +38,7 @@ import {
   pause as pauseNomination,
   resume as resumeNomination,
   setHand,
+  setHidden as setNominationHidden,
   setPace,
   startVote,
   type Nomination,
@@ -783,6 +784,19 @@ export async function setNominationPaceAction(
   if (room.gameId) emitGameUpdate(room.gameId);
 }
 
+/** ST: 비공개 투표(오르간 그라인더) 토글 — 플레이어에게 손·집계를 숨긴다(getActiveNomination이 비-ST에게 hands 비움). */
+export async function setNominationHiddenAction(
+  roomId: string,
+  id: string,
+  hidden: boolean,
+): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  const nom = getNomination(id);
+  if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
+  setNominationHidden(id, hidden);
+  if (room.gameId) emitGameUpdate(room.gameId);
+}
+
 export async function cancelNominationAction(roomId: string, id: string): Promise<{ error: string } | void> {
   const { room } = await requireRoomOwner(roomId);
   const nom = getNomination(id);
@@ -820,9 +834,14 @@ export async function commitNominationAction(
 
 /** 활성 지목 조회 — 플레이어·ST 공용(멤버면 누구나, 공개 정보). 낮이 아니면 null. */
 export async function getActiveNominationAction(roomId: string): Promise<Nomination | null> {
-  const { room } = await requireRoomMember(roomId);
+  const { user, room } = await requireRoomMember(roomId);
   if (!room.gameId) return null;
   const game = getGame(room.gameId);
   if (!game || game.phase !== "day") return null;
-  return getActiveNomination(room.gameId, game.day) ?? null;
+  const nom = getActiveNomination(room.gameId, game.day);
+  if (!nom) return null;
+  // 비공개 투표(오르간 그라인더): 비-ST(플레이어)에겐 손·집계를 서버에서 비운다. 방장·관리자는 전부 본다.
+  const isOwner = room.ownerId === user.id || isAdmin(user);
+  if (nom.hidden && !isOwner) return { ...nom, hands: [] };
+  return nom;
 }

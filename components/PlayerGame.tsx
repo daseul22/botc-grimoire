@@ -416,6 +416,7 @@ export function PlayerGame({
           boundSeat={boundSeat}
           players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
           me={{ status: me.status, ghostVoteUsed: me.ghostVoteUsed }}
+          myCharacterId={me.characterId}
           canNominate={canNominate}
           nominationsOpen={nominationsOpen}
           nominatedSeats={nominatedSeats}

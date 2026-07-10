@@ -35,7 +35,9 @@ export type Nomination = {
   paused: boolean;
   /** 여행자 추방인가 — 처형과 규칙이 다르다(전원 투표·유령표 무소모·추방선 과반 초과). */
   isExile: boolean;
-  /** 지금까지 집계된 손(공개). */
+  /** 비공개 투표(오르간 그라인더) — 플레이어는 손·집계를 못 본다(서버가 비-ST에게 hands를 비움). */
+  hidden: boolean;
+  /** 지금까지 집계된 손(공개 — hidden이면 서버가 비-ST에게 빈 배열로 내림). */
   hands: Hand[];
   createdAt: string;
   updatedAt: string;
@@ -55,6 +57,7 @@ type NomRow = {
   turn_started_at: string | null;
   paused: number;
   is_exile: number;
+  hidden: number;
   created_at: string;
   updated_at: string;
 };
@@ -85,6 +88,7 @@ function toNom(r: NomRow): Nomination {
     turnStartedAt: r.turn_started_at,
     paused: !!r.paused,
     isExile: !!r.is_exile,
+    hidden: !!r.hidden,
     hands: loadHands(r.id),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -248,6 +252,11 @@ export function resume(id: string): void {
   db.prepare(
     "UPDATE game_nominations SET paused=0, step=step+1, turn_started_at=?, updated_at=? WHERE id=? AND status='voting'",
   ).run(t, t, id);
+}
+
+/** 비공개 투표(오르간 그라인더) 토글 — 플레이어에게 손·집계를 숨긴다(서버가 비-ST에게 hands 비움). */
+export function setHidden(id: string, hidden: boolean): void {
+  db.prepare("UPDATE game_nominations SET hidden=?, updated_at=? WHERE id=?").run(hidden ? 1 : 0, now(), id);
 }
 
 /** 좌석당 속도 조정(초). 0=수동. */

@@ -22,6 +22,8 @@ export type NominationView = {
   paused: boolean;
   /** 여행자 추방(전원 투표·유령표 무소모·추방선). false면 일반 처형 지목. */
   isExile: boolean;
+  /** 비공개 투표(오르간 그라인더) — 서버가 플레이어에게 hands를 비워 보낸다. UI도 집계를 숨긴다. */
+  hidden: boolean;
   hands: { seat: number; hand: 0 | 1; isGhost: boolean }[];
 };
 
@@ -38,6 +40,7 @@ export function DayVotePanel({
   boundSeat,
   players,
   me,
+  myCharacterId,
   canNominate,
   nominationsOpen = false,
   nominatedSeats,
@@ -47,6 +50,8 @@ export function DayVotePanel({
   boundSeat: number;
   players: SeatLite[];
   me: { status: "alive" | "dead"; ghostVoteUsed: boolean };
+  /** 본인 실제 직업 — 집사 등 투표 제약 소프트 안내용(강제 아님, 정체 노출 방지). */
+  myCharacterId?: string;
   canNominate: boolean;
   /** ST가 '지목 받기'를 열었는가 — 안 열렸으면 대기 안내. */
   nominationsOpen?: boolean;
@@ -174,7 +179,7 @@ export function DayVotePanel({
             “{nick(nomination.nominee)}” {nomination.isExile ? "추방" : "처형"}에 찬성합니까?
           </h2>
           <p className="mb-4 text-xs text-muted">
-            현재 찬성 {upCount}표
+            {nomination.hidden ? "비공개 투표 — 집계는 이야기꾼만 봅니다" : `현재 찬성 ${upCount}표`}
             {nomination.perSeatSec > 0 && nomination.turnStartedAt && (
               <> · <Countdown startedAt={nomination.turnStartedAt} seconds={nomination.perSeatSec} /></>
             )}
@@ -186,6 +191,11 @@ export function DayVotePanel({
                 : deadNoGhost
                   ? "유령표를 이미 사용해 찬성할 수 없습니다(손 내리기만)."
                   : "유령표는 게임 중 한 번만 쓸 수 있습니다."}
+            </p>
+          )}
+          {myCharacterId === "butler" && (
+            <p className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">
+              집사는 주인이 손을 들 때만 함께 찬성할 수 있습니다(주인이 안 들면 손 내리기).
             </p>
           )}
           <div className="flex gap-3">
@@ -228,11 +238,15 @@ export function DayVotePanel({
   if (nomination.status === "pending") {
     msg = `“${nick(nomination.nominee)}” 지목됨 · 이야기꾼이 투표를 시작하면 손을 들 수 있습니다`;
   } else if (nomination.status === "tallied") {
-    msg = `집계 완료 · 찬성 ${upCount}표 · 이야기꾼 정산 대기`;
+    msg = nomination.hidden
+      ? "집계 완료(비공개) · 이야기꾼 정산 대기"
+      : `집계 완료 · 찬성 ${upCount}표 · 이야기꾼 정산 대기`;
   } else {
     // voting, 남의 차례
     const prog = `${Math.min(nomination.pointer + 1, nomination.order.length)}/${nomination.order.length}`;
-    msg = `${nick(curSeat as number)} 투표 중 (${prog}) · 찬성 ${upCount}표`;
+    msg = nomination.hidden
+      ? `${nick(curSeat as number)} 투표 중 (${prog}) · 비공개`
+      : `${nick(curSeat as number)} 투표 중 (${prog}) · 찬성 ${upCount}표`;
   }
   // 상단 가운데 눈에 띄는 배너 — 헤더 바로 아래(하단 FAB 회피 불필요). 펄스 점 + 골드 강조로 주목도↑.
   return (

@@ -56,6 +56,8 @@ export default async function RoomSeatPage({
   let nominatedSeats: number[] = [];
   if (game.phase === "day" && game.status !== "finished") {
     nomination = getActiveNomination(room.gameId, game.day) ?? null;
+    // 비공개 투표(오르간 그라인더): 플레이어 화면(항상 비-ST)에는 손·집계를 숨긴다(getActiveNominationAction과 동일 기준).
+    if (nomination?.hidden) nomination = { ...nomination, hands: [] };
     const today = listForDay(room.gameId, game.day);
     nominatedSeats = today.map((n) => n.nominee);
     const meP = game.players.find((p) => p.seat === boundSeat);

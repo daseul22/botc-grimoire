@@ -17,6 +17,7 @@ import {
   openNominationOnBehalfAction,
   pauseNominationAction,
   resumeNominationAction,
+  setNominationHiddenAction,
   setNominationPaceAction,
   setNominationsOpenAction,
   startDayTimerAction,
@@ -295,6 +296,17 @@ function DayPanel({
                   options={PACE_OPTS}
                 />
               </div>
+            )}
+            {(nom.status === "pending" || nom.status === "voting") && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(() => setNominationHiddenAction(roomId, nom.id, !nom.hidden))}
+                title="오르간 그라인더 — 플레이어에게 손·집계를 숨기고 이야기꾼만 봅니다"
+                className={`w-fit rounded-lg border px-2.5 py-1.5 text-xs ${nom.hidden ? "border-gold/60 bg-gold/15 text-gold" : "border-border text-muted hover:text-text"}`}
+              >
+                {nom.hidden ? "✓ 비공개 투표(오르간 그라인더)" : "비공개 투표(오르간 그라인더)"}
+              </button>
             )}
             {nom.status === "tallied" && (
               <div className="space-y-1.5">
