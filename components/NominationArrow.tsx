@@ -35,8 +35,8 @@ export function NominationArrow({
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len;
   const uy = dy / len;
-  // 토큰 언저리까지 물려 화살촉이 대상 토큰 바로 밖을 가리키게(짧은 화살표는 비율로 줄임).
-  const pull = Math.min(7, len * 0.32);
+  // 토큰+라벨 영역을 확실히 벗어나도록 넉넉히 물린다(겹침 방지). 짧은 화살표는 최소 가시선 확보.
+  const pull = Math.min(11, Math.max(0, (len - 4) / 2));
   const ax = a.x + ux * pull;
   const ay = a.y + uy * pull;
   const bx = b.x - ux * pull;
