@@ -72,8 +72,8 @@ export type Alignment = "good" | "evil";
 export type Phase = "night" | "day";
 /** 좌석 생사 상태. */
 export type SeatStatus = "alive" | "dead";
-/** 사망 원인 — 처형/밤 살해/기타/미사망. 사망 글리프·복기에 사용. */
-export type DeathCause = "execution" | "night" | "other" | "";
+/** 사망 원인 — 처형/밤 살해/여행자 추방/기타/미사망. 사망 글리프·복기에 사용. */
+export type DeathCause = "execution" | "night" | "exile" | "other" | "";
 
 /** 서버 액션 공통 반환형 — 성공 값(T) 또는 에러. */
 export type ServerActionResult<T> = T | { error: string };

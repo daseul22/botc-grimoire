@@ -299,21 +299,26 @@ function DayPanel({
             {nom.status === "tallied" && (
               <div className="space-y-1.5">
                 <p className="text-xs text-muted">
-                  {upCount >= cutoff
-                    ? `${nomineeIsTraveller ? "추방" : "과반"}선(${cutoff}표) 충족 — 단독 최다일 때만 처형하세요.`
-                    : `${nomineeIsTraveller ? "추방" : "과반"}선 ${cutoff}표에 ${cutoff - upCount}표 부족.`}
+                  {nomineeIsTraveller
+                    ? upCount >= cutoff
+                      ? `추방선(${cutoff}표) 충족 — 추방할 수 있습니다(여행자, 처형과 별개).`
+                      : `추방선 ${cutoff}표에 ${cutoff - upCount}표 부족.`
+                    : upCount >= cutoff
+                      ? `과반선(${cutoff}표) 충족 — 단독 최다일 때만 처형하세요.`
+                      : `과반선 ${cutoff}표에 ${cutoff - upCount}표 부족.`}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => {
-                      if (confirm(`${nameOf(nom.nominee)}을(를) 처형할까요? (좌석이 사망 처리됩니다)`))
+                      const verb = nomineeIsTraveller ? "추방" : "처형";
+                      if (confirm(`${nameOf(nom.nominee)}을(를) ${verb}할까요? (좌석이 사망 처리됩니다)`))
                         run(() => commitNominationAction(roomId, nom.id, true), true);
                     }}
                     className="rounded-lg bg-red-500/20 px-3 py-1.5 text-sm font-semibold text-red-300 hover:bg-red-500/30 disabled:opacity-40"
                   >
-                    ☠️ 처형 확정
+                    {nomineeIsTraveller ? "⊘ 추방 확정" : "☠️ 처형 확정"}
                   </button>
                   <button
                     type="button"
@@ -321,7 +326,7 @@ function DayPanel({
                     onClick={() => run(() => commitNominationAction(roomId, nom.id, false), true)}
                     className="rounded-lg border border-border px-3 py-1.5 text-sm hover:text-text disabled:opacity-40"
                   >
-                    정산만(처형 안 함)
+                    {nomineeIsTraveller ? "정산만(추방 안 함)" : "정산만(처형 안 함)"}
                   </button>
                 </div>
               </div>

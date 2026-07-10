@@ -19,6 +19,8 @@ export type NominationView = {
   perSeatSec: number;
   turnStartedAt: string | null;
   paused: boolean;
+  /** 여행자 추방(전원 투표·유령표 무소모·추방선). false면 일반 처형 지목. */
+  isExile: boolean;
   hands: { seat: number; hand: 0 | 1; isGhost: boolean }[];
 };
 
@@ -152,7 +154,8 @@ export function DayVotePanel({
         </button>
       );
     }
-    const deadNoGhost = me.status === "dead" && me.ghostVoteUsed;
+    // 여행자 추방은 죽은 자도 유령표 없이 자유롭게 투표한다 → 유령표 소진 제한 없음.
+    const deadNoGhost = !nomination.isExile && me.status === "dead" && me.ghostVoteUsed;
     return (
       <div
         data-modal
@@ -165,7 +168,7 @@ export function DayVotePanel({
         >
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gold">투표 · 내 차례</p>
           <h2 className="mb-1 text-lg font-bold leading-snug">
-            “{nick(nomination.nominee)}” 처형에 찬성합니까?
+            “{nick(nomination.nominee)}” {nomination.isExile ? "추방" : "처형"}에 찬성합니까?
           </h2>
           <p className="mb-4 text-xs text-muted">
             현재 찬성 {upCount}표
@@ -175,7 +178,11 @@ export function DayVotePanel({
           </p>
           {me.status === "dead" && (
             <p className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs text-red-400">
-              {deadNoGhost ? "유령표를 이미 사용해 찬성할 수 없습니다(손 내리기만)." : "유령표는 게임 중 한 번만 쓸 수 있습니다."}
+              {nomination.isExile
+                ? "여행자 추방은 죽은 뒤에도 유령표 없이 자유롭게 투표할 수 있습니다."
+                : deadNoGhost
+                  ? "유령표를 이미 사용해 찬성할 수 없습니다(손 내리기만)."
+                  : "유령표는 게임 중 한 번만 쓸 수 있습니다."}
             </p>
           )}
           <div className="flex gap-3">

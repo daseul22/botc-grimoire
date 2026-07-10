@@ -103,7 +103,7 @@ export function ShowcasePayloadView({
               const y = Number.isFinite(s.y) ? s.y : fb[i]?.y ?? 0.5;
               const ch = getChar(s.characterId);
               const evil = s.alignment === "evil";
-              const glyph = s.deathCause === "execution" ? "☠️" : s.deathCause === "night" ? "🌙" : "✕";
+              const glyph = s.deathCause === "execution" ? "☠️" : s.deathCause === "night" ? "🌙" : s.deathCause === "exile" ? "⊘" : "✕";
               // 상태 토큰(마커)을 ST 캔버스와 동일하게 MarkerToken으로 — roleParam(집착·능력획득 등) 대상 직업용 미니 charMap.
               const mkCharMap: Record<string, Character> = {};
               for (const m of s.markers) {

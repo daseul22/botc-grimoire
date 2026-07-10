@@ -236,7 +236,7 @@ export function PlayerGame({
           const dead = p.status === "dead";
           const g = guessOf(p.seat);
           const guessCh = g.guess ? charMap[g.guess] : undefined;
-          const deathGlyph = p.deathCause === "execution" ? "☠️" : p.deathCause === "night" ? "🌙" : "✕";
+          const deathGlyph = p.deathCause === "execution" ? "☠️" : p.deathCause === "night" ? "🌙" : p.deathCause === "exile" ? "⊘" : "✕";
           return (
             <div
               key={p.seat}

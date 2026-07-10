@@ -33,6 +33,8 @@ export type Nomination = {
   /** 현재 턴 시작 ISO(일시정지/비투표 시 null). 클라 카운트다운의 기준. */
   turnStartedAt: string | null;
   paused: boolean;
+  /** 여행자 추방인가 — 처형과 규칙이 다르다(전원 투표·유령표 무소모·추방선 과반 초과). */
+  isExile: boolean;
   /** 지금까지 집계된 손(공개). */
   hands: Hand[];
   createdAt: string;
@@ -52,6 +54,7 @@ type NomRow = {
   per_seat_sec: number;
   turn_started_at: string | null;
   paused: number;
+  is_exile: number;
   created_at: string;
   updated_at: string;
 };
@@ -81,6 +84,7 @@ function toNom(r: NomRow): Nomination {
     perSeatSec: r.per_seat_sec,
     turnStartedAt: r.turn_started_at,
     paused: !!r.paused,
+    isExile: !!r.is_exile,
     hands: loadHands(r.id),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -89,15 +93,18 @@ function toNom(r: NomRow): Nomination {
 
 /**
  * 투표 순서 계산(순수). 지명자 다음 좌석부터 시계방향(좌석 인덱스 순환), 마지막이 지명자.
- * 자격: 생존 좌석 or (사망 & 유령표 미사용) 좌석만 포함. 좌석 번호가 0..n-1 연속이 아니어도
+ * 처형 지목 자격: 생존 좌석 or (사망 & 유령표 미사용). 좌석 번호가 0..n-1 연속이 아니어도
  * 정렬된 좌석 목록을 순환해 순서를 만든다.
+ * **여행자 추방(isExile)**: 규칙상 산 자·죽은 자 전원이 유령표 소모 없이 투표한다 → 전 좌석 포함.
  */
-export function computeOrder(seats: SeatLite[], nominee: number): number[] {
+export function computeOrder(seats: SeatLite[], nominee: number, isExile = false): number[] {
   const ss = [...seats].map((s) => s.seat).sort((a, b) => a - b);
   const n = ss.length;
   const ni = ss.indexOf(nominee);
   if (ni < 0) return [];
-  const eligible = new Map(seats.map((s) => [s.seat, s.status === "alive" || !s.ghostVoteUsed]));
+  const eligible = new Map(
+    seats.map((s) => [s.seat, isExile || s.status === "alive" || !s.ghostVoteUsed]),
+  );
   const order: number[] = [];
   for (let k = 1; k <= n; k++) {
     const seat = ss[(ni + k) % n]; // k=n → 지명자 본인(마지막)
@@ -106,7 +113,7 @@ export function computeOrder(seats: SeatLite[], nominee: number): number[] {
   return order;
 }
 
-/** 지목 생성(pending). order는 좌석 자격으로 계산해 저장한다. */
+/** 지목 생성(pending). order는 좌석 자격으로 계산해 저장한다. isExile이면 전원 투표 순서. */
 export function openNomination(input: {
   gameId: string;
   day: number;
@@ -114,14 +121,16 @@ export function openNomination(input: {
   nominee: number;
   seats: SeatLite[];
   perSeatSec?: number;
+  isExile?: boolean;
 }): string {
   const id = "nom-" + crypto.randomUUID().slice(0, 8);
   const t = now();
-  const order = computeOrder(input.seats, input.nominee);
+  const isExile = !!input.isExile;
+  const order = computeOrder(input.seats, input.nominee, isExile);
   db.prepare(
     `INSERT INTO game_nominations
-      (id,game_id,day,nominator_seat,nominee_seat,status,order_json,pointer,step,per_seat_sec,turn_started_at,paused,created_at,updated_at)
-     VALUES (?,?,?,?,?,'pending',?,-1,0,?,NULL,0,?,?)`,
+      (id,game_id,day,nominator_seat,nominee_seat,status,order_json,pointer,step,per_seat_sec,turn_started_at,paused,is_exile,created_at,updated_at)
+     VALUES (?,?,?,?,?,'pending',?,-1,0,?,NULL,0,?,?,?)`,
   ).run(
     id,
     input.gameId,
@@ -130,6 +139,7 @@ export function openNomination(input: {
     input.nominee,
     JSON.stringify(order),
     Math.max(0, Math.min(60, input.perSeatSec ?? 0)),
+    isExile ? 1 : 0,
     t,
     t,
   );
@@ -205,8 +215,9 @@ export function advance(id: string, expectedStep: number): AdvanceResult {
         db.prepare(
           "INSERT INTO game_nomination_hands (nomination_id,voter_seat,hand,is_ghost) VALUES (?,?,0,0)",
         ).run(id, curSeat);
-      } else if (hr.hand && hr.is_ghost) {
+      } else if (hr.hand && hr.is_ghost && !r.is_exile) {
         // 유령표를 든 손 → 소모 확정(전역 game_players.ghost_vote_used).
+        // 여행자 추방은 죽은 자도 유령표 없이 투표하므로 소모하지 않는다(is_exile 가드).
         db.prepare("UPDATE game_players SET ghost_vote_used=1 WHERE game_id=? AND seat=?").run(r.game_id, curSeat);
       }
     }

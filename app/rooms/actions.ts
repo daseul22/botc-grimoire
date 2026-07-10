@@ -620,12 +620,16 @@ function doOpenNomination(
   if (today.some((n) => n.nominator === nominator)) return { error: "이미 지목했습니다(하루 1회)." };
   if (today.some((n) => n.nominee === nominee)) return { error: "이미 지목된 대상입니다(하루 1회)." };
   cancelStale(gameId, game.day); // 지난 낮의 미커밋 지목 정리
+  // 피지명자가 여행자면 '추방'(처형과 다른 규칙: 전원 투표·유령표 무소모·추방선 과반 초과).
+  const charMap = characterMapForGame(game);
+  const isExile = charMap.get(target.characterId)?.team === "traveller";
   const id = openNomination({
     gameId,
     day: game.day,
     nominator,
     nominee,
     seats: game.players.map((p) => ({ seat: p.seat, status: p.status, ghostVoteUsed: p.ghostVoteUsed })),
+    isExile,
   });
   emitGameUpdate(gameId);
   return { id };
@@ -719,8 +723,9 @@ export async function castHandAction(
   if (!me) return { error: "좌석을 찾을 수 없습니다." };
   const up = hand === 1;
   const isDead = me.status === "dead";
-  if (isDead && up && me.ghostVoteUsed) return { error: "유령표를 이미 사용했습니다." };
-  setHand(id, seat, up ? 1 : 0, isDead && up);
+  // 여행자 추방은 죽은 자도 유령표 소모 없이 투표한다 → 유령표 검사·소모 마킹 모두 건너뛴다.
+  if (isDead && up && !nom.isExile && me.ghostVoteUsed) return { error: "유령표를 이미 사용했습니다." };
+  setHand(id, seat, up ? 1 : 0, isDead && up && !nom.isExile);
   emitGameUpdate(room.gameId);
 }
 
@@ -800,9 +805,15 @@ export async function commitNominationAction(
   const nom = getNomination(id);
   if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
   const votes = countUp(id);
-  captureUndo(room.gameId, "낮 투표 정산");
-  recordVote(room.gameId, { nominator: nom.nominator, nominee: nom.nominee, votes, executed });
-  if (executed) setStatus(room.gameId, nom.nominee, "dead", "execution");
+  captureUndo(room.gameId, nom.isExile ? "여행자 추방 정산" : "낮 투표 정산");
+  if (nom.isExile) {
+    // 추방은 처형(VoteRecord)이 아니다 — 언더테이커·처형 커트라인 오염을 막으려 committed 투표 레이어를
+    // 건드리지 않고, 라이브 지목행(is_exile)이 기록으로 남는다. executed=추방 확정이면 여행자 사망(cause='exile').
+    if (executed) setStatus(room.gameId, nom.nominee, "dead", "exile");
+  } else {
+    recordVote(room.gameId, { nominator: nom.nominator, nominee: nom.nominee, votes, executed });
+    if (executed) setStatus(room.gameId, nom.nominee, "dead", "execution");
+  }
   markCommitted(id);
   emitGameUpdate(room.gameId);
 }

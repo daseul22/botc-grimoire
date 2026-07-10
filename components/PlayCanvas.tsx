@@ -579,8 +579,8 @@ export function PlayCanvas({
             const fakeCh = fakeId && fakeId !== p.characterId ? charMap[fakeId] : undefined;
             const fakeTeamColor = fakeCh ? TEAM_MAP[fakeCh.team]?.color : undefined;
             // 사망 원인별 중앙 글리프 — 처형/밤 살해 구분(시체매장인·점쟁이꾼 추적).
-            const deathGlyph = p.deathCause === "execution" ? "☠️" : p.deathCause === "night" ? "🌙" : "✕";
-            const deathTitle = p.deathCause === "execution" ? "처형됨" : p.deathCause === "night" ? "밤에 사망" : "사망";
+            const deathGlyph = p.deathCause === "execution" ? "☠️" : p.deathCause === "night" ? "🌙" : p.deathCause === "exile" ? "⊘" : "✕";
+            const deathTitle = p.deathCause === "execution" ? "처형됨" : p.deathCause === "night" ? "밤에 사망" : p.deathCause === "exile" ? "추방됨" : "사망";
             return (
               <div key={p.seat} data-token onPointerDown={(e) => onDown(e, p.seat)} onPointerMove={(e) => onMove(e, p.locked)} onPointerUp={onUp} className={`absolute flex touch-none select-none ${fs ? "cursor-default" : p.locked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${selected === p.seat ? "z-10" : ""}`} style={{ left: `${px * 100}%`, top: `${py * 100}%`, transform: "translate(-50%, -50%)", transition: fs ? "left 0.45s ease, top 0.45s ease" : undefined }}>
                 {/* 전체화면 시 1.8배 — 위치(translate)는 바깥, 크기(scale)는 안쪽에 둬 드래그가 안 끊기게 분리 */}
