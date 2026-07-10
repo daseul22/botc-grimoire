@@ -364,6 +364,8 @@ export async function sendChatAction(
     const g = getGame(room.gameId);
     if (g && g.status !== "finished") {
       const mySeat = seatForUser(room.gameId, user.id);
+      // 관전자(좌석 없는 멤버)는 대화를 볼 수만 있다 — 게임에 개입하지 않도록 전송 차단.
+      if (mySeat == null) return { error: "관전자는 대화를 볼 수만 있습니다." };
       // 지목 시간 활성화(nominationsOpen) 또는 활성 지목/투표 중이면 전챗·귓말 모두 차단.
       const nominationsActive = g.nominationsOpen || !!getActiveNomination(room.gameId, g.day);
       const gate = chatGate(g.phase, openTimerRunning(g), nominationsActive, mySeat, g.players.length);

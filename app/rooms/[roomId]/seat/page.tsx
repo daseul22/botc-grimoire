@@ -10,6 +10,7 @@ import { chatGate, openTimerRunning, type ChatPolicy } from "@/lib/chat-policy";
 import { redactGameForSeat } from "@/lib/redact";
 import { characterMapForGame } from "@/lib/game-characters";
 import { PlayerGame } from "@/components/PlayerGame";
+import { SpectatorGame } from "@/components/SpectatorGame";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "내 자리" };
@@ -33,13 +34,33 @@ export default async function RoomSeatPage({
   const game = getGame(room.gameId);
   if (!game) redirect(`/rooms/${roomId}`);
 
+  const memberColorMap = Object.fromEntries(room.members.map((m) => [m.userId, m.color]));
+  const seatColorMap = Object.fromEntries(
+    room.members
+      .filter((m) => m.seat != null)
+      .map((m) => [m.seat as number, colorHex(m.color, m.userId)]),
+  );
+
   const boundSeat = seatForUser(room.gameId, user.id);
   if (boundSeat == null) {
+    // 관전자(좌석 없는 멤버) — 막다른 페이지 대신 읽기전용 공개 보드. redact(-1)로 전 좌석 마스킹.
+    let specNom: Nomination | null = null;
+    if (game.phase === "day" && game.status !== "finished") {
+      specNom = getActiveNomination(room.gameId, game.day) ?? null;
+      if (specNom?.hidden) specNom = { ...specNom, hands: [] };
+    }
     return (
-      <div className="mx-auto max-w-md py-16 text-center">
-        <p className="mb-1 text-xs text-muted">{game.sheetName}</p>
-        <p className="text-sm text-muted">관전자에게는 자리 정보가 없습니다.</p>
-      </div>
+      <SpectatorGame
+        game={redactGameForSeat(game, -1)}
+        nomination={specNom}
+        roomId={roomId}
+        gameId={room.gameId}
+        meId={user.id}
+        members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
+        memberColors={memberColorMap}
+        seatColors={seatColorMap}
+        chatPolicy={{ allChat: false, whisper: [], reason: "관전 중 — 대화는 볼 수만 있습니다." }}
+      />
     );
   }
 
@@ -78,14 +99,7 @@ export default async function RoomSeatPage({
     reason: gate.reason,
   };
 
-  // 닉네임 구분 색: 채팅용 userId→색id, 보드 라벨용 seat→hex.
-  const memberColors = Object.fromEntries(room.members.map((m) => [m.userId, m.color]));
-  const seatColors = Object.fromEntries(
-    room.members
-      .filter((m) => m.seat != null)
-      .map((m) => [m.seat as number, colorHex(m.color, m.userId)]),
-  );
-
+  // 닉네임 구분 색: 채팅용 userId→색id(memberColorMap), 보드 라벨용 seat→hex(seatColorMap) — 위에서 계산.
   return (
     <PlayerGame
       game={redacted}
@@ -95,8 +109,8 @@ export default async function RoomSeatPage({
       roomId={roomId}
       meId={user.id}
       members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
-      memberColors={memberColors}
-      seatColors={seatColors}
+      memberColors={memberColorMap}
+      seatColors={seatColorMap}
       initialNotes={notes}
       request={request}
       nomination={nomination}
