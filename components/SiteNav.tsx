@@ -13,6 +13,7 @@ const NAV = [
   { href: "/games", label: "내역" },
   { href: "/stats", label: "통계" },
   { href: "/rules", label: "규칙" },
+  { href: "/guide", label: "온라인 가이드" },
 ];
 
 const ROLE_CLS: Record<Role, string> = {
