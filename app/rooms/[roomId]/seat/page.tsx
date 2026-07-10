@@ -6,6 +6,7 @@ import { getPlayerNotes } from "@/lib/player-board";
 import { getActiveForSeat } from "@/lib/night-requests";
 import { getActive as getActiveNomination, listForDay, type Nomination } from "@/lib/nominations";
 import { colorHex } from "@/lib/player-colors";
+import { chatGate, openTimerRunning, type ChatPolicy } from "@/lib/chat-policy";
 import { redactGameForSeat } from "@/lib/redact";
 import { characterMapForGame } from "@/lib/game-characters";
 import { PlayerGame } from "@/components/PlayerGame";
@@ -62,6 +63,17 @@ export default async function RoomSeatPage({
     canNominate = !nomination && !!meP && meP.status === "alive" && !iNominated;
   }
 
+  // 채팅 잠금 정책(밤/지목·투표 중 차단, 귓말=공개토론 중 양옆 이웃) — 서버 sendChatAction과 동일 기준.
+  const gate = chatGate(game.phase, openTimerRunning(game), !!nomination, boundSeat, game.players.length);
+  const neighborUserIds = room.members
+    .filter((m) => m.seat != null && gate.neighborSeats.includes(m.seat as number))
+    .map((m) => m.userId);
+  const chatPolicy: ChatPolicy = {
+    allChat: gate.allChat,
+    whisper: gate.whisper ? neighborUserIds : [],
+    reason: gate.reason,
+  };
+
   // 닉네임 구분 색: 채팅용 userId→색id, 보드 라벨용 seat→hex.
   const memberColors = Object.fromEntries(room.members.map((m) => [m.userId, m.color]));
   const seatColors = Object.fromEntries(
@@ -86,6 +98,7 @@ export default async function RoomSeatPage({
       nomination={nomination}
       canNominate={canNominate}
       nominatedSeats={nominatedSeats}
+      chatPolicy={chatPolicy}
     />
   );
 }

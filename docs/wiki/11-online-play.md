@@ -127,8 +127,17 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 - 전달: 룸 채널 SSE 재사용(`emitRoomUpdate` → 위젯이 `getMessagesAction` 재조회). 본문은 React 텍스트(XSS escape).
 - 한글 등 IME 조합 중 Enter는 무시(`e.nativeEvent.isComposing`) — 조합 확정 Enter가 전송까지 일으켜
   "안녕"이 두 번 가던 버그 방지.
-- **밤 잠금**: `phase==='night'`이면 채팅 전송 불가(읽기는 됨). ChatWidget `locked` prop으로 입력·전송 비활성 +
-  "🌙 밤에는 대화할 수 없습니다" 안내, `sendChatAction`도 **서버에서 밤 거부**(클라 우회 차단). 로비·낮·종료는 허용.
+- **채팅 잠금 정책**([lib/chat-policy.ts](../../lib/chat-policy.ts) — 서버·클라 단일 출처): 귓말이 악팀 공조에 너무
+  유리해 "귓속말" 컨셉으로 좁혔다.
+  - **밤**: 전챗·귓말 모두 차단.
+  - **낮 · 지목·투표 중**(`getActive` 활성 지목 존재): 전챗·귓말 모두 차단.
+  - **낮 · 지목 없음**: 전챗(전체)은 허용 / 귓말은 **공개토론(open) 타이머 중**(startedAt 있고 finishedAt 없음) +
+    **바로 옆 좌석**(양옆, 사망 무관 — `neighborSeatsOf`)에게만.
+
+  `chatGate(phase, openRunning, nominationActive, mySeat, seatCount)`가 판정한다. 서버 `sendChatAction`이 강제
+  (발신자 좌석 + 수신자 좌석 인접 검사, 클라 우회 차단), 클라 `ChatWidget`은 `policy`(전챗 가능 여부·귓말 대상
+  userId 목록·사유)로 입력/받는사람 드롭다운을 제한하고 막힘 사유를 표시한다. **이야기꾼(방장)은 운영자라 예외**
+  (자유롭게 대화·귓말), 로비·종료 게임도 자유(`FREE_CHAT`). 색 이모지 없이 색·텍스트 안내.
 
 ## 플레이어 닉네임 구분 색 — `lib/player-colors.ts`
 
@@ -261,7 +270,8 @@ stateDiagram-v2
 
 - `lib/realtime.ts` 이벤트 버스(게임/룸 채널) · `lib/rooms.ts` 룸 데이터 레이어 ·
   `lib/role-assign.ts` 직업 배정(게임/룸 시작 공유) · `lib/redact.ts` 좌석 redaction ·
-  `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/night-requests.ts` 밤 행동 요청(전송 인프라) ·
+  `lib/player-board.ts` 추측/메모 · `lib/chat.ts` 전체 채팅 · `lib/chat-policy.ts` 채팅 잠금 정책(밤·지목·귓말) ·
+  `lib/night-requests.ts` 밤 행동 요청(전송 인프라) ·
   `lib/showcase.ts` 보여주기 해석(LAN·온라인 단일 출처) ·
   `lib/nominations.ts` 낮 지목/투표(시계바늘 순차) · `lib/voting.ts` 정산 계산(LAN·온라인 공유) ·
   `lib/player-colors.ts` 닉네임 구분 15색(채팅·보드).

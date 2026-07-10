@@ -6,6 +6,7 @@ import { useRoomStream } from "./useGameStream";
 import { Select } from "./Select";
 import { Modal } from "./Modal";
 import { colorHex, PLAYER_COLORS } from "@/lib/player-colors";
+import { FREE_CHAT, type ChatPolicy } from "@/lib/chat-policy";
 
 // lib/chat의 ChatMessage와 동일 구조(클라가 서버 모듈을 import하지 않도록 로컬 정의).
 type ChatMessage = {
@@ -33,7 +34,7 @@ export function ChatWidget({
   members = [],
   memberColors = {},
   canEditColors = false,
-  locked = false,
+  policy = FREE_CHAT,
 }: {
   roomId: string;
   meId: number;
@@ -42,8 +43,8 @@ export function ChatWidget({
   memberColors?: Record<number, string>;
   /** 이야기꾼이면 색 편집 가능. */
   canEditColors?: boolean;
-  /** 밤 등 대화 금지 상태 — 읽기는 되지만 전송 불가. */
-  locked?: boolean;
+  /** 채팅 잠금 정책 — 전챗 가능 여부·귓말 대상(양옆 이웃)·막힘 사유. 읽기는 항상 가능. */
+  policy?: ChatPolicy;
 }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -102,10 +103,23 @@ export function ChatWidget({
   };
 
   const others = members.filter((m) => m.userId !== meId);
+  // 귓말 가능 대상(정책). 'any'=전원(로비·이야기꾼), 배열=양옆 이웃만.
+  const canWhisperTo = (userId: number) => policy.whisper === "any" || policy.whisper.includes(userId);
+  const whisperMembers = policy.whisper === "any" ? others : others.filter((m) => canWhisperTo(m.userId));
+  // 받는 사람 드롭다운 — 전체 + 귓말 가능한 멤버만.
   const recipientOptions = [
     { value: 0, label: "전체" },
-    ...others.map((m) => ({ value: m.userId, label: m.nickname })),
+    ...whisperMembers.map((m) => ({ value: m.userId, label: m.nickname })),
   ];
+  // 이 수신자로 지금 전송 불가면 사유 문구, 가능하면 "".
+  const sendBlock = (recipient: number): string =>
+    recipient === 0
+      ? policy.allChat
+        ? ""
+        : policy.reason
+      : canWhisperTo(recipient)
+        ? ""
+        : policy.reason || "귓말은 양옆 이웃에게만 가능합니다.";
 
   // 닉네임 구분 색. 지정 없으면 userId 기반 결정론 폴백.
   const colorOf = (userId: number) => colorHex(colors[userId], userId);
@@ -150,19 +164,22 @@ export function ChatWidget({
   const partyName = (p: number) => (p === meId ? "나" : others.find((o) => o.userId === p)?.nickname ?? `#${p}`);
 
   const sendTo = (recipient: number) => {
-    if (locked) return;
+    if (sendBlock(recipient)) return;
     const t = text.trim();
     if (!t) return;
     setText("");
     void sendChatAction(roomId, t, recipient === 0 ? null : recipient).then(load);
   };
 
-  // 밤 등 대화 금지 안내(입력 영역 상단).
-  const lockNote = locked ? (
-    <p className="mb-1.5 rounded-lg border border-border bg-surface-2/60 px-2.5 py-1.5 text-center text-[11px] text-muted">
-      🌙 밤에는 대화할 수 없습니다
-    </p>
-  ) : null;
+  // 현재 수신자로 못 보낼 때 상단 안내(밤/지목·투표 중/공개토론 아님/양옆 아님).
+  const noteFor = (recipient: number) => {
+    const b = sendBlock(recipient);
+    return b ? (
+      <p className="mb-1.5 rounded-lg border border-border bg-surface-2/60 px-2.5 py-1.5 text-center text-[11px] text-muted">
+        {b}
+      </p>
+    ) : null;
+  };
 
   // 이름 토큰 — 플레이어 색으로. 발신자/수신자 각각 자기 색이라 이야기꾼이 스캔하기 쉽다.
   const nameEl = (userId: number, nickname: string) => (
@@ -281,18 +298,18 @@ export function ChatWidget({
             {recipientId !== 0 && <span className="text-[11px] text-indigo-300">귓말</span>}
           </div>
         )}
-        {lockNote}
+        {noteFor(recipientId)}
         <div className="flex gap-2">
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => onInputKey(e, recipientId)}
             maxLength={1000}
-            disabled={locked}
-            placeholder={locked ? "밤에는 대화할 수 없습니다" : recipientId === 0 ? "메시지…" : "귓말…"}
+            disabled={!!sendBlock(recipientId)}
+            placeholder={sendBlock(recipientId) || (recipientId === 0 ? "메시지…" : "귓말…")}
             className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60 disabled:opacity-50"
           />
-          <button type="button" onClick={() => sendTo(recipientId)} disabled={locked || !text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
+          <button type="button" onClick={() => sendTo(recipientId)} disabled={!!sendBlock(recipientId) || !text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
             전송
           </button>
         </div>
@@ -438,18 +455,18 @@ export function ChatWidget({
             )}
           </div>
           <div className="border-t border-border p-2">
-            {lockNote}
+            {noteFor(activeThread)}
             <div className="flex gap-2">
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => onInputKey(e, activeThread)}
                 maxLength={1000}
-                disabled={locked}
-                placeholder={locked ? "밤에는 대화할 수 없습니다" : activeThread === 0 ? "전체에게 메시지…" : `${activeTitle}에게 귓말…`}
+                disabled={!!sendBlock(activeThread)}
+                placeholder={sendBlock(activeThread) || (activeThread === 0 ? "전체에게 메시지…" : `${activeTitle}에게 귓말…`)}
                 className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60 disabled:opacity-50"
               />
-              <button type="button" onClick={() => sendTo(activeThread)} disabled={locked || !text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
+              <button type="button" onClick={() => sendTo(activeThread)} disabled={!!sendBlock(activeThread) || !text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
                 전송
               </button>
             </div>

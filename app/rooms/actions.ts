@@ -68,6 +68,7 @@ import {
 import { isPlayerColor } from "@/lib/player-colors";
 import { setGeneralMemo, setGuess, setSeatNote } from "@/lib/player-board";
 import { listMessages, postMessage, type ChatMessage } from "@/lib/chat";
+import { chatGate, openTimerRunning } from "@/lib/chat-policy";
 
 // 방장(이야기꾼) 또는 관리자만. 미인가 시 throw(서버 액션은 공개 POST라 UI 게이팅과 별개로 강제).
 async function requireRoomOwner(roomId: string): Promise<{ user: AuthUser; room: Room }> {
@@ -309,11 +310,23 @@ export async function sendChatAction(
   recipientUserId?: number | null,
 ): Promise<{ error: string } | void> {
   const { user, room } = await requireRoomMember(roomId);
-  // 밤에는 대화 금지(선택지 조작 방지 — 서버에서도 강제). 로비·낮·종료 게임은 허용.
-  if (room.gameId) {
+  // 채팅 잠금(서버 강제) — 밤/지목·투표 중 차단, 귓말은 공개토론 중 양옆 이웃에게만.
+  // 로비·종료 게임은 자유. 이야기꾼(방장)은 운영자라 예외.
+  if (room.gameId && room.ownerId !== user.id) {
     const g = getGame(room.gameId);
-    if (g && g.status !== "finished" && g.phase === "night")
-      return { error: "밤에는 대화할 수 없습니다." };
+    if (g && g.status !== "finished") {
+      const mySeat = seatForUser(room.gameId, user.id);
+      const nominationActive = !!getActiveNomination(room.gameId, g.day);
+      const gate = chatGate(g.phase, openTimerRunning(g), nominationActive, mySeat, g.players.length);
+      if (recipientUserId == null) {
+        if (!gate.allChat) return { error: gate.reason };
+      } else {
+        if (!gate.whisper) return { error: gate.reason || "지금은 귓말할 수 없습니다." };
+        const rSeat = seatForUser(room.gameId, recipientUserId);
+        if (rSeat == null || !gate.neighborSeats.includes(rSeat))
+          return { error: "귓말은 양옆 이웃에게만 가능합니다." };
+      }
+    }
   }
   const text = body.trim().slice(0, 1000);
   if (!text) return;

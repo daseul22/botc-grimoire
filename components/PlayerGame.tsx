@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { TEAMS } from "@/lib/constants";
+import { FREE_CHAT, type ChatPolicy } from "@/lib/chat-policy";
 import type { Character, Game } from "@/lib/types";
 import { CharacterIcon } from "./CharacterIcon";
 import { AbilityModal } from "./AbilityModal";
@@ -44,6 +45,7 @@ export function PlayerGame({
   nomination,
   canNominate,
   nominatedSeats,
+  chatPolicy = FREE_CHAT,
 }: {
   game: Game;
   sheetChars: Character[];
@@ -61,6 +63,8 @@ export function PlayerGame({
   nomination: NominationView | null;
   canNominate: boolean;
   nominatedSeats: number[];
+  /** 채팅 잠금 정책(밤/지목 차단, 귓말=공개토론 중 양옆). 페이지에서 계산해 전달. */
+  chatPolicy?: ChatPolicy;
 }) {
   const router = useRouter();
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;
@@ -353,7 +357,7 @@ export function PlayerGame({
         );
       })()}
 
-      <ChatWidget roomId={roomId} meId={meId} members={members} memberColors={memberColors} locked={game.phase === "night"} />
+      <ChatWidget roomId={roomId} meId={meId} members={members} memberColors={memberColors} policy={chatPolicy} />
 
       {/* 받은 정보·내 응답 기록 — 진행 요청과 분리해 다시 볼 수 있게. */}
       <button

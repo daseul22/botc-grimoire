@@ -8,6 +8,7 @@ import { PlayCanvas } from "@/components/PlayCanvas";
 import { GameReplay } from "@/components/GameReplay";
 import { ChatWidget } from "@/components/ChatWidget";
 import { DayConsole } from "@/components/DayConsole";
+import { FREE_CHAT } from "@/lib/chat-policy";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "온라인 진행" };
@@ -62,7 +63,7 @@ export default async function RoomPlayPage({
         members={room.members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
         memberColors={Object.fromEntries(room.members.map((m) => [m.userId, m.color]))}
         canEditColors={canManage}
-        locked={game.phase === "night"}
+        policy={FREE_CHAT}
       />
     </>
   );
