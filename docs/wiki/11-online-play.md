@@ -342,14 +342,52 @@ stateDiagram-v2
 추가로 `/play/[gameId]`·`/play/[gameId]/seat`의 온라인 redirect도 `RoomRedirect`로 우회(이중 방어).
 배경: **온라인 방을 시작하면 `createGame`으로 실제 Game 레코드가 만들어지고 LAN 라우트 `/play/[gameId]`로도 존재한다** — 보드/보여주기 UI를 LAN과 공유하는 게 이 클래스의 근원.
 
-## 다듬을 거리
+## 견고성·규칙·운영 개선 (공식/커뮤니티 대비 격차 보강)
 
-- 이야기꾼 보드(PlayCanvas)의 SSE 구독은 **밤 행동 요청**(`listNightRequestsAction` refetch)·낮 `DayConsole`까지 왔다.
-  낮 처형 정산 뒤 `DayConsole`이 `router.refresh`로 보드에 사망을 반영한다. 그 외 플레이어발 변경(예: 투표 진행)을
-  PlayCanvas 토큰에 즉시 반영하려면 `getGameAction` refetch+`setGame`을 붙인다.
-- 밤 행동 push 후속: `recipient:none` 좌석 지정을 seat picker 대신 자동 추론(마술사·꼭두각시 등 소수 케이스),
-  push 실패/오프라인 플레이어에 대한 재전송 표시.
-- 낮 투표 후속: 여행자 추방(exile) 별도 UI, 투표 로그의 복기 타임라인 통합, 낮 토론 타이머(PhaseTimers) 연동.
+공식 앱·clocktower.online과 비교해 **끊김 견고성·규칙 정합성·운영 편의**의 구멍을 메운 묶음(P0~P2).
+
+**끊김 견고성**
+- **SSE 재연결 refetch**([useGameStream](../../components/useGameStream.ts)): EventSource 재연결(3초)이나 서버 재시작 동안 emit된
+  `update`는 이벤트 버퍼가 없어 유실됐다. `open` 리스너로 (재)연결마다 `onUpdate`를 1회 발사해 refetch로 따라잡는다(최초 open은 스킵).
+- **SSE 연결 통합**: `useEventStream`을 URL당 단일 EventSource 멀티플렉서로 — ST play 페이지의 `PlayCanvas`+`DayConsole`이
+  같은 게임 스트림을 공유(전엔 각자 열어 3개). 마지막 구독자가 떠나면 닫는다. 종료 룸은 `clearRoomChannel`로 `realtime.revs` 정리.
+- **게임 중 프레즌스**([useHeartbeat](../../components/useHeartbeat.ts)·`readPresence`·`getPresenceAction`): 로비에만 있던 하트비트를
+  게임 화면(플레이어·ST 보드)으로 확장. 탭이 보이는 동안 즉시+15초 하트비트, 백그라운드면 멈춰 45초 뒤 오프라인(의도된 자리 비움).
+  ST 보드가 15초 폴링으로 seat→online을 소비해 좌석에 **오프라인 뱃지**, 밤 요청 대기 뱃지에 **오프라인·경과(N분째)** 표시(`RequestStatusBadge`).
+- **PlayCanvas 서버 진실 반영**: `game=useState(initial)`이라 처형 사망 등 플레이어발 변경이 새로고침 전까지 안 떴다.
+  `getGameAction`(방장·관리자만 전체 게임) refetch를 SSE·visibility 복귀·부모 prop 변경에서 `mergeServerGame`으로 채택
+  (드래그 중일 수 있는 로컬 좌표 x/y만 보존, 생사·마커·진영 등은 서버 진실).
+
+**규칙 정합성**
+- **여행자 추방(exile)** — 처형과 **분리된 파이프라인**(`game_nominations.is_exile`). 피지명자 `team==='traveller'`면 추방:
+  `computeOrder`가 전원 투표(산 자·죽은 자·유령표 무관), `advance`가 유령표 미소모, `castHand`가 죽은 자도 자유 up.
+  정산은 committed `VoteRecord`(처형 레이어)를 건드리지 않고 `deathCause='exile'`로 사망(언더테이커·처형 커트라인 오염 방지). 추방선은 `exileCutoff`(과반 초과).
+- **직업 변경 능력의 실제 좌석 mutate**([lib/games/record.ts](../../lib/games/record.ts)): 핏쥐·카잘리·티폰군주·소환사가 '통보'만 하던 걸
+  `applyRoleChange`로 대상 좌석 `characterId`/진영(새 직업 팀에서 도출)까지 실제 변경. 카잘리·티폰군주·소환사는 `playerPicks`로
+  대상+새 직업을 캡처(전엔 좌석만 받고 role 유실). cacklejack은 `result:none`이라 ST 수동 유지.
+- **특수 투표 — 오르간 그라인더 비공개 투표**(`game_nominations.hidden`): ST 토글(`setNominationHiddenAction`) 시
+  `getActiveNominationAction`·seat 페이지가 **비-ST에게 `hands`를 서버에서 비운다**(플레이어는 손·집계 못 봄, ST만 열람).
+  DayVotePanel은 '비공개 투표' 표시. **집사**는 본인이 집사면 '주인이 손 들 때만 투표' 소프트 안내(하드 차단하면 정체 노출).
+- **동률·비최다 처형 confirm**: `commitNomination` 전 이미 계산된 `tally`로 과반 미달·오늘 최다와 동률·단독 최다 아님을 confirm 경고(ST 판단 존중).
+- **투표 히스토리 복기**: `VoteRecord.voters?`(찬성 좌석)를 온라인 정산 시 캡처해 [GameReplay](../../components/GameReplay.tsx)에 '찬성: 닉네임…' 노출.
+
+**운영·확장·접근성**
+- **'내 차례' 능동 알림**([useTurnAlert](../../components/useTurnAlert.ts)): 투표 차례·밤 요청 도착 시 WebAudio 비프+진동+숨겨진 탭이면
+  `document.title` 플래시(복귀 시 복원). PlayerGame이 숨겨진 탭도 SSE 갱신해야 백그라운드 알림이 뜬다.
+- **밤 순서 반자동**([NightSidebar](../../components/NightSidebar.tsx)): 첫 미완료 노드를 현재 순번으로 골드 링 하이라이트 +
+  헤더 진행도(완료/전체) + '현재 순번' 점프. ST가 다른 노드도 언제든 처리 가능한 반자동.
+- **커스텀 스크립트 JSON import**([lib/script-import.ts](../../lib/script-import.ts)): 공식 Script Tool JSON(`_meta`+id 배열)을
+  파싱해 앱 직업 id로 정규화 매칭(snake_charmer↔snakecharmer), 미지원(홈브루) id는 경고. SheetBuilder에서 붙여넣기/파일. 홈브루 직업 정의는 범위 밖.
+- **관전자 읽기전용 뷰**([SpectatorGame](../../components/SpectatorGame.tsx)): 좌석 없는 멤버가 막다른 페이지 대신 `redact(-1)`로 전 좌석
+  마스킹된 공개 보드(정체 "?"·생사·지목 화살표·타이머) + 채팅 관전. 관전자 전송은 클라 정책 + `sendChatAction`이 좌석 없는 발신자를 서버 차단.
+- **접근성**: 투표 차례 모달(`role=alertdialog`)·관전 배너(`role=status`)·요청 모달·채팅 목록(`role=log aria-live`)·잠금 사유 aria-label·타이머(`role=timer`).
+
+## 남은 다듬을 거리
+
+- 밤 행동 push 후속: `recipient:none` 좌석 지정을 seat picker 대신 자동 추론(마술사·꼭두각시 등 소수 케이스).
+- 특수 투표: 부두(voodoo, 투표 엔진 전면 오버라이드)·컬트 리더. 홈브루 직업 정의(커스텀 능력·이미지) import.
+- 죽은 자/유령 전용 채팅 채널(현재는 좌석 보유 죽은 자도 정상 플레이어 뷰 — BotC상 낮 발언은 정상이라 강제 분리 안 함).
+- 음성/영상(디스코드 전제 유지). 다중 인스턴스/서버리스 전개 시 인메모리 버스를 외부 pub/sub로 교체.
 
 ---
 [← 인증·인가](10-auth.md) · [홈](README.md)
