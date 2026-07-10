@@ -108,9 +108,9 @@ export function PlayerGame({
   useHeartbeat(roomId);
 
   // 이야기꾼이 게임을 바꾸면(사망·이동·밤 행동 요청 등) SSE로 보드를 즉시 갱신.
-  useGameStream(gameId, () => {
-    if (document.visibilityState === "visible") router.refresh();
-  });
+  // 숨겨진 탭도 갱신한다 — 내 차례(투표)·밤 행동 요청이 도착하면 useTurnAlert가 백그라운드에서
+  // 타이틀 플래시로 알려야 하므로, 갱신을 건너뛰면 상태가 안 바뀌어 알림도 못 뜬다.
+  useGameStream(gameId, () => router.refresh());
 
   // 백그라운드였다 돌아오면(모바일) 놓친 변경/요청을 다시 가져온다(SSE는 hidden일 때 refresh 건너뜀).
   useEffect(() => {

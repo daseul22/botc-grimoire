@@ -7,6 +7,7 @@ import { CharacterIcon } from "./CharacterIcon";
 import { RolePickerModal } from "./RolePickerModal";
 import { ShowcasePayloadView } from "./ShowcasePayloadView";
 import { useBackClose } from "./useBackClose";
+import { useTurnAlert } from "./useTurnAlert";
 import {
   acknowledgeNightRequestAction,
   respondNightRequestAction,
@@ -54,6 +55,9 @@ export function NightRequestPanel({
 
   // 모바일 뒤로가기 → 패널을 접어 보드를 볼 수 있게(페이지 이탈 방지). picker가 먼저 소비.
   useBackClose(!collapsed && !pickerOpen, () => setCollapsed(true));
+
+  // 내 응답이 필요한 요청(선택 대기·정보 확인 대기)이 도착하면 소리·진동·타이틀 플래시.
+  useTurnAlert(request.status === "awaiting" || request.status === "delivered", "밤 행동");
 
   const candidates = Object.values(charMap);
 

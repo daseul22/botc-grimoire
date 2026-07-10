@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useBackClose } from "./useBackClose";
 import { useAutoAdvance } from "./useAutoAdvance";
 import { useDelayedFlag } from "./useDelayedFlag";
+import { useTurnAlert } from "./useTurnAlert";
 import { castHandAction, nominateAction } from "@/app/rooms/actions";
 
 // lib/nominations의 Nomination과 동일 구조(클라가 서버 모듈 import 안 하도록 로컬 정의).
@@ -70,6 +71,8 @@ export function DayVotePanel({
   // 접힘은 '이 턴'에 한정 — 턴(pointer)이 바뀌면 키가 달라져 자동으로 펼쳐지므로 내 차례를 놓치지 않는다.
   const turnKey = `${nomination?.id ?? ""}:${nomination?.pointer ?? -1}`;
   const collapsed = collapsedKey === turnKey;
+  // 내 투표 차례가 오면 소리·진동·타이틀 플래시(백그라운드 탭에서도 차례를 알림).
+  useTurnAlert(myTurn, "투표 차례");
 
   // 모바일 뒤로가기 → 내 차례 모달을 접어 보드 확인(picker가 먼저 소비).
   useBackClose(myTurn && !collapsed && !pickerOpen, () => setCollapsedKey(turnKey));
