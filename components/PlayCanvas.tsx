@@ -40,11 +40,13 @@ import {
   cancelNightRequestAction,
   commitPickResponseAction,
   getActiveNominationAction,
+  getPresenceAction,
   listNightRequestsAction,
   pushShowcaseAction,
   requestPlayerPickAction,
 } from "@/app/rooms/actions";
 import { useGameStream } from "./useGameStream";
+import { useHeartbeat } from "./useHeartbeat";
 import type { NightRequestView } from "./NightRequestPanel";
 import type { NominationView } from "./DayVotePanel";
 import type { OnlineNightCtx } from "./NightActionRow";
@@ -219,6 +221,29 @@ export function PlayCanvas({
   }, [loadRequests]);
   // 플레이어 응답(선택·확인)을 게임 SSE로 즉시 반영(온라인일 때만 구독).
   useGameStream(roomId ? game.id : undefined, loadRequests);
+
+  // ── 프레즌스: 좌석별 온라인/오프라인 ──
+  // 하트비트는 emit하지 않으므로 SSE로 안 온다 → 15초 폴링으로 조회한다(비밀 아님). ST 자신도 하트비트.
+  useHeartbeat(roomId);
+  const [presence, setPresence] = useState<Record<number, boolean>>({});
+  useEffect(() => {
+    if (!roomId) return;
+    let alive = true;
+    const poll = () => {
+      if (document.visibilityState !== "visible") return;
+      getPresenceAction(roomId)
+        .then((p) => {
+          if (alive) setPresence(p);
+        })
+        .catch(() => {});
+    };
+    poll();
+    const t = setInterval(poll, 15000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [roomId]);
 
   // 룸 액션({error}|{id}|void)을 감싸 실행 — 반환값으로 setGame하지 않고(게임 불변) 요청 목록만 갱신.
   const runRoom = (fn: () => Promise<unknown>, after?: () => void) => {
@@ -490,6 +515,8 @@ export function PlayCanvas({
             const ch = charMap[p.characterId];
             const dead = p.status === "dead";
             const teamColor = ch ? TEAM_MAP[ch.team]?.color : "#a39bb5";
+            // 온라인: 이 좌석이 오프라인(하트비트 끊김)인가 — 밤 대상 선택·투표 차례를 잡고 이탈했는지 ST가 본다.
+            const offline = !!roomId && presence[p.seat] === false;
             // 첩자 시점이면 좌석 순서대로 첩자를 6시(아래)에 두고 원형 재배치, 아니면 저장된 좌표.
             let px = p.x;
             let py = p.y;
@@ -552,6 +579,11 @@ export function PlayCanvas({
                   )}
                 </div>
                 <span className={`truncate font-medium ${fs ? "max-w-32 text-base font-semibold" : "max-w-24 text-sm"}`} style={{ color: seatColors[p.seat] }}>{p.nickname}</span>
+                {offline && (
+                  <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-muted ring-1 ring-border" title="접속 끊김 — 하트비트 없음">
+                    오프라인
+                  </span>
+                )}
                 {/* 전체화면: 진영명+직업명을 진영색 칩으로 — 비숙련 관전자가 마을/외지/하수인/악마를 색+글자로 구분 */}
                 {fs && ch ? (
                   <span

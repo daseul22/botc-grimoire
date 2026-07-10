@@ -23,6 +23,7 @@ import {
   setGuessAction,
   setSeatNoteAction,
 } from "@/app/rooms/actions";
+import { useHeartbeat } from "./useHeartbeat";
 
 type SeatGuess = { guess: string; note: string };
 
@@ -102,6 +103,9 @@ export function PlayerGame({
       .then((h) => setHistory(h as NightRequestView[]))
       .catch(() => {});
   }, [historyOpen, roomId]);
+
+  // 게임 중 접속 생존 신호 — ST가 이 좌석의 온라인/오프라인을 볼 수 있게(프레즌스).
+  useHeartbeat(roomId);
 
   // 이야기꾼이 게임을 바꾸면(사망·이동·밤 행동 요청 등) SSE로 보드를 즉시 갱신.
   useGameStream(gameId, () => {

@@ -303,6 +303,28 @@ export function touchMember(roomId: string, userId: number): void {
   ).run(now(), roomId, userId);
 }
 
+/** 접속 프레즌스 임계(ms) — 하트비트 15초 기준, 한두 번 놓쳐도 온라인으로 본다. */
+export const PRESENCE_THRESHOLD_MS = 45000;
+
+/**
+ * 멤버별 접속 여부 — last_seen_at이 임계 이내면 온라인. 게임 중 하트비트(touchMember)를 소비한다.
+ * 프레즌스는 게임 상태가 아니라(비밀 아님) 별도 조회로 내려, 폰이 꺼졌는지/차례를 잡고 이탈했는지 ST가 본다.
+ */
+export function readPresence(
+  roomId: string,
+  thresholdMs = PRESENCE_THRESHOLD_MS,
+): { userId: number; seat: number | null; online: boolean }[] {
+  const rows = db
+    .prepare("SELECT user_id, seat, last_seen_at FROM game_room_members WHERE room_id = ?")
+    .all(roomId) as { user_id: number; seat: number | null; last_seen_at: string }[];
+  const cutoff = Date.now() - thresholdMs;
+  return rows.map((r) => ({
+    userId: r.user_id,
+    seat: r.seat,
+    online: new Date(r.last_seen_at).getTime() >= cutoff,
+  }));
+}
+
 // ── 초대 ──
 
 /** 지정 초대 생성(이미 pending이면 그대로 반환). inviteId 반환. */

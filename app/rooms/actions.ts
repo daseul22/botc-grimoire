@@ -74,6 +74,7 @@ import {
   getRoomByCode,
   isMember,
   markRoomStarted,
+  readPresence,
   removeMember,
   setInviteStatus,
   setMemberColor,
@@ -269,11 +270,25 @@ export async function startRoomAction(
   redirect(`/rooms/${roomId}/play`);
 }
 
-/** 접속 생존 신호(빈번하므로 emit 안 함). 로비에서 주기적으로 호출. */
+/** 접속 생존 신호(빈번하므로 emit 안 함). 로비·게임 화면에서 주기적으로 호출. */
 export async function heartbeatRoomAction(roomId: string): Promise<void> {
   const user = await getCurrentUser();
   if (!user) return;
   touchMember(roomId, user.id);
+}
+
+/**
+ * 좌석별 접속 여부(seat → online). ST 보드가 폴링해 오프라인 좌석을 표시한다.
+ * 프레즌스는 비밀이 아니라 게임 SSE로 흘리지 않고(하트비트는 emit 안 함) 별도 조회로 내린다. 멤버만.
+ */
+export async function getPresenceAction(roomId: string): Promise<Record<number, boolean>> {
+  const user = await getCurrentUser();
+  if (!user) return {};
+  const room = getRoom(roomId);
+  if (!room || !room.members.some((m) => m.userId === user.id)) return {};
+  const map: Record<number, boolean> = {};
+  for (const p of readPresence(roomId)) if (p.seat != null) map[p.seat] = p.online;
+  return map;
 }
 
 // ── 플레이어 개인 추측/메모(마스킹 보드) — 룸 멤버 본인 것만. emit 안 함(사적). ──
