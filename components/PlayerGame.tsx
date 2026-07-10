@@ -386,7 +386,11 @@ export function PlayerGame({
           <button type="button" onClick={() => setHistoryOpen(false)} className="rounded p-1 text-muted hover:text-text">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto p-3">
-          <NightHistoryList requests={history} charMap={charMap} />
+          <NightHistoryList
+            requests={history}
+            charMap={charMap}
+            nameOf={(seat) => game.players.find((p) => p.seat === seat)?.nickname ?? `좌석 ${seat + 1}`}
+          />
         </div>
       </Modal>
 

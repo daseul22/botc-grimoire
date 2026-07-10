@@ -235,6 +235,8 @@ stateDiagram-v2
 - **recipient 라우팅**: showcase의 recipient가 `actor`→본인 좌석, `target`→첫 지목 좌석(세레노버스·마귀할멈),
   `none`→ST가 받는 좌석을 직접 지정(마술사·꼭두각시·미치광이 가짜 공격 — 데몬에게 보여줌).
 - 기록 열람: `components/NightHistoryList.tsx`(`showcaseSummary`로 요약), 플레이어 '기록' 버튼.
+  응답 대상 좌석은 `nameOf`(좌석→닉네임)로 **닉네임 표시**(닉네임은 공개라 플레이어 본인 기록도 넘김 — 좌석 번호로 새던 버그 수정).
+  `showActor`는 이야기꾼 뷰에서만 항목 헤더에 행동 좌석 이름을 붙인다(플레이어 본인 기록은 항상 자신이라 생략).
 
 ## 낮 지목·투표 (시계바늘 순차) — `lib/nominations.ts`
 
