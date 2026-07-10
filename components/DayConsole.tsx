@@ -325,7 +325,17 @@ function DayPanel({
                     disabled={busy}
                     onClick={() => {
                       const verb = nomineeIsTraveller ? "추방" : "처형";
-                      if (confirm(`${nameOf(nom.nominee)}을(를) ${verb}할까요? (좌석이 사망 처리됩니다)`))
+                      // 이미 계산된 tally를 재사용해 규칙 위반 소지(과반 미달·동률·비최다)를 confirm으로 경고(하드 차단 아님 — ST 판단 존중).
+                      let warn = "";
+                      if (upCount < cutoff) {
+                        warn = `찬성 ${upCount}표는 ${nomineeIsTraveller ? "추방선" : "과반선"} ${cutoff}표에 미달입니다.\n`;
+                      } else if (!nomineeIsTraveller && tally.highestVotes > 0 && upCount <= tally.highestVotes) {
+                        warn =
+                          upCount === tally.highestVotes
+                            ? `오늘 최다 득표(${tally.highestVotes}표)와 동률입니다 — 룰상 동률은 처형되지 않습니다.\n`
+                            : `오늘 최다 득표(${tally.highestVotes}표)보다 적어 단독 최다가 아닙니다.\n`;
+                      }
+                      if (confirm(`${warn}${nameOf(nom.nominee)}을(를) ${verb}할까요? (좌석이 사망 처리됩니다)`))
                         run(() => commitNominationAction(roomId, nom.id, true), true);
                     }}
                     className="rounded-lg bg-red-500/20 px-3 py-1.5 text-sm font-semibold text-red-300 hover:bg-red-500/30 disabled:opacity-40"
