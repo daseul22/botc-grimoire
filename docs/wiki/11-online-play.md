@@ -259,7 +259,7 @@ stateDiagram-v2
 - **정산 규칙 공유**: 처형선(생존 과반)·최다·동률 계산은 [lib/voting.ts](../../lib/voting.ts) `computeTally`로 추출해
   LAN `VotesSidebar`와 온라인 `DayConsole`이 함께 쓴다(규칙 분기 방지).
 - **UI**: 플레이어 [components/DayVotePanel.tsx](../../components/DayVotePanel.tsx)(내 차례=강제 모달 손들기/내리기+카운트다운,
-  남의 차례=하단 배너 관전, 지목 가능하면 "지목하기"), ST [components/DayConsole.tsx](../../components/DayConsole.tsx)(플로팅 —
+  남의 차례=상단 알림 배너 관전(헤더 아래 가운데·골드·펄스로 눈에 띄게), 지목 가능하면 "지목하기"), ST [components/DayConsole.tsx](../../components/DayConsole.tsx)(플로팅 —
   대행 지목·시작/일시정지/다음/속도/취소·정산/처형). 활성 지목은 게임 SSE로 refetch(액션 기반, PlayCanvas 낙관 상태 보존).
 - **phase 게이팅**: 지목/투표/정산 모두 `phase==='day'`에서만. `getActive`는 `day===game.day`만(오래된 지목 격리),
   새 지목 생성 시 이전 낮의 미커밋 지목을 `cancelStale`로 정리. 밤 전환 시 플레이어 패널은 자동 소멸.
