@@ -206,6 +206,7 @@ stateDiagram-v2
 - **첫밤 정보**(하수인/악마): 정보 노드에서 수신자별 **한 화면 합본**을 push — 하수인은 "동료 하수인 + 악마",
   악마는 "하수인 + 블러핑 3개"를 한 번에 받는다(1회 기상 = 화면 1개). 노드마다 수신자당 버튼 하나("정보 보내기")라
   과거의 블러핑/하수인/악마 정보 개별 버튼 혼동이 없다. `resolveShowcase`의 `minion-info`/`demon-info` 모드 → `firstNightInfo` payload.
+  `minion-info`는 `seatsShownAsMinions(..., {excludeSeat: seat})`로 **받는 본인을 '동료 하수인'에서 제외**한다(하수인이 유일할 때 자기 이름이 뜨던 버그 수정).
 
 핵심 — **단일 출처**:
 - [lib/showcase.ts](../../lib/showcase.ts) `resolveShowcase(game, seat, {as,variant,mode}, getTeam)` → `ShowcasePayload`
@@ -381,6 +382,13 @@ stateDiagram-v2
 - **관전자 읽기전용 뷰**([SpectatorGame](../../components/SpectatorGame.tsx)): 좌석 없는 멤버가 막다른 페이지 대신 `redact(-1)`로 전 좌석
   마스킹된 공개 보드(정체 "?"·생사·지목 화살표·타이머) + 채팅 관전. 관전자 전송은 클라 정책 + `sendChatAction`이 좌석 없는 발신자를 서버 차단.
 - **접근성**: 투표 차례 모달(`role=alertdialog`)·관전 배너(`role=status`)·요청 모달·채팅 목록(`role=log aria-live`)·잠금 사유 aria-label·타이머(`role=timer`).
+
+## 플레이어 사용 가이드 페이지 (`/guide`)
+
+플레이어 시점 온보딩 — 내 자리·밤 요청·지목/투표·채팅·관전 등 15개 상황을 스크린샷과 함께 설명한다.
+[docs/player-guide-online.md](../player-guide-online.md)를 [app/guide/page.tsx](../../app/guide/page.tsx)가 `marked`로 파싱 렌더
+(h3=상황별 좌측 sticky 목차, 스타일은 `globals.css`의 `.guide-prose`). 스크린샷은 `public/guide/online/*`(헤드리스 브라우저로 생성).
+헤더 네비 '규칙' 오른쪽 '온라인 가이드' 링크([SiteNav](../../components/SiteNav.tsx)).
 
 ## 남은 다듬을 거리
 
