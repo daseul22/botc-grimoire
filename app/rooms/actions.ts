@@ -14,6 +14,7 @@ import {
   commitActionRecord,
   createGame,
   getGame,
+  getGameOwner,
   recordVote,
   seatForUser,
   setNominationsOpen,
@@ -289,6 +290,21 @@ export async function getPresenceAction(roomId: string): Promise<Record<number, 
   const map: Record<number, boolean> = {};
   for (const p of readPresence(roomId)) if (p.seat != null) map[p.seat] = p.online;
   return map;
+}
+
+/**
+ * ST 보드 전체 게임 refetch — SSE 신호에 서버 진실을 다시 읽어 처형 사망 등 플레이어발 변경을 반영한다.
+ * 전체 게임(비밀 포함)이라 **방장(ST)·관리자만**. 플레이어는 자기 좌석 페이지의 redact 경로로만 받는다.
+ */
+export async function getGameAction(roomId: string): Promise<Game | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const room = getRoom(roomId);
+  if (!room || !room.gameId) return null;
+  const owner = getGameOwner(room.gameId);
+  const canManage = isAdmin(user) || (owner != null && owner === user.id);
+  if (!canManage) return null;
+  return getGame(room.gameId) ?? null;
 }
 
 // ── 플레이어 개인 추측/메모(마스킹 보드) — 룸 멤버 본인 것만. emit 안 함(사적). ──

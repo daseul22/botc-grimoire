@@ -40,6 +40,7 @@ import {
   cancelNightRequestAction,
   commitPickResponseAction,
   getActiveNominationAction,
+  getGameAction,
   getPresenceAction,
   listNightRequestsAction,
   pushShowcaseAction,
@@ -53,6 +54,20 @@ import type { OnlineNightCtx } from "./NightActionRow";
 import { NominationArrow } from "./NominationArrow";
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+// SSE/부모 refresh로 들어온 서버 진실을 채택하되, ST가 드래그 중일 수 있는 로컬 좌표(x/y)만 보존한다.
+// 좌표는 오직 이 ST가 옮기고 저장하므로 로컬이 권위 — 그 외(생사·사망원인·마커·진영·위장·페이즈 등)는 서버를 따른다.
+// 이게 없으면 처형 사망 등 플레이어발/타 컴포넌트발 변경이 새로고침 전까지 캔버스에 안 뜬다.
+function mergeServerGame(local: Game, server: Game): Game {
+  const posBySeat = new Map(local.players.map((p) => [p.seat, { x: p.x, y: p.y }]));
+  return {
+    ...server,
+    players: server.players.map((sp) => {
+      const pos = posBySeat.get(sp.seat);
+      return pos ? { ...sp, x: pos.x, y: pos.y } : sp;
+    }),
+  };
+}
 
 export function PlayCanvas({
   game: initial,
@@ -70,6 +85,13 @@ export function PlayCanvas({
   online?: { roomId: string };
 }) {
   const [game, setGame] = useState(initial);
+  // 부모(play 페이지)가 router.refresh 등으로 새 game prop을 넘기면 서버 진실을 채택(로컬 좌표는 보존).
+  // effect가 아니라 렌더 중 이전 prop과 비교해 동기화 — React 권장(prop→state 파생은 렌더에서, set-state-in-effect 회피).
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (initial !== prevInitial) {
+    setPrevInitial(initial);
+    setGame((cur) => mergeServerGame(cur, initial));
+  }
   const [selected, setSelected] = useState<number | null>(null);
   const [modalChar, setModalChar] = useState<Character | null>(null);
   const [sidebar, setSidebar] = useState<SidebarKey | null>(
@@ -219,8 +241,35 @@ export function PlayCanvas({
   useEffect(() => {
     loadRequests();
   }, [loadRequests]);
-  // 플레이어 응답(선택·확인)을 게임 SSE로 즉시 반영(온라인일 때만 구독).
-  useGameStream(roomId ? game.id : undefined, loadRequests);
+  // 서버 진실을 다시 읽어 로컬 좌표만 보존하고 채택(처형 사망·플레이어발 변경 반영).
+  const refetchGame = useCallback(() => {
+    if (!roomId) return;
+    getGameAction(roomId)
+      .then((g) => {
+        if (g) setGame((cur) => mergeServerGame(cur, g));
+      })
+      .catch(() => {});
+  }, [roomId]);
+  // 플레이어 응답(선택·확인)·처형 사망 등 게임 변경을 SSE로 즉시 반영 — 요청 목록 + 서버 게임 refetch(온라인만).
+  useGameStream(roomId ? game.id : undefined, () => {
+    loadRequests();
+    refetchGame();
+  });
+  // 백그라운드였다 돌아오면(모바일·다중탭) 놓친 변경을 다시 가져온다(SSE가 hidden일 때 못 받은 것 복구).
+  useEffect(() => {
+    if (!roomId) return;
+    const tick = () => {
+      if (document.visibilityState !== "visible") return;
+      loadRequests();
+      refetchGame();
+    };
+    document.addEventListener("visibilitychange", tick);
+    window.addEventListener("focus", tick);
+    return () => {
+      document.removeEventListener("visibilitychange", tick);
+      window.removeEventListener("focus", tick);
+    };
+  }, [roomId, loadRequests, refetchGame]);
 
   // ── 프레즌스: 좌석별 온라인/오프라인 ──
   // 하트비트는 emit하지 않으므로 SSE로 안 온다 → 15초 폴링으로 조회한다(비밀 아님). ST 자신도 하트비트.
