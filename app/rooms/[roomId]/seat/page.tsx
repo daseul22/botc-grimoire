@@ -64,8 +64,9 @@ export default async function RoomSeatPage({
     canNominate = game.nominationsOpen && !nomination && !!meP && meP.status === "alive" && !iNominated;
   }
 
-  // 채팅 잠금 정책(밤/지목·투표 중 차단, 귓말=공개토론 중 양옆 이웃) — 서버 sendChatAction과 동일 기준.
-  const gate = chatGate(game.phase, openTimerRunning(game), !!nomination, boundSeat, game.players.length);
+  // 채팅 잠금 정책(밤/지목 시간 차단, 귓말=공개토론 중 양옆 이웃) — 서버 sendChatAction과 동일 기준.
+  // 지목 시간 활성화(nominationsOpen) 또는 활성 지목/투표 중이면 전챗·귓말 모두 차단.
+  const gate = chatGate(game.phase, openTimerRunning(game), game.nominationsOpen || !!nomination, boundSeat, game.players.length);
   const neighborUserIds = room.members
     .filter((m) => m.seat != null && gate.neighborSeats.includes(m.seat as number))
     .map((m) => m.userId);

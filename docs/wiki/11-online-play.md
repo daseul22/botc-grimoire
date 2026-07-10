@@ -130,11 +130,12 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 - **채팅 잠금 정책**([lib/chat-policy.ts](../../lib/chat-policy.ts) — 서버·클라 단일 출처): 귓말이 악팀 공조에 너무
   유리해 "귓속말" 컨셉으로 좁혔다.
   - **밤**: 전챗·귓말 모두 차단.
-  - **낮 · 지목·투표 중**(`getActive` 활성 지목 존재): 전챗·귓말 모두 차단.
+  - **낮 · 지목 시간**(ST가 '지목 받기'를 열었거나(`nominationsOpen`) `getActive` 활성 지목/투표 진행 중): 전챗·귓말 모두 차단.
+    지목 시간이 열리는 순간부터 잠긴다(개별 지목이 시작되기 전에도).
   - **낮 · 지목 없음**: 전챗(전체)은 허용 / 귓말은 **공개토론(open) 타이머 중**(startedAt 있고 finishedAt 없음) +
     **바로 옆 좌석**(양옆, 사망 무관 — `neighborSeatsOf`)에게만.
 
-  `chatGate(phase, openRunning, nominationActive, mySeat, seatCount)`가 판정한다. 서버 `sendChatAction`이 강제
+  `chatGate(phase, openRunning, nominationsActive, mySeat, seatCount)`가 판정한다(`nominationsActive = nominationsOpen || 활성 지목`). 서버 `sendChatAction`이 강제
   (발신자 좌석 + 수신자 좌석 인접 검사, 클라 우회 차단), 클라 `ChatWidget`은 `policy`(전챗 가능 여부·귓말 대상
   userId 목록·사유)로 입력/받는사람 드롭다운을 제한하고 막힘 사유를 표시한다. **이야기꾼(방장)은 운영자라 예외**
   (자유롭게 대화·귓말), 로비·종료 게임도 자유(`FREE_CHAT`). 색 이모지 없이 색·텍스트 안내.

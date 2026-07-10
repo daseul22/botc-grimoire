@@ -326,14 +326,15 @@ export async function sendChatAction(
   recipientUserId?: number | null,
 ): Promise<{ error: string } | void> {
   const { user, room } = await requireRoomMember(roomId);
-  // 채팅 잠금(서버 강제) — 밤/지목·투표 중 차단, 귓말은 공개토론 중 양옆 이웃에게만.
+  // 채팅 잠금(서버 강제) — 밤/지목 시간 차단, 귓말은 공개토론 중 양옆 이웃에게만.
   // 로비·종료 게임은 자유. 이야기꾼(방장)은 운영자라 예외.
   if (room.gameId && room.ownerId !== user.id) {
     const g = getGame(room.gameId);
     if (g && g.status !== "finished") {
       const mySeat = seatForUser(room.gameId, user.id);
-      const nominationActive = !!getActiveNomination(room.gameId, g.day);
-      const gate = chatGate(g.phase, openTimerRunning(g), nominationActive, mySeat, g.players.length);
+      // 지목 시간 활성화(nominationsOpen) 또는 활성 지목/투표 중이면 전챗·귓말 모두 차단.
+      const nominationsActive = g.nominationsOpen || !!getActiveNomination(room.gameId, g.day);
+      const gate = chatGate(g.phase, openTimerRunning(g), nominationsActive, mySeat, g.players.length);
       if (recipientUserId == null) {
         if (!gate.allChat) return { error: gate.reason };
       } else {
