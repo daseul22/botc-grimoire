@@ -158,7 +158,8 @@ export function resolveShowcase(
 
   // ─── 첫밤 정보(합본): 하수인 1명이 받는 화면 = 동료 하수인 + 악마 ───
   if (mode === "minion-info") {
-    const minions = seatsShownAsMinions(game.players, getTeam).map((s) => nickOf(game, s));
+    // 받는 본인(seat)은 '동료 하수인'에서 제외 — 자기 자신을 동료로 표시하던 문제 방지.
+    const minions = seatsShownAsMinions(game.players, getTeam, { excludeSeat: seat }).map((s) => nickOf(game, s));
     const demons = seatsShownAsDemons(game.players, getTeam).map((s) => nickOf(game, s));
     const sections: { label: string; kind: "names" | "roles"; items: string[] }[] = [];
     if (minions.length) sections.push({ label: "동료 하수인", kind: "names", items: minions });
