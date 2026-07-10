@@ -149,12 +149,18 @@ export function GameReplay({
                     {h.votes.map((v) => {
                       const nom = h.players.find((p) => p.seat === v.nominator)?.nickname ?? `${v.nominator}`;
                       const nee = h.players.find((p) => p.seat === v.nominee)?.nickname ?? `${v.nominee}`;
+                      const voterNames = v.voters?.map((s) => h.players.find((p) => p.seat === s)?.nickname ?? `${s + 1}`) ?? [];
                       return (
-                        <div key={v.nominee} className="flex flex-wrap items-center gap-1.5 text-xs">
-                          <span className="font-medium">{nom}</span>
-                          <span className="text-muted">→ {nee}</span>
-                          <span className="font-semibold text-gold">{v.votes}표</span>
-                          {v.executed && <span className="rounded bg-red-500/20 px-1 text-[10px] font-semibold text-red-400">처형</span>}
+                        <div key={v.nominee} className="text-xs">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-medium">{nom}</span>
+                            <span className="text-muted">→ {nee}</span>
+                            <span className="font-semibold text-gold">{v.votes}표</span>
+                            {v.executed && <span className="rounded bg-red-500/20 px-1 text-[10px] font-semibold text-red-400">처형</span>}
+                          </div>
+                          {voterNames.length > 0 && (
+                            <p className="mt-0.5 break-words pl-1 text-[11px] text-muted">찬성: {voterNames.join(", ")}</p>
+                          )}
                         </div>
                       );
                     })}

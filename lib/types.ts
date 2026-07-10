@@ -125,6 +125,8 @@ export interface VoteRecord {
   votes: number;
   /** 이 지목으로 처형됐는가 */
   executed: boolean;
+  /** 찬성한 좌석 목록(온라인 시계바늘 투표에서 기록 — LAN 수동 집계는 없음). 복기 타임라인에 노출. */
+  voters?: number[];
 }
 
 export interface Game {

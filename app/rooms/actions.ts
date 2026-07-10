@@ -827,13 +827,15 @@ export async function commitNominationAction(
   const nom = getNomination(id);
   if (!nom || nom.gameId !== room.gameId) return { error: "지목을 찾을 수 없습니다." };
   const votes = countUp(id);
+  // 찬성한 좌석 명단(복기 타임라인용) — 언더테이커·식인귀 검증·사후 분석에 쓴다.
+  const voters = nom.hands.filter((h) => h.hand === 1).map((h) => h.seat);
   captureUndo(room.gameId, nom.isExile ? "여행자 추방 정산" : "낮 투표 정산");
   if (nom.isExile) {
     // 추방은 처형(VoteRecord)이 아니다 — 언더테이커·처형 커트라인 오염을 막으려 committed 투표 레이어를
     // 건드리지 않고, 라이브 지목행(is_exile)이 기록으로 남는다. executed=추방 확정이면 여행자 사망(cause='exile').
     if (executed) setStatus(room.gameId, nom.nominee, "dead", "exile");
   } else {
-    recordVote(room.gameId, { nominator: nom.nominator, nominee: nom.nominee, votes, executed });
+    recordVote(room.gameId, { nominator: nom.nominator, nominee: nom.nominee, votes, executed, voters });
     if (executed) setStatus(room.gameId, nom.nominee, "dead", "execution");
   }
   markCommitted(id);
