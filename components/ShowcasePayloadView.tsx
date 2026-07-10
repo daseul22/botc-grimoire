@@ -8,6 +8,7 @@ import type { ActionSpec } from "@/lib/night-actions";
 import type { ShowcasePayload } from "@/lib/showcase";
 import type { Character } from "@/lib/types";
 import { MARKER_MAP, parseMarker } from "@/lib/markers";
+import { circlePositions } from "@/lib/seat-layout";
 import { CharacterIcon } from "./CharacterIcon";
 import { NameOnlyBig, RoleTokenBig, ShowcaseView } from "./ShowcaseView";
 
@@ -81,9 +82,11 @@ export function ShowcasePayloadView({
   if (payload.kind === "grimoire") {
     // 마도서 전체 — 이야기꾼 캔버스와 동일한 원형 좌석 배치(좌표 x/y)로 실제 직업/닉네임/진영/생사/마커.
     const n = payload.seats.length;
-    const tokenPx = n > 11 ? 34 : n > 8 ? 40 : 48;
+    const tokenPx = n > 11 ? 40 : n > 8 ? 48 : 56;
     const INSET = 0.1; // 플레이어 보드와 동일 — 가장자리 라벨 클리핑 방지.
     const posPct = (v: number) => `${(INSET + v * (1 - 2 * INSET)) * 100}%`;
+    // 좌표가 없는(구) payload는 원형 폴백으로 배치 — 좌상단에 겹치는 사고 방지.
+    const fb = circlePositions(n);
     return (
       <div className="w-full">
         <p className="mb-2 text-center text-base text-muted">{payload.forNickname} 님 — 마도서(그리모어)</p>
@@ -91,10 +94,12 @@ export function ShowcasePayloadView({
           <p className="text-center text-base text-muted">{payload.emptyText}</p>
         ) : (
           <div
-            className="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-xl border border-border bg-bg"
+            className="relative mx-auto aspect-square w-full max-w-[min(100%,72vh)] overflow-hidden rounded-xl border border-border bg-bg"
             style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}
           >
-            {payload.seats.map((s) => {
+            {payload.seats.map((s, i) => {
+              const x = Number.isFinite(s.x) ? s.x : fb[i]?.x ?? 0.5;
+              const y = Number.isFinite(s.y) ? s.y : fb[i]?.y ?? 0.5;
               const ch = getChar(s.characterId);
               const evil = s.alignment === "evil";
               const marks = s.markers
@@ -105,7 +110,7 @@ export function ShowcasePayloadView({
                 <div
                   key={s.seat}
                   className="absolute flex flex-col items-center gap-0.5"
-                  style={{ left: posPct(s.x), top: posPct(s.y), transform: "translate(-50%, -50%)" }}
+                  style={{ left: posPct(x), top: posPct(y), transform: "translate(-50%, -50%)" }}
                 >
                   <div className="relative" style={{ width: tokenPx, height: tokenPx }}>
                     <div
@@ -132,10 +137,10 @@ export function ShowcasePayloadView({
                       </span>
                     )}
                   </div>
-                  <span className="pointer-events-none max-w-[4.5rem] truncate text-[10px] font-semibold text-text">
+                  <span className="pointer-events-none max-w-[5rem] truncate text-[11px] font-semibold text-text">
                     {ch?.name.ko ?? "?"}
                   </span>
-                  <span className="pointer-events-none max-w-[4.5rem] truncate text-[9px] text-muted">
+                  <span className="pointer-events-none max-w-[5rem] truncate text-[10px] text-muted">
                     {s.seat + 1}. {s.nickname}
                   </span>
                 </div>

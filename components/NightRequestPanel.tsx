@@ -89,14 +89,14 @@ export function NightRequestPanel({
       return [...prev, s];
     });
 
-  const Shell = ({ children }: { children: React.ReactNode }) => (
+  const Shell = ({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) => (
     <div
       data-modal
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
       onClick={() => setCollapsed(true)}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-gold/50 bg-surface p-5 shadow-xl"
+        className={`w-full ${wide ? "max-w-3xl" : "max-w-md"} rounded-2xl border border-gold/50 bg-surface p-5 shadow-xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-2 flex items-center justify-between">
@@ -118,8 +118,10 @@ export function NightRequestPanel({
   // 전달된 보여주기 표시 — LAN show 페이지와 같은 ShowcasePayloadView로 1:1 렌더.
   // info가 비어 있어도 확인 버튼으로 빠져나갈 수 있게(막힌 모달 방지).
   if (request.status === "delivered") {
+    // 마도서(그리모어)는 전체 보드라 모달을 넓게.
+    const wide = request.info?.kind === "grimoire";
     return (
-      <Shell>
+      <Shell wide={wide}>
         {request.info ? (
           <div className="flex flex-col items-center gap-4 py-2 text-center">
             <ShowcasePayloadView payload={request.info} getChar={(id) => charMap[id]} />
