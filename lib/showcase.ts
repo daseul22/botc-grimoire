@@ -61,6 +61,7 @@ export type ShowcasePayload =
     }
   | {
       // 마도서(그리모어) 전체 — 첩자·과부 등이 모든 좌석의 실제 직업/진영/마커/생사를 본다.
+      // 이야기꾼 캔버스와 같은 원형 배치로 렌더하도록 좌표(x,y)를 함께 싣는다.
       // recipientSeat=받을 좌석(라우팅용). seats에 전체 좌석의 정체가 담기므로 *받는 좌석만* 내려가야 한다(seat 게이팅).
       kind: "grimoire";
       forNickname: string;
@@ -72,6 +73,9 @@ export type ShowcasePayload =
         alignment: string;
         alive: boolean;
         markers: string[];
+        x: number;
+        y: number;
+        deathCause: string;
       }[];
       emptyText: string;
     };
@@ -119,6 +123,9 @@ export function resolveShowcase(
           alignment: p.alignment,
           alive: p.status !== "dead",
           markers: p.markers,
+          x: p.x,
+          y: p.y,
+          deathCause: p.deathCause,
         })),
       emptyText: "표시할 좌석이 없습니다.",
     };
