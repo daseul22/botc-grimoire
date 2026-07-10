@@ -105,15 +105,17 @@ export function DayVotePanel({
   // ── 지목 없음 ──
   if (!nomination || nomination.status === "committed" || nomination.status === "cancelled") {
     if (!canNominate) {
-      // ST가 아직 지목을 안 열었으면 생존 플레이어에게 대기 안내(이미 지목함/사망이면 조용히).
-      if (!nominationsOpen && me.status === "alive") {
-        return (
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 px-4 py-2 text-center backdrop-blur">
-            <span className="text-xs text-muted">이야기꾼이 지목 시간을 열면 지목할 수 있습니다.</span>
-          </div>
-        );
-      }
-      return null;
+      // 사망이면 조용히. 생존 플레이어에겐 왜 못 하는지 안내 — 지목 안 열림 vs 이미 지목함.
+      if (me.status !== "alive") return null;
+      const hint = nominationsOpen
+        ? "오늘은 이미 지목했습니다 (하루 1회)."
+        : "이야기꾼이 지목 시간을 열면 지목할 수 있습니다.";
+      // 하단 가운데 subtle 알약 — 좌하단 기록·우하단 채팅 FAB를 안 가리게 코너를 비운다.
+      return (
+        <div className="fixed bottom-4 left-1/2 z-30 flex max-w-[calc(100%-12rem)] -translate-x-1/2 items-center rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-xs text-muted shadow-lg backdrop-blur">
+          <span className="truncate">{hint}</span>
+        </div>
+      );
     }
     return (
       <>
