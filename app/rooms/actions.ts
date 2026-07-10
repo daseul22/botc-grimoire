@@ -64,7 +64,7 @@ import type { Game } from "@/lib/types";
 import { assignRoles, resolveSheet } from "@/lib/role-assign";
 import { circlePositions } from "@/lib/seat-layout";
 import { ratioTotal, type Ratio } from "@/lib/ratio";
-import { emitRoomUpdate, emitGameUpdate } from "@/lib/realtime";
+import { emitRoomUpdate, emitGameUpdate, clearRoomChannel } from "@/lib/realtime";
 import {
   addMember,
   assignSeat,
@@ -206,9 +206,14 @@ export async function leaveRoomAction(roomId: string): Promise<{ error: string }
   if (!user) return { error: "로그인이 필요합니다." };
   const room = getRoom(roomId);
   if (!room) return;
-  if (room.ownerId === user.id) closeRoom(roomId);
-  else removeMember(roomId, user.id);
-  emitRoomUpdate(roomId);
+  if (room.ownerId === user.id) {
+    closeRoom(roomId);
+    emitRoomUpdate(roomId);
+    clearRoomChannel(roomId);
+  } else {
+    removeMember(roomId, user.id);
+    emitRoomUpdate(roomId);
+  }
   redirect("/rooms");
 }
 
@@ -216,6 +221,7 @@ export async function closeRoomAction(roomId: string): Promise<{ error: string }
   await requireRoomOwner(roomId);
   closeRoom(roomId);
   emitRoomUpdate(roomId);
+  clearRoomChannel(roomId);
   redirect("/rooms");
 }
 

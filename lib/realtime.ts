@@ -73,3 +73,11 @@ export function roomRev(roomId: string): number {
 export function subscribeRoom(roomId: string, listener: (event: ChannelEvent) => void): () => void {
   return subscribeChannel(roomId, listener);
 }
+
+/**
+ * 종료된 룸의 rev 엔트리 정리 — 장기 실행 프로세스에서 닫힌 룸 rev가 revs Map에 무한 누적되는 걸 막는다.
+ * 리스너는 SSE 라우트가 연결 종료 시 스스로 unsub하므로 여기선 rev 엔트리만 지운다(닫힌 룸 id는 재사용 안 됨).
+ */
+export function clearRoomChannel(roomId: string): void {
+  revs.delete(roomId);
+}

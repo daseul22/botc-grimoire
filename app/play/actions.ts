@@ -51,7 +51,7 @@ import {
   getGameOwner,
 } from "@/lib/games";
 import { getCurrentUser, isAdmin, isStoryteller, userIdByNickname, type AuthUser } from "@/lib/auth";
-import { emitGameUpdate, emitRoomUpdate } from "@/lib/realtime";
+import { emitGameUpdate, emitRoomUpdate, clearRoomChannel } from "@/lib/realtime";
 import { closeRoom, getRoomByGameId } from "@/lib/rooms";
 import { assignRoles, resolveSheet } from "@/lib/role-assign";
 import { isOncePerGame } from "@/lib/night-actions";
@@ -479,6 +479,7 @@ export async function deleteGameAction(gameId: string): Promise<void> {
   if (room) {
     closeRoom(room.id);
     emitRoomUpdate(room.id);
+    clearRoomChannel(room.id);
   }
   revalidatePath("/games");
 }
