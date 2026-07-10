@@ -7,9 +7,10 @@
 import type { ActionSpec } from "@/lib/night-actions";
 import type { ShowcasePayload } from "@/lib/showcase";
 import type { Character } from "@/lib/types";
-import { MARKER_MAP, parseMarker } from "@/lib/markers";
+import { parseMarker } from "@/lib/markers";
 import { circlePositions } from "@/lib/seat-layout";
 import { CharacterIcon } from "./CharacterIcon";
+import { MarkerToken } from "./MarkerToken";
 import { NameOnlyBig, RoleTokenBig, ShowcaseView } from "./ShowcaseView";
 
 export function ShowcasePayloadView({
@@ -102,10 +103,14 @@ export function ShowcasePayloadView({
               const y = Number.isFinite(s.y) ? s.y : fb[i]?.y ?? 0.5;
               const ch = getChar(s.characterId);
               const evil = s.alignment === "evil";
-              const marks = s.markers
-                .map((m) => MARKER_MAP[parseMarker(m).base])
-                .filter((mk): mk is NonNullable<typeof mk> => !!mk);
               const glyph = s.deathCause === "execution" ? "☠️" : s.deathCause === "night" ? "🌙" : "✕";
+              // 상태 토큰(마커)을 ST 캔버스와 동일하게 MarkerToken으로 — roleParam(집착·능력획득 등) 대상 직업용 미니 charMap.
+              const mkCharMap: Record<string, Character> = {};
+              for (const m of s.markers) {
+                const { param } = parseMarker(m);
+                const pc = param ? getChar(param) : undefined;
+                if (param && pc) mkCharMap[param] = pc;
+              }
               return (
                 <div
                   key={s.seat}
@@ -129,13 +134,6 @@ export function ShowcasePayloadView({
                         </span>
                       )}
                     </div>
-                    {marks.length > 0 && (
-                      <span className="absolute -right-1 -top-1 flex gap-0.5">
-                        {marks.map((mk, i) => (
-                          <span key={i} title={mk.label} className="h-2 w-2 rounded-full border border-bg" style={{ background: mk.color }} />
-                        ))}
-                      </span>
-                    )}
                   </div>
                   <span className="pointer-events-none max-w-[5rem] truncate text-[11px] font-semibold text-text">
                     {ch?.name.ko ?? "?"}
@@ -143,6 +141,13 @@ export function ShowcasePayloadView({
                   <span className="pointer-events-none max-w-[5rem] truncate text-[10px] text-muted">
                     {s.seat + 1}. {s.nickname}
                   </span>
+                  {s.markers.length > 0 && (
+                    <span className="flex max-w-[6.5rem] flex-wrap justify-center gap-0.5">
+                      {s.markers.map((m) => (
+                        <MarkerToken key={m} m={m} charMap={mkCharMap} px={22} />
+                      ))}
+                    </span>
+                  )}
                 </div>
               );
             })}
