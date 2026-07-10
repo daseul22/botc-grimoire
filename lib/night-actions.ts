@@ -295,8 +295,8 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   alhadikhia: { targets: 3, result: "none", marker: "dying", showcase: { heading: "이 세 명이 선택되었습니다", subheading: "각자 순서대로 생존/사망을 선택합니다 (모두 생존 시 모두 사망)", tokens: ["names"] } },
   yaggababble: { targets: 0, result: "text", hint: "비밀 문구", showcase: { heading: "당신의 비밀 문구:", subheading: "오늘 이를 공개 발언한 횟수만큼 플레이어가 사망할 수 있습니다" } },
   ojo: { targets: 1, result: "role", marker: "dying", hint: "선택한 캐릭터 (없으면 ST가 사망자 선택)" },
-  kazali: { targets: 1, result: "role", hint: "새 하수인이 될 직업", showcase: { recipient: "target", heading: "당신은 이제 하수인입니다", subheading: "카잘리가 당신을 하수인으로 만들었습니다", tokens: ["result"] } },
-  lordoftyphon: { targets: 1, result: "role", hint: "이웃이 될 하수인 직업", showcase: { recipient: "target", heading: "당신은 이제 하수인입니다", subheading: "티폰의 군주의 이웃으로 악 진영이 되었습니다", tokens: ["result"] } },
+  kazali: { targets: 1, result: "role", playerPicks: true, hint: "새 하수인이 될 직업", showcase: { recipient: "target", heading: "당신은 이제 하수인입니다", subheading: "카잘리가 당신을 하수인으로 만들었습니다", tokens: ["result"] } },
+  lordoftyphon: { targets: 1, result: "role", playerPicks: true, hint: "이웃이 될 하수인 직업", showcase: { recipient: "target", heading: "당신은 이제 하수인입니다", subheading: "티폰의 군주의 이웃으로 악 진영이 되었습니다", tokens: ["result"] } },
   riot: { targets: 0, result: "none" },
   cacklejack: { targets: 1, result: "none", showcase: { recipient: "target", heading: "당신의 캐릭터가 바뀌었습니다", subheading: "낄낄이가 당신을 새 캐릭터로 바꿨습니다" } },
   duchess: { targets: 3, result: "number", hint: "방문자 중 악 수", showcase: { recipient: "none", heading: "방문자 중 악은 {count}명입니다", subheading: "세 방문자 중 한 명에게는 거짓으로 알려줍니다", tokens: ["names"] } },
@@ -360,8 +360,8 @@ export const OTHER_NIGHT_SPECS: Record<string, ActionSpec> = {
   lordoftyphon: { targets: 1, result: "none", marker: "dying" },
   // 할머니: 그 외 밤은 '손주가 밤에 죽으면 할머니도 사망'(순수 패시브) — 입력 위젯 없이 reminder만.
   grandmother: { targets: 0, result: "none" },
-  // 소환사: 3일차 밤 1명을 악마로 만들고 그 대상에게 통보.
-  summoner: { targets: 1, result: "role", hint: "악마가 될 대상", showcase: { recipient: "target", heading: "당신은 이제 악마입니다", subheading: "소환사가 당신을 악마로 만들었습니다", tokens: ["result"] } },
+  // 소환사: 3일차 밤 1명을 악마로 만들고(대상 좌석이 실제로 그 악마 직업이 됨) 그 대상에게 통보.
+  summoner: { targets: 1, result: "role", playerPicks: true, hint: "악마가 될 대상·직업", showcase: { recipient: "target", heading: "당신은 이제 악마입니다", subheading: "소환사가 당신을 악마로 만들었습니다", tokens: ["result"] } },
 };
 
 /**
