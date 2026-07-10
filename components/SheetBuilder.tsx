@@ -7,6 +7,7 @@ import { EDITIONS, TEAM_MAP, TEAMS } from "@/lib/constants";
 import type { Character, EditionId, Team } from "@/lib/types";
 import { CharacterIcon } from "./CharacterIcon";
 import { Pill } from "./Pill";
+import { parseScriptJson, type ScriptImportResult } from "@/lib/script-import";
 import { createSheetAction, updateSheetAction } from "@/app/sheets/actions";
 
 type EditionFilter = EditionId | "all";
@@ -37,6 +38,19 @@ export function SheetBuilder({
   const [q, setQ] = useState("");
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
+
+  // 공식 스크립트 JSON 가져오기 — 붙여넣기/파일로 직업 목록을 채운다.
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importInfo, setImportInfo] = useState<ScriptImportResult | null>(null);
+
+  function doImport() {
+    const res = parseScriptJson(importText, characters);
+    setImportInfo(res);
+    if (res.error || res.matched.length === 0) return;
+    setSelected(new Set(res.matched));
+    if (res.name && !name.trim()) setName(res.name);
+  }
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -105,6 +119,69 @@ export function SheetBuilder({
           placeholder="설명 (선택)"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-gold/60"
         />
+
+        {/* 공식 스크립트 JSON 가져오기 — script.bloodontheclocktower.com에서 내보낸 JSON을 붙여넣거나 파일 선택 */}
+        <div className="rounded-lg border border-border bg-surface-2/40">
+          <button
+            type="button"
+            onClick={() => setImportOpen((v) => !v)}
+            className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-muted hover:text-text"
+          >
+            <span>공식 스크립트 JSON 가져오기</span>
+            <span className="text-xs">{importOpen ? "▲" : "▼"}</span>
+          </button>
+          {importOpen && (
+            <div className="space-y-2 border-t border-border px-3 py-2.5">
+              <p className="text-xs text-muted">
+                script.bloodontheclocktower.com에서 내보낸 JSON을 붙여넣으세요. 알려진 공식 직업만 매칭되고, 이 앱에 없는
+                홈브루 직업은 건너뜁니다.
+              </p>
+              <input
+                type="file"
+                accept="application/json,.json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setImportText(String(reader.result ?? ""));
+                  reader.readAsText(file);
+                }}
+                className="block w-full text-xs text-muted file:mr-2 file:rounded file:border-0 file:bg-surface file:px-2 file:py-1 file:text-xs file:text-text"
+              />
+              <textarea
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder='[{"id":"_meta","name":"..."}, "washerwoman", ...]'
+                rows={4}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-xs outline-none placeholder:text-muted focus:border-gold/60"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={doImport}
+                  disabled={!importText.trim()}
+                  className="rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-bg disabled:opacity-40"
+                >
+                  가져오기
+                </button>
+                {importInfo &&
+                  (importInfo.error ? (
+                    <span className="text-xs text-red-400">{importInfo.error}</span>
+                  ) : (
+                    <span className="text-xs text-muted">
+                      {importInfo.matched.length}개 매칭
+                      {importInfo.unknown.length > 0 && (
+                        <span className="text-amber-400">
+                          {" "}· 미지원 {importInfo.unknown.length}개({importInfo.unknown.slice(0, 5).join(", ")}
+                          {importInfo.unknown.length > 5 ? " …" : ""})
+                        </span>
+                      )}
+                    </span>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-5 space-y-3">
