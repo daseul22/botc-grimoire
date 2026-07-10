@@ -404,14 +404,12 @@ export function PlayerGame({
       {/* 참여한 방의 스크립트 직업 목록 — 우측에서 열리는 드로어(메모 공간 침범 없음).
           전체 공개 스크립트를 팀별로, 인플레이 여부는 표시하지 않는다(어떤 직업이 실제로 들어갔는지는 비밀). */}
       {scriptOpen && (
-        <div
-          data-modal
-          className="fixed inset-0 z-40 flex justify-end bg-black/50"
-          onClick={() => setScriptOpen(false)}
-        >
+        <>
+          {/* 백드롭(닫기) + 우측에 고정된 드로어. justify-end 대신 right-0로 확실히 우측에 붙인다. */}
+          <div data-modal className="fixed inset-0 z-40 bg-black/50" onClick={() => setScriptOpen(false)} />
           <aside
-            className="flex h-full w-full max-w-xs flex-col border-l border-border bg-surface shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+            data-modal
+            className="fixed inset-y-0 right-0 z-40 flex w-full max-w-xs flex-col border-l border-border bg-surface shadow-xl"
           >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold">
@@ -443,7 +441,7 @@ export function PlayerGame({
               ))}
             </div>
           </aside>
-        </div>
+        </>
       )}
 
       {/* 스크립트 직업 상세 — 목록에서 클릭 시. ST 보드와 동일한 능력 모달 재사용. */}
