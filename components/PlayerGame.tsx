@@ -83,6 +83,7 @@ export function PlayerGame({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<NightRequestView[]>([]);
+  const [scriptOpen, setScriptOpen] = useState(false);
   const [modalChar, setModalChar] = useState<Character | null>(null);
   const [, startTransition] = useTransition();
 
@@ -159,6 +160,17 @@ export function PlayerGame({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panelSeat, pickerOpen]);
 
+  // 직업 목록 드로어 — 모바일 뒤로가기·Escape로 닫기(상세 모달이 열려 있으면 모달이 먼저 소비).
+  useBackClose(scriptOpen && !modalChar, () => setScriptOpen(false));
+  useEffect(() => {
+    if (!scriptOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !modalChar) setScriptOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [scriptOpen, modalChar]);
+
   // 토큰 크기는 인원 수에 맞춰 줄여 겹침을 줄인다. 좌표는 안쪽으로 모아 가장자리 라벨 클리핑 방지.
   const tokenPx = game.players.length > 11 ? 38 : game.players.length > 8 ? 44 : 52;
   const INSET = 0.1;
@@ -183,9 +195,18 @@ export function PlayerGame({
         </div>
       )}
 
-      <p className="mb-2 text-xs text-muted">
-        좌석을 눌러 직업을 추측하고 메모하세요. 기록은 나만 볼 수 있습니다.
-      </p>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs text-muted">
+          좌석을 눌러 직업을 추측하고 메모하세요. 기록은 나만 볼 수 있습니다.
+        </p>
+        <button
+          type="button"
+          onClick={() => setScriptOpen(true)}
+          className="shrink-0 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:border-gold/60 hover:text-text"
+        >
+          직업 목록
+        </button>
+      </div>
 
       {/* 데스크탑: 보드(좌) + 메모 사이드바(우). 모바일: 세로 스택. */}
       <div className="lg:flex lg:gap-6">
@@ -254,51 +275,18 @@ export function PlayerGame({
         })}
       </div>
 
-        {/* 우측 사이드바 — 스크립트 직업 목록 + 자유 메모. 모바일은 보드 아래로 스택. */}
-        <aside className="mt-4 flex flex-col gap-4 lg:mt-0 lg:w-80 lg:shrink-0">
-          {/* 참여한 방의 스크립트 직업 — 팀별, 클릭하면 상세 모달(전체 공개, 인플레이 표시 안 함). */}
-          <section className="flex shrink-0 flex-col">
-            <label className="mb-1 block text-xs font-semibold text-muted">
-              스크립트 직업 <span className="font-normal text-muted/60">· {sheetChars.length}</span>
-            </label>
-            <div className="max-h-64 overflow-y-auto rounded-lg border border-border bg-surface p-2 lg:max-h-80">
-              {scriptGroups.map(({ team, chars }) => (
-                <div key={team.id} className="mb-2 last:mb-0">
-                  <p className="mb-1 px-1 text-[11px] font-semibold" style={{ color: team.color }}>
-                    {team.label.ko} <span className="text-muted/70">· {chars.length}</span>
-                  </p>
-                  <div className="space-y-0.5">
-                    {chars.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setModalChar(c)}
-                        title={`${c.name.ko} — 상세 보기`}
-                        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-surface-2"
-                      >
-                        <CharacterIcon character={c} size={24} />
-                        <span className="truncate text-xs font-medium">{c.name.ko}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* 자유 메모 — 많이 쓸 수 있게 크게. */}
-          <section className="flex min-h-0 flex-1 flex-col">
-            <label className="mb-1 block text-xs font-semibold text-muted">
-              메모 <span className="font-normal text-muted/60">· 나만 봄</span>
-            </label>
-            <textarea
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
-              onBlur={() => saveMemo(memo)}
-              placeholder="자유롭게 기록하세요"
-              className="min-h-[8rem] w-full flex-1 resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-gold/60"
-            />
-          </section>
+        {/* 자유 메모 — 데스크탑에선 우측 사이드바로 크게(많이 쓸 수 있게), 모바일은 보드 아래로 */}
+        <aside className="mt-4 flex flex-col lg:mt-0 lg:w-80 lg:shrink-0">
+          <label className="mb-1 block text-xs font-semibold text-muted">
+            메모 <span className="font-normal text-muted/60">· 나만 봄</span>
+          </label>
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            onBlur={() => saveMemo(memo)}
+            placeholder="자유롭게 기록하세요"
+            className="min-h-[8rem] w-full flex-1 resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-gold/60"
+          />
         </aside>
       </div>
 
@@ -411,6 +399,51 @@ export function PlayerGame({
           canNominate={canNominate}
           nominatedSeats={nominatedSeats}
         />
+      )}
+
+      {/* 참여한 방의 스크립트 직업 목록 — 우측에서 열리는 드로어(메모 공간 침범 없음).
+          전체 공개 스크립트를 팀별로, 인플레이 여부는 표시하지 않는다(어떤 직업이 실제로 들어갔는지는 비밀). */}
+      {scriptOpen && (
+        <div
+          data-modal
+          className="fixed inset-0 z-40 flex justify-end bg-black/50"
+          onClick={() => setScriptOpen(false)}
+        >
+          <aside
+            className="flex h-full w-full max-w-xs flex-col border-l border-border bg-surface shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">
+                스크립트 직업 <span className="font-normal text-muted">· {sheetChars.length}</span>
+              </h2>
+              <button type="button" onClick={() => setScriptOpen(false)} className="rounded p-1 text-muted hover:text-text">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3">
+              {scriptGroups.map(({ team, chars }) => (
+                <div key={team.id} className="mb-3 last:mb-0">
+                  <p className="mb-1.5 px-1 text-xs font-semibold" style={{ color: team.color }}>
+                    {team.label.ko} <span className="text-muted/70">· {chars.length}</span>
+                  </p>
+                  <div className="space-y-0.5">
+                    {chars.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setModalChar(c)}
+                        title={`${c.name.ko} — 상세 보기`}
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-surface-2"
+                      >
+                        <CharacterIcon character={c} size={28} />
+                        <span className="truncate text-sm font-medium">{c.name.ko}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
       )}
 
       {/* 스크립트 직업 상세 — 목록에서 클릭 시. ST 보드와 동일한 능력 모달 재사용. */}
