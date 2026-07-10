@@ -453,6 +453,26 @@ export function showsWithoutRecord(characterId: string): boolean {
   return characterId === "marionette" || characterId === "magician";
 }
 
+/**
+ * 대상을 *플레이어가 아니라 이야기꾼이* 고르는 정보 직업 — 세탁부·조사자류("이 두 명 중 하나가 X").
+ * 이들은 ST가 가리킬 좌석을 정하고 직접 기록하므로 '대상 고르게 하기'(플레이어 선택 요청)를 띄우지 않는다.
+ */
+export const ST_CHOOSES_TARGETS: ReadonlySet<string> = new Set<string>([
+  "washerwoman", "librarian", "investigator", // 트러블 브루잉 — "이 두 명 중 한 명이 X"
+  "grandmother", "balloonist", // 특정 플레이어의 직업을 알려주는 정보
+  "steward", "bountyhunter", "noble", "knight", "highpriestess", "choirboy", "sage", // 플레이어에 대한 정보
+  "virgin", // 낮 — 대상은 지목자(플레이어가 고르지 않음, ST가 기록)
+]);
+
+/**
+ * targets를 *플레이어가 직접* 고를 능력인지 — 킬/보호/독/저주(대개 result:none) + 자기정보 선택(점쟁이·까마귀지기 등).
+ * playerPicks(직업 선택)와 ST가 대상을 정하는 정보 직업(ST_CHOOSES_TARGETS)은 제외한다.
+ * 온라인 순서 패널이 '대상 고르게 하기'(pick-players push)를 띄울지 판정하는 단일 출처.
+ */
+export function playerChoosesTargets(characterId: string, spec: ActionSpec): boolean {
+  return spec.targets >= 1 && !spec.playerPicks && !ST_CHOOSES_TARGETS.has(characterId);
+}
+
 /** 마커 적용 시 실제 저장 문자열. mad는 결과(직업)를 파라미터로 결합. */
 export function markerForAction(marker: string, result: string): string {
   return marker === "mad" && result ? `mad:${result}` : marker;

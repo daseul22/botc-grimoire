@@ -173,13 +173,19 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
 ```mermaid
 stateDiagram-v2
   [*] --> delivered: ST 📲보여주기 (정보 push)
-  [*] --> awaiting: ST 📲직업 고르게 하기 (playerPicks)
+  [*] --> awaiting: ST 📲대상/직업 고르게 하기
   awaiting --> responded: 플레이어 선택 제출
   responded --> delivered: ST '이 선택으로 기록' 후 보여주기
   delivered --> done: 플레이어 '확인했습니다'
 ```
 
-- **정보 직업**(공감자·세탁부 등): 행에서 대상 버튼 선택 + 자동추천 결과 → 저장 → **📲 보여주기** → 그 좌석 폰에
+행 유형별로 ST가 누를 **전송** 버튼이 다르다(단일 출처 `nightActionSpec` + `playerChoosesTargets`):
+- **대상 선택 능력**(`targets≥1` — 수도사·임프·독살자·집사·점쟁이·까마귀지기 등): **📲 대상 고르게 하기** →
+  폰에 좌석 그리드(`pick-players`, `maxTargets=targets`) → 제출 → 행에 응답 인라인 → "이 선택으로 기록"
+  → (정보 직업이면 결과 입력 후) 보여주기. **플레이어가 자기 킬/보호/정보 대상을 직접 고른다.**
+  단, 세탁부·조사자·사서·할머니·기구조종사·귀족·기사 등 **ST가 가리킬 좌석을 정하는 정보 직업**(`ST_CHOOSES_TARGETS`)은
+  이 버튼을 띄우지 않는다 — ST가 "+ 행동 기록"으로 직접 좌석을 골라 기록한 뒤 보여준다.
+- **정보 직업**(공감자·요리사 등 `targets=0`): 행에서 자동추천 결과 → 저장 → **📲 보여주기** → 그 좌석 폰에
   showcase가 뜨고 → **확인했습니다** → 행이 "✓ 플레이어 확인함".
 - **직접 선택 직업**(`playerPicks` — 철학자·도박꾼·세레노버스): **📲 직업 고르게 하기** → 폰에 직업/좌석 picker →
   제출 → 행에 선택 인라인 표시 → "이 선택으로 기록" → 보여주기.
@@ -206,7 +212,8 @@ stateDiagram-v2
   데이터 actions/votes/timers/nominations_open과 동형). 마이그레이션은 멱등 `ALTER … ADD COLUMN idx DEFAULT 0`
   (기존 요청은 1일차 밤=idx 0으로 귀속).
 - 액션([app/rooms/actions.ts](../../app/rooms/actions.ts)): `pushShowcaseAction(roomId, seat, characterId, {variant,mode,toSeat})`
-  (resolve→`createRequest`로 delivered 즉시 생성) · `requestPlayerPickAction`(spec→`pick-character`/`pick-player-character`)
+  (resolve→`createRequest`로 delivered 즉시 생성) · `requestPlayerPickAction`(spec으로 kind 도출 —
+  playerPicks→`pick-character`/`pick-player-character`, 그 외 `targets>0`→**`pick-players`**)
   · 기존 `respond`/`acknowledge`/`cancel` 재사용. 전부 `emitGameUpdate`.
 - 온라인 컨텍스트: `PlayCanvas`가 `online={{roomId}}`면 `listNightRequestsAction`로 좌석별 요청을 조회(게임 SSE로 갱신)해
   `OnlineNightCtx`를 사이드바→[NightActionRow](../../components/NightActionRow.tsx)에 내려, 보여주기/직업목록을 push 버튼으로

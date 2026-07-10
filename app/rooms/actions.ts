@@ -396,9 +396,10 @@ export async function pushShowcaseAction(
 }
 
 /**
- * ST '직업 고르게 하기' — playerPicks 직업(철학자·도박꾼 등)에게 폰으로 선택 요청.
- * spec으로 요청 종류 결정(targets>0=좌석+직업, 아니면 직업만). 플레이어 응답은 행에 표시되고,
- * ST가 그 선택으로 행동을 기록한 뒤 보여준다.
+ * ST '고르게 하기' — 플레이어 폰으로 선택 요청. spec으로 요청 종류를 결정한다:
+ *   - playerPicks 직업(철학자·도박꾼 등): 직업 선택(pick-character), 좌석까지면 좌석+직업(pick-player-character).
+ *   - 그 외 대상 선택 능력(수도사·임프·독살자·점쟁이 등, targets≥1): 좌석만 선택(pick-players).
+ * 플레이어 응답은 행에 표시되고, ST가 그 선택으로 행동을 기록한 뒤(정보면) 보여준다.
  */
 export async function requestPlayerPickAction(
   roomId: string,
@@ -411,12 +412,22 @@ export async function requestPlayerPickAction(
   if (!game) return { error: "게임을 찾을 수 없습니다." };
   if (!game.players.some((p) => p.seat === seat)) return { error: "좌석이 올바르지 않습니다." };
   const spec = specForPhase(characterId, game.phase ?? "night", game.day);
-  const kind: NightRequestKind = spec.targets > 0 ? "pick-player-character" : "pick-character";
+  let kind: NightRequestKind;
+  let prompt: string;
+  if (spec.playerPicks) {
+    kind = spec.targets > 0 ? "pick-player-character" : "pick-character";
+    prompt = spec.hint ? `${spec.hint} 선택` : "직업을 선택하세요";
+  } else if (spec.targets > 0) {
+    kind = "pick-players";
+    prompt = spec.hint ? `${spec.hint} 선택` : `대상 ${Math.max(1, Math.min(3, spec.targets))}명 선택`;
+  } else {
+    return { error: "플레이어가 고를 대상이 없습니다." };
+  }
   const id = createRequest({
     gameId: room.gameId,
     seat,
     kind,
-    prompt: (spec.hint ? `${spec.hint} 선택` : "직업을 선택하세요").slice(0, 300),
+    prompt: prompt.slice(0, 300),
     maxTargets: Math.max(1, Math.min(3, spec.targets || 1)),
   });
   emitGameUpdate(room.gameId);

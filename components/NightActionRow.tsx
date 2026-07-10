@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MARKER_MAP } from "@/lib/markers";
-import { formatResult, INFO_KINDS, infoTargetWarn, markerForAction, showcaseVariants, type ActionSpec } from "@/lib/night-actions";
+import { formatResult, INFO_KINDS, infoTargetWarn, markerForAction, playerChoosesTargets, showcaseVariants, type ActionSpec } from "@/lib/night-actions";
 import type { Character, GamePlayer, NightActionRecord, VoteRecord } from "@/lib/types";
 import { ActionFields } from "./ActionFields";
 import { RequestStatusBadge } from "./RequestStatusBadge";
@@ -135,29 +135,38 @@ export function NightActionRow({
       </a>
     );
 
-  // 직업 목록: 온라인=폰에 선택 요청 / LAN=새 창 그리드.
-  const pickAction = () =>
-    online ? (
+  // 플레이어에게 '고르게 하기' — 직업(playerPicks) 또는 대상 좌석(수도사·임프·독살자·점쟁이 등).
+  //   playerPicks : 직업 선택 요청. LAN은 /pick 새 창 그리드.
+  //   대상 선택   : 좌석 선택 요청(pick-players). 온라인 전용(LAN은 ST가 직접 기록).
+  const picksTargets = playerChoosesTargets(characterId, spec);
+  const canPick = spec.playerPicks || picksTargets;
+  const pickAction = () => {
+    if (!online) {
+      // LAN: 직업 선택만 페이지가 있다(좌석 대상은 ST가 직접 기록).
+      return spec.playerPicks ? (
+        <a
+          href={`/play/${gameId}/pick/${actor.seat}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
+          className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text"
+        >
+          직업 목록
+        </a>
+      ) : null;
+    }
+    return (
       <button
         type="button"
         disabled={online.busy}
         onClick={() => online.requestPick(actor.seat, characterId)}
-        title="플레이어 폰에서 직업을 직접 고르게 하기"
+        title={spec.playerPicks ? "플레이어 폰에서 직업을 직접 고르게 하기" : "플레이어 폰에서 대상 좌석을 직접 고르게 하기"}
         className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text disabled:opacity-50"
       >
-        직업 고르게 하기
+        {spec.playerPicks ? "직업 고르게 하기" : "대상 고르게 하기"}
       </button>
-    ) : (
-      <a
-        href={`/play/${gameId}/pick/${actor.seat}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="플레이어에게 직업 목록을 보여주고 직접 고르게 하기"
-        className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-1 text-muted hover:text-text"
-      >
-        직업 목록
-      </a>
     );
+  };
 
   const nameOf = (seat: number) => players.find((p) => p.seat === seat)?.nickname ?? `${seat}`;
 
@@ -280,7 +289,7 @@ export function NightActionRow({
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <button type="button" onClick={startEdit} className="text-muted hover:text-text">수정</button>
           <button type="button" disabled={busy} onClick={onClear} className="text-muted hover:text-red-400 disabled:opacity-50">지우기</button>
-          {spec.playerPicks && pickAction()}
+          {canPick && pickAction()}
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {/* result 없는 직업도 명시적 showcase가 있으면 노출(미치광이 가짜 공격 → 데몬에게). */}
             {showcaseArr.length <= 1 && (spec.result !== "none" || hasShowcase) && showcaseAction(0, "보여주기")}
@@ -327,7 +336,7 @@ export function NightActionRow({
           >
             ＋ 행동 기록
           </button>
-          {spec.playerPicks && pickAction()}
+          {canPick && pickAction()}
           {onlineStatus()}
         </div>
         {recipientPicker()}
