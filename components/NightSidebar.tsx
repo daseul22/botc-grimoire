@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { TEAM_MAP } from "@/lib/constants";
 import { effectiveCharacterId, parseMarker } from "@/lib/markers";
 import { ACTION_CRITERIA, actionSpec, isAbilityUsedUp, nightActionSpec } from "@/lib/night-actions";
@@ -96,18 +97,53 @@ export function NightSidebar({
   }
   items.sort((a, b) => a.order - b.order);
 
+  // ── 밤 순서 반자동 진행 ── 현재 순번(첫 미완료 노드)을 하이라이트하고 '현재로' 점프를 제공한다.
+  // 완전 자동이 아니라 ST가 언제든 다른 노드를 처리·오버라이드할 수 있는 반자동(진행도 표시 + 포커스 보조).
+  const isDone = (item: RoleItem | InfoItem): boolean => {
+    if (item.kind === "role") return game.doneSeats.includes(item.p.seat);
+    if (!online) return true; // LAN 정보 노드는 완료 추적이 없어 스텝퍼에서 건너뜀.
+    const targets =
+      item.infoKind === "minion"
+        ? game.players.filter((x) => charMap[x.characterId]?.team === "minion" && x.characterId !== "marionette")
+        : game.players.filter((x) => charMap[x.characterId]?.team === "demon");
+    return (
+      targets.length > 0 &&
+      targets.every((t) => {
+        const r = online.requestBySeat.get(t.seat);
+        return !!r && (r.status === "delivered" || r.status === "done");
+      })
+    );
+  };
+  const doneFlags = items.map(isDone);
+  const currentIndex = doneFlags.findIndex((d) => !d); // -1 = 전부 완료
+  const doneCount = doneFlags.filter(Boolean).length;
+  const currentRef = useRef<HTMLLIElement | null>(null);
+  const scrollToCurrent = () => currentRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+
   return (
     <aside className="flex w-full shrink-0 flex-col md:h-[70vh] md:w-72 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-surface">
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <span className="text-sm font-semibold">
           {isFirstNight ? "첫째 밤" : "그 외 밤"} 행동 순서
-          <span className="ml-1 font-normal text-muted">· {items.length}</span>
+          <span className="ml-1 font-normal text-muted">· {doneCount}/{items.length}</span>
         </span>
-        <button type="button" onClick={onClose} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="m9 18 6-6-6-6" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          {currentIndex >= 0 && (
+            <button
+              type="button"
+              onClick={scrollToCurrent}
+              title="지금 진행할 순번(첫 미완료)으로 이동"
+              className="rounded px-1.5 py-0.5 text-xs font-semibold text-gold hover:bg-gold/15"
+            >
+              현재 순번
+            </button>
+          )}
+          <button type="button" onClick={onClose} title="닫기" className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        </div>
       </div>
       {items.length === 0 ? (
         <p className="px-3 py-3 text-sm text-muted">이 밤에 행동하는 직업이 없습니다.</p>
@@ -125,7 +161,11 @@ export function NightSidebar({
               // 악마 정보: 각 데몬 폰에 블러핑 3개 + 하수인이 누구인지 보여주기.
               const demonSeats = game.players.filter((x) => charMap[x.characterId]?.team === "demon");
               return (
-                <li key={`info-${item.infoKind}`} className="bg-surface-2/40 px-3 py-2">
+                <li
+                  key={`info-${item.infoKind}`}
+                  ref={i === currentIndex ? currentRef : undefined}
+                  className={`bg-surface-2/40 px-3 py-2 ${i === currentIndex ? "ring-2 ring-inset ring-gold/60" : ""}`}
+                >
                   <div className="flex items-center gap-2 text-sm">
                     <span className="w-4 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -234,7 +274,11 @@ export function NightSidebar({
               );
             if (usedOnce) headerTags.push({ key: "used", label: "능력 사용함", title: "일회성 능력 — 사용 완료(부활 능력으로 되살아나지 않는 한)", tone: "muted" });
             return (
-              <li key={`${p.seat}-${effId}`} className={`px-3 py-2 ${checked ? "opacity-55" : ""}`}>
+              <li
+                key={`${p.seat}-${effId}`}
+                ref={i === currentIndex ? currentRef : undefined}
+                className={`px-3 py-2 ${checked ? "opacity-55" : ""} ${i === currentIndex ? "ring-2 ring-inset ring-gold/60 bg-gold/5" : ""}`}
+              >
                 <ActionCardHeader
                   index={i + 1}
                   image={ch?.image}
