@@ -182,6 +182,8 @@ for (const sql of [
   "ALTER TABLE games ADD COLUMN lunatic_minions TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE games ADD COLUMN disguises TEXT NOT NULL DEFAULT '{}'",
   "ALTER TABLE game_phases ADD COLUMN timers TEXT NOT NULL DEFAULT '{}'",
+  // 낮 지목 받기 활성화(ST가 열어야 플레이어가 지목 가능). 페이즈 스냅샷별 → 매 낮 자동 리셋(off).
+  "ALTER TABLE game_phases ADD COLUMN nominations_open INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE games ADD COLUMN label TEXT NOT NULL DEFAULT ''",
   // 인증 도입: 게임을 시작한 이야기꾼(소유자). 레거시 게임은 null(진행 중이면 관리자만 열람).
   "ALTER TABLE games ADD COLUMN owner_id INTEGER",

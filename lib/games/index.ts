@@ -13,6 +13,7 @@ export {
   getPhaseTimers,
   recordAction,
   recordVote,
+  setNominationsOpen,
   setNote,
   setTimerDuration,
   startTimer,

@@ -15,10 +15,12 @@ export function DayTimers({ timers }: { timers?: PhaseTimers }) {
     return () => clearInterval(id);
   }, []);
 
-  const active = (["whisper", "open"] as const).filter(
+  const active = (["whisper", "open", "claim", "rebuttal"] as const).filter(
     (k) => timers?.[k]?.startedAt && !timers[k]!.finishedAt,
   );
   if (active.length === 0) return null;
+
+  const LABEL = { whisper: "밀담", open: "공개토론", claim: "주장", rebuttal: "반론" } as const;
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
@@ -26,7 +28,7 @@ export function DayTimers({ timers }: { timers?: PhaseTimers }) {
     <div className="pointer-events-none sticky top-14 z-10 mb-3 flex justify-center gap-2">
       {active.map((k) => {
         const t = timers![k]!;
-        const label = k === "whisper" ? "밀담" : "공개토론";
+        const label = LABEL[k];
         const remaining = Math.max(0, t.durationSec - Math.floor((now - t.startedAt!) / 1000));
         const over = remaining === 0;
         const flashing = over && Math.floor(now / 500) % 2 === 0;

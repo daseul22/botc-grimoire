@@ -38,13 +38,16 @@ import {
 } from "@/app/play/actions";
 import {
   cancelNightRequestAction,
+  getActiveNominationAction,
   listNightRequestsAction,
   pushShowcaseAction,
   requestPlayerPickAction,
 } from "@/app/rooms/actions";
 import { useGameStream } from "./useGameStream";
 import type { NightRequestView } from "./NightRequestPanel";
+import type { NominationView } from "./DayVotePanel";
 import type { OnlineNightCtx } from "./NightActionRow";
+import { NominationArrow } from "./NominationArrow";
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -200,10 +203,14 @@ export function PlayCanvas({
   // ── 온라인 밤: 좌석별 활성 요청 조회 + 보여주기/직업선택을 플레이어 폰으로 push ──
   const roomId = online?.roomId;
   const [nightRequests, setNightRequests] = useState<NightRequestView[]>([]);
+  const [dayNom, setDayNom] = useState<NominationView | null>(null); // 활성 낮 지목(보드 화살표용)
   const loadRequests = useCallback(() => {
     if (!roomId) return;
     listNightRequestsAction(roomId)
       .then((r) => setNightRequests(r as NightRequestView[]))
+      .catch(() => {});
+    getActiveNominationAction(roomId)
+      .then((n) => setDayNom(n as NominationView | null))
       .catch(() => {});
   }, [roomId]);
   useEffect(() => {
@@ -457,6 +464,19 @@ export function PlayCanvas({
 
           {/* 전체화면 첩자 그리모어 — 기호 의미 범례(좌하단). 비숙련 관전자 이해 보조. */}
           {fs && <GrimoireLegend game={game} charMap={charMap} />}
+
+          {/* 활성 낮 지목 화살표(지목자→대상) — 토큰 뒤. 첩자 시점이면 그 좌표를 따른다. */}
+          {dayNom && (
+            <NominationArrow
+              players={game.players.map((p) => {
+                const sp = spyActive ? spyPos?.[p.seat] : undefined;
+                return { seat: p.seat, x: sp ? sp.x : p.x, y: sp ? sp.y : p.y };
+              })}
+              nominator={dayNom.nominator}
+              nominee={dayNom.nominee}
+              inset={0}
+            />
+          )}
 
           {game.players.map((p) => {
             const ch = charMap[p.characterId];

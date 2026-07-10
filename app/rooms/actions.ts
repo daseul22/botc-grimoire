@@ -9,7 +9,19 @@ import {
   userIdByNickname,
   type AuthUser,
 } from "@/lib/auth";
-import { captureUndo, createGame, getGame, recordVote, seatForUser, setStatus } from "@/lib/games";
+import {
+  captureUndo,
+  createGame,
+  getGame,
+  recordVote,
+  seatForUser,
+  setNominationsOpen,
+  setStatus,
+  setTimerDuration,
+  startTimer,
+  stopTimer,
+  type TimerKind,
+} from "@/lib/games";
 import {
   advance,
   cancel as cancelNomination,
@@ -534,6 +546,9 @@ export async function nominateAction(
 ): Promise<{ error: string } | { id: string }> {
   const { user, room } = await requireRoomMember(roomId);
   if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  // 플레이어 직접 지목은 ST가 '지목 받기'를 연 뒤에만(대행은 아래 openNominationOnBehalf로 예외).
+  if (!getGame(room.gameId)?.nominationsOpen)
+    return { error: "아직 지목 시간이 아닙니다. 이야기꾼이 지목을 열면 지목할 수 있습니다." };
   const seat = seatForUser(room.gameId, user.id);
   if (seat == null) return { error: "좌석이 배정되지 않았습니다(관전자는 지목 불가)." };
   return doOpenNomination(room.gameId, seat, nomineeSeat);
@@ -548,6 +563,41 @@ export async function openNominationOnBehalfAction(
   const { room } = await requireRoomOwner(roomId);
   if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
   return doOpenNomination(room.gameId, nominator, nominee);
+}
+
+/** ST: '지목 받기' 활성화/중지 — 열려야 플레이어가 직접 지목할 수 있다(순차로 여러 번 허용). */
+export async function setNominationsOpenAction(
+  roomId: string,
+  open: boolean,
+): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  setNominationsOpen(room.gameId, open);
+  emitGameUpdate(room.gameId);
+}
+
+/** ST: 낮 타이머(주장·반론) 시작 — 초 지정 시 길이 설정 후 시작. 지목 콘솔에서 수동. */
+export async function startDayTimerAction(
+  roomId: string,
+  kind: TimerKind,
+  sec?: number,
+): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  if (sec != null && sec > 0) setTimerDuration(room.gameId, kind, Math.min(600, sec));
+  startTimer(room.gameId, kind);
+  emitGameUpdate(room.gameId);
+}
+
+/** ST: 낮 타이머(주장·반론) 정지. */
+export async function stopDayTimerAction(
+  roomId: string,
+  kind: TimerKind,
+): Promise<{ error: string } | void> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  stopTimer(room.gameId, kind);
+  emitGameUpdate(room.gameId);
 }
 
 /** ST: 투표 스윕 시작(첫 좌석부터). */

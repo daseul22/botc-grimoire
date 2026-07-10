@@ -18,7 +18,10 @@ import {
   pauseNominationAction,
   resumeNominationAction,
   setNominationPaceAction,
+  setNominationsOpenAction,
+  startDayTimerAction,
   startVoteAction,
+  stopDayTimerAction,
 } from "@/app/rooms/actions";
 
 const PACE_OPTS = [
@@ -143,6 +146,26 @@ function DayPanel({
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
+        {/* 지목 받기 활성화 — 열어야 플레이어가 직접 지목(순차로 여러 번). 매 낮 자동 닫힘. */}
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-bg p-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold">
+              지목 받기 {game.nominationsOpen ? <span className="text-green-400">· 열림</span> : <span className="text-muted">· 닫힘</span>}
+            </p>
+            <p className="text-[11px] text-muted">열면 플레이어가 순차로 직접 지목할 수 있습니다.</p>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => run(() => setNominationsOpenAction(roomId, !game.nominationsOpen), true)}
+            className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${
+              game.nominationsOpen ? "border border-border text-muted hover:text-text" : "bg-gold text-bg"
+            }`}
+          >
+            {game.nominationsOpen ? "지목 닫기" : "지목 받기 시작"}
+          </button>
+        </div>
+
         {/* 오늘 정산 맥락(committed) */}
         <div className="rounded-lg border border-border bg-surface-2/40 p-2 text-[11px]">
           <p className="flex items-center justify-between">
@@ -185,6 +208,9 @@ function DayPanel({
                 {nom.status === "pending" ? "시작 전" : nom.status === "voting" ? "투표 중" : "집계 완료"}
               </span>
             </div>
+
+            {/* 주장·반론 타이머(ST 수동, 1분 기본) — 지목 후 지목자 주장 → 피지목자 반론. */}
+            <NominationTimers game={game} roomId={roomId} run={run} busy={busy} />
 
             {/* 진행: 순서·손 */}
             {(nom.status === "voting" || nom.status === "tallied") && (
@@ -382,5 +408,72 @@ function NewNomination({
         지목 생성
       </button>
     </section>
+  );
+}
+
+/** 주장·반론 타이머(ST 수동, 1분 기본) — 지목 후 지목자 주장 → 피지목자 반론. 진행 중이면 카운트다운+정지. */
+function NominationTimers({
+  game,
+  roomId,
+  run,
+  busy,
+}: {
+  game: Game;
+  roomId: string;
+  run: (fn: () => Promise<{ error: string } | unknown>, refresh?: boolean) => void;
+  busy: boolean;
+}) {
+  const rows = [
+    { kind: "claim" as const, label: "주장(지목자)" },
+    { kind: "rebuttal" as const, label: "반론(피지목자)" },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {rows.map(({ kind, label }) => {
+        const t = game.phaseTimers?.[kind];
+        const running = !!(t?.startedAt && !t.finishedAt);
+        return running ? (
+          <span key={kind} className="inline-flex items-center gap-1.5 rounded-lg border border-gold/40 bg-gold/10 px-2 py-1 text-xs">
+            <span className="font-medium">{label}</span>
+            <TimerCountdown startedAt={t!.startedAt!} seconds={t!.durationSec} />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run(() => stopDayTimerAction(roomId, kind), true)}
+              className="text-muted hover:text-red-400 disabled:opacity-40"
+            >
+              정지
+            </button>
+          </span>
+        ) : (
+          <button
+            key={kind}
+            type="button"
+            disabled={busy}
+            onClick={() => run(() => startDayTimerAction(roomId, kind, 60), true)}
+            className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-gold/50 hover:text-text disabled:opacity-40"
+          >
+            {label} 1분
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** 남은 시간 카운트다운(mm:ss). 서버 startedAt(ms) 기준 클라 시계. */
+function TimerCountdown({ startedAt, seconds }: { startedAt: number; seconds: number }) {
+  const [left, setLeft] = useState(() => Math.max(0, Math.ceil(seconds - (Date.now() - startedAt) / 1000)));
+  useEffect(() => {
+    const id = setInterval(
+      () => setLeft(Math.max(0, Math.ceil(seconds - (Date.now() - startedAt) / 1000))),
+      500,
+    );
+    return () => clearInterval(id);
+  }, [startedAt, seconds]);
+  return (
+    <span className={`tabular-nums ${left <= 5 ? "text-red-400" : "text-gold"}`}>
+      {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
+    </span>
   );
 }

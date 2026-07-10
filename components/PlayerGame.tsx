@@ -7,6 +7,7 @@ import { FREE_CHAT, type ChatPolicy } from "@/lib/chat-policy";
 import type { Character, Game } from "@/lib/types";
 import { CharacterIcon } from "./CharacterIcon";
 import { AbilityModal } from "./AbilityModal";
+import { NominationArrow } from "./NominationArrow";
 import { RolePickerModal } from "./RolePickerModal";
 import { useGameStream } from "./useGameStream";
 import { useBackClose } from "./useBackClose";
@@ -44,6 +45,7 @@ export function PlayerGame({
   request,
   nomination,
   canNominate,
+  nominationsOpen = false,
   nominatedSeats,
   chatPolicy = FREE_CHAT,
 }: {
@@ -62,6 +64,8 @@ export function PlayerGame({
   request: NightRequestView | null;
   nomination: NominationView | null;
   canNominate: boolean;
+  /** ST가 '지목 받기'를 열었는가 — 못 열었으면 플레이어에게 대기 안내. */
+  nominationsOpen?: boolean;
   nominatedSeats: number[];
   /** 채팅 잠금 정책(밤/지목 차단, 귓말=공개토론 중 양옆). 페이지에서 계산해 전달. */
   chatPolicy?: ChatPolicy;
@@ -219,6 +223,10 @@ export function PlayerGame({
           className="relative mx-auto aspect-square w-full overflow-hidden rounded-xl border border-border bg-surface lg:mx-0 lg:min-w-0 lg:flex-1 lg:self-start"
           style={{ backgroundImage: "radial-gradient(circle, rgba(212,162,58,0.06) 0%, transparent 70%)" }}
         >
+        {/* 활성 지목 화살표(지목자→대상) — 토큰 뒤에 렌더(뒤에 두려 토큰 map 앞에). */}
+        {nomination && (
+          <NominationArrow players={game.players} nominator={nomination.nominator} nominee={nomination.nominee} inset={0.1} />
+        )}
         {game.players.map((p) => {
           const isMe = p.seat === boundSeat;
           const dead = p.status === "dead";
@@ -401,6 +409,7 @@ export function PlayerGame({
           players={game.players.map((p) => ({ seat: p.seat, nickname: p.nickname, status: p.status }))}
           me={{ status: me.status, ghostVoteUsed: me.ghostVoteUsed }}
           canNominate={canNominate}
+          nominationsOpen={nominationsOpen}
           nominatedSeats={nominatedSeats}
         />
       )}

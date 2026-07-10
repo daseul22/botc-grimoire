@@ -110,8 +110,25 @@ export function setNote(gameId: string, note: string): void {
   );
 }
 
-// 페이즈별 타이머(밀담/공개토론) — game_phases.timers JSON 컬럼.
-export type TimerKind = "whisper" | "open";
+/** 현재 페이즈 스냅샷의 '지목 받기 활성화' 여부(낮). ST가 열어야 플레이어가 지목 가능. */
+export function readNominationsOpen(gameId: string, idx: number): boolean {
+  const row = db
+    .prepare("SELECT nominations_open FROM game_phases WHERE game_id = ? AND idx = ?")
+    .get(gameId, idx) as { nominations_open: number } | undefined;
+  return !!row?.nominations_open;
+}
+
+export function setNominationsOpen(gameId: string, open: boolean): void {
+  const idx = currentIdx(gameId);
+  db.prepare("UPDATE game_phases SET nominations_open = ? WHERE game_id = ? AND idx = ?").run(
+    open ? 1 : 0,
+    gameId,
+    idx,
+  );
+}
+
+// 페이즈별 타이머 — game_phases.timers JSON 컬럼. 밀담/공개토론 + 지목 후 주장/반론(1분 기본).
+export type TimerKind = "whisper" | "open" | "claim" | "rebuttal";
 
 export function readTimers(gameId: string, idx: number): PhaseTimers {
   const row = db

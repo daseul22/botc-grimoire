@@ -60,7 +60,8 @@ export default async function RoomSeatPage({
     nominatedSeats = today.map((n) => n.nominee);
     const meP = game.players.find((p) => p.seat === boundSeat);
     const iNominated = today.some((n) => n.nominator === boundSeat);
-    canNominate = !nomination && !!meP && meP.status === "alive" && !iNominated;
+    // ST가 '지목 받기'를 연 뒤에만 직접 지목 가능(순차로 여러 번 — 활성 지목 없을 때).
+    canNominate = game.nominationsOpen && !nomination && !!meP && meP.status === "alive" && !iNominated;
   }
 
   // 채팅 잠금 정책(밤/지목·투표 중 차단, 귓말=공개토론 중 양옆 이웃) — 서버 sendChatAction과 동일 기준.
@@ -97,6 +98,7 @@ export default async function RoomSeatPage({
       request={request}
       nomination={nomination}
       canNominate={canNominate}
+      nominationsOpen={game.nominationsOpen}
       nominatedSeats={nominatedSeats}
       chatPolicy={chatPolicy}
     />

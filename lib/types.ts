@@ -168,8 +168,10 @@ export interface Game {
    * 폰(직업공유·직업배포)에서 볼 화면용. 키=좌석, 값=가짜로 보여줄 directory characterId.
    */
   disguises: Record<number, string>;
-  /** 현재 페이즈(낮)의 타이머 — 밀담/공개토론. 다른 페이즈로 advance하면 새 record. */
+  /** 현재 페이즈(낮)의 타이머 — 밀담/공개토론 + 지목 후 주장/반론. 다른 페이즈로 advance하면 새 record. */
   phaseTimers: PhaseTimers;
+  /** 낮 '지목 받기' 활성화 여부(ST가 열어야 플레이어가 지목 가능). 페이즈 스냅샷별 → 매 낮 리셋. */
+  nominationsOpen: boolean;
   /** 실행 취소 스택 정보 — count=쌓인 조작 수, lastLabel=가장 최근 조작 이름. */
   undo: { count: number; lastLabel: string | null };
   /** 직업배포(claim)에서 점유된 좌석들 — ST가 좌석별 재열람 허용(점유 해제)할 때 사용. */
@@ -194,4 +196,8 @@ export interface PhaseTimer {
 export interface PhaseTimers {
   whisper?: PhaseTimer;
   open?: PhaseTimer;
+  /** 지목 후 지목자 주장 시간(기본 1분). */
+  claim?: PhaseTimer;
+  /** 지목 후 피지목자 반론 시간(기본 1분). */
+  rebuttal?: PhaseTimer;
 }

@@ -18,7 +18,7 @@ import {
   type PlayerRow,
   type StateMap,
 } from "./schema";
-import { readActions, readDone, readNote, readTimers, readVotes } from "./phase-data";
+import { readActions, readDone, readNominationsOpen, readNote, readTimers, readVotes } from "./phase-data";
 import {
   getClaims,
   getDisguises,
@@ -90,6 +90,7 @@ export function getGame(id: string): Game | undefined {
     lunaticMinions: getLunaticMinions(id),
     disguises: getDisguises(id),
     phaseTimers: readTimers(id, idx),
+    nominationsOpen: readNominationsOpen(id, idx),
     undo: undoInfo(id),
     claimedSeats: Object.keys(getClaims(id)).map(Number),
     lastExecution: readLastExecution(id, idx),
@@ -251,6 +252,11 @@ export function redrawRoles(gameId: string, roles: RoleAssignment[]): void {
     for (const r of roles) upd.run(r.characterId, r.alignment, gameId, r.seat);
     db.prepare("DELETE FROM game_phases WHERE game_id = ?").run(gameId);
     db.prepare("DELETE FROM game_phase_actions WHERE game_id = ?").run(gameId);
+    // 낮 지목/투표(라이브 레이어)도 초기화 — 재추첨은 1일차 밤으로 리셋하므로 이전 지목이 되살아나면 안 됨.
+    db.prepare(
+      "DELETE FROM game_nomination_hands WHERE nomination_id IN (SELECT id FROM game_nominations WHERE game_id = ?)",
+    ).run(gameId);
+    db.prepare("DELETE FROM game_nominations WHERE game_id = ?").run(gameId);
     const seats = db
       .prepare("SELECT seat FROM game_players WHERE game_id = ?")
       .all(gameId) as { seat: number }[];

@@ -242,6 +242,11 @@ stateDiagram-v2
   시계방향이다([seat-layout.ts](../../lib/seat-layout.ts) `circlePositions`). 투표 불가 좌석(죽었고 유령표 없음)은 스킵.
 - **지목 주체**: 플레이어가 자기 화면에서 직접(`nominateAction`) **또는** ST 대행(`openNominationOnBehalfAction`).
   하루 1회·생존자만·활성 지목 1개 제한은 **서버에서 강제**(LAN VotesSidebar는 클라만 검사 — 온라인은 신뢰 불가라 필수).
+- **지목 받기 활성화(ST)**: 플레이어 직접 지목은 ST가 **'지목 받기'를 연 뒤에만**(`game_phases.nominations_open`,
+  `setNominationsOpenAction`). 열면 순차로 여러 번(각자 1회·각 대상 1회, 활성 지목 없을 때만). **페이즈 스냅샷별
+  플래그라 매 낮 자동 닫힘.** 플레이어 `canNominate`에 반영, 닫혀 있으면 DayVotePanel이 하단에 "지목 시간 대기" 안내.
+  ST 대행은 이 게이트 예외. **재추첨(`redrawRoles`)은 `game_nominations`도 삭제** — 이전 지목이 되살아나
+  '이미 지목받음'으로 막던 버그 방지(day 1 리셋과 함께).
 - **자기 차례에만 손**: `castHandAction`은 `seatForUser===nomination.order[pointer]`인 좌석만 허용(밤요청
   `seatForUser===req.seat`과 동형). 죽은 좌석은 `ghostVoteUsed`가 남아있을 때만 up.
 - **진행(advance)**: `pointer`를 다음으로 옮기며 현재 좌석 손을 확정한다. **`step` CAS**로 중복 호출을 무해화
@@ -258,6 +263,12 @@ stateDiagram-v2
   대행 지목·시작/일시정지/다음/속도/취소·정산/처형). 활성 지목은 게임 SSE로 refetch(액션 기반, PlayCanvas 낙관 상태 보존).
 - **phase 게이팅**: 지목/투표/정산 모두 `phase==='day'`에서만. `getActive`는 `day===game.day`만(오래된 지목 격리),
   새 지목 생성 시 이전 낮의 미커밋 지목을 `cancelStale`로 정리. 밤 전환 시 플레이어 패널은 자동 소멸.
+- **지목 화살표**: 활성 지목이 있으면 ST·플레이어 보드에 지목자→대상 SVG 화살표([NominationArrow](../../components/NominationArrow.tsx)).
+  두 보드의 좌표 매핑이 달라(ST=raw `v*100%`, 플레이어=`(0.1+v*0.8)*100%`) `inset` 파라미터로 흡수. ST 보드는 활성
+  지목을 `getActiveNominationAction`으로 refetch(PlayCanvas 온라인 컨텍스트).
+- **주장·반론 타이머**: 지목 후 지목자 '주장'·피지목자 '반론' 시간(ST 수동, 기본 1분). `PhaseTimers`의 `claim`/`rebuttal`
+  종류(밀담/공개토론과 같은 `game_phases.timers` JSON) — `startDayTimerAction`/`stopDayTimerAction`. DayConsole에
+  시작/정지+카운트다운, 플레이어는 `DayTimers` sticky pill로 진행 중 표시.
 
 ## 공통 모달 — `components/Modal.tsx`
 
