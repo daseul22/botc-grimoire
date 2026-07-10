@@ -35,6 +35,8 @@ export function DayTimers({ timers }: { timers?: PhaseTimers }) {
         return (
           <div
             key={k}
+            role="timer"
+            aria-label={`${label} ${over ? "종료" : `${fmt(remaining)} 남음`}`}
             className="flex items-center gap-2 rounded-full border px-3 py-1 shadow-lg backdrop-blur"
             style={{
               borderColor: over ? "#d23b3b" : "var(--color-border)",

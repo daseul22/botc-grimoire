@@ -171,6 +171,8 @@ export function DayVotePanel({
         onClick={() => setCollapsedKey(turnKey)}
       >
         <div
+          role="alertdialog"
+          aria-label="투표 차례가 되었습니다"
           className="w-full max-w-sm rounded-2xl border border-gold/50 bg-surface p-5 text-center shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
@@ -252,6 +254,8 @@ export function DayVotePanel({
   return (
     <div
       title={msg}
+      role="status"
+      aria-live="polite"
       className="fixed left-1/2 top-16 z-30 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-gold/60 bg-surface px-4 py-2 text-sm shadow-xl"
     >
       <span className="flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-gold" aria-hidden />

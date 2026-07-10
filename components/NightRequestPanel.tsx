@@ -100,6 +100,8 @@ export function NightRequestPanel({
       onClick={() => setCollapsed(true)}
     >
       <div
+        role="alertdialog"
+        aria-label="이야기꾼 요청이 도착했습니다"
         className={`w-full ${wide ? "max-w-3xl" : "max-w-md"} rounded-2xl border border-gold/50 bg-surface p-5 shadow-xl`}
         onClick={(e) => e.stopPropagation()}
       >

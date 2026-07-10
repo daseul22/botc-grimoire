@@ -277,7 +277,7 @@ export function ChatWidget({
   const drawerBody = (
     <>
       {header}
-      <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-2">
+      <div ref={listRef} role="log" aria-live="polite" aria-relevant="additions" aria-label="채팅" className="flex-1 space-y-2 overflow-y-auto px-3 py-2">
         {msgs.length === 0 ? (
           <p className="pt-8 text-center text-xs text-muted">아직 메시지가 없습니다.</p>
         ) : (
@@ -307,6 +307,7 @@ export function ChatWidget({
             maxLength={1000}
             disabled={!!sendBlock(recipientId)}
             placeholder={sendBlock(recipientId) || (recipientId === 0 ? "메시지…" : "귓말…")}
+            aria-label={sendBlock(recipientId) || (recipientId === 0 ? "전체 메시지 입력" : "귓말 입력")}
             className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60 disabled:opacity-50"
           />
           <button type="button" onClick={() => sendTo(recipientId)} disabled={!!sendBlock(recipientId) || !text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
@@ -441,7 +442,7 @@ export function ChatWidget({
             </div>
           )}
 
-          <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-2">
+          <div ref={listRef} role="log" aria-live="polite" aria-relevant="additions" aria-label="채팅" className="flex-1 space-y-2 overflow-y-auto px-3 py-2">
             {paneMsgs.length === 0 ? (
               <p className="pt-8 text-center text-xs text-muted">
                 {activeThread === 0
@@ -464,6 +465,7 @@ export function ChatWidget({
                 maxLength={1000}
                 disabled={!!sendBlock(activeThread)}
                 placeholder={sendBlock(activeThread) || (activeThread === 0 ? "전체에게 메시지…" : `${activeTitle}에게 귓말…`)}
+                aria-label={sendBlock(activeThread) || (activeThread === 0 ? "전체 메시지 입력" : `${activeTitle}에게 귓말 입력`)}
                 className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-gold/60 disabled:opacity-50"
               />
               <button type="button" onClick={() => sendTo(activeThread)} disabled={!!sendBlock(activeThread) || !text.trim()} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-bg disabled:opacity-40">
