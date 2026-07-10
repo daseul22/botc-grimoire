@@ -153,7 +153,7 @@ export function NightSidebar({
                               >
                                 {online.requestBySeat.get(m.seat) ? "다시 보내기" : "정보 보내기"}
                               </button>
-                              <RequestStatusBadge req={online.requestBySeat.get(m.seat)} />
+                              <RequestStatusBadge req={online.requestBySeat.get(m.seat)} offline={online.presence?.[m.seat] === false} />
                             </div>
                           ))
                       ) : (
@@ -181,7 +181,7 @@ export function NightSidebar({
                           >
                             {online.requestBySeat.get(d.seat) ? "다시 보내기" : "정보 보내기"}
                           </button>
-                          <RequestStatusBadge req={online.requestBySeat.get(d.seat)} />
+                          <RequestStatusBadge req={online.requestBySeat.get(d.seat)} offline={online.presence?.[d.seat] === false} />
                         </div>
                       ))
                     ) : (

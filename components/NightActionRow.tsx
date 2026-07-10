@@ -17,6 +17,8 @@ const short = (s: string) => (s.length > 7 ? s.slice(0, 6) + "…" : s);
 export type OnlineNightCtx = {
   roomId: string;
   requestBySeat: Map<number, NightRequestView>;
+  /** 좌석별 접속 여부(seat → online). 응답 대기 뱃지에 오프라인 표시(P0-2 프레즌스). */
+  presence?: Record<number, boolean>;
   busy: boolean;
   pushShowcase: (seat: number, characterId: string, opts?: { variant?: number; mode?: string; toSeat?: number }) => void;
   requestPick: (seat: number, characterId: string) => void;
@@ -197,13 +199,14 @@ export function NightActionRow({
   // 온라인 전송/응답 상태 — 색 뱃지로 "전송함·대기 / 확인함"을 구분. 선택 요청은 응답→기록 흐름.
   const onlineStatus = () => {
     if (!online || !req) return null;
-    // 보여주기(info): 전송함/확인함 뱃지만.
-    if (req.kind === "info") return <RequestStatusBadge req={req} />;
+    const offline = online.presence?.[req.seat] === false;
+    // 보여주기(info): 전송함/확인함 뱃지만(+오프라인·경과).
+    if (req.kind === "info") return <RequestStatusBadge req={req} offline={offline} />;
     // 직업 고르게 하기(pick): 대기 뱃지+취소 / 응답 뱃지+선택+기록.
     if (req.status === "awaiting") {
       return (
         <span className="flex items-center gap-1.5">
-          <RequestStatusBadge req={req} />
+          <RequestStatusBadge req={req} offline={offline} />
           <button type="button" onClick={() => online.cancelRequest(req.id)} className="text-[11px] text-muted hover:text-red-400">취소</button>
         </span>
       );

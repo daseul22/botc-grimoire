@@ -315,6 +315,7 @@ export function PlayCanvas({
     ? {
         roomId,
         requestBySeat: new Map(nightRequests.map((r) => [r.seat, r])),
+        presence,
         busy,
         pushShowcase: (seat, characterId, opts) =>
           runRoom(() => pushShowcaseAction(roomId, seat, characterId, opts), loadRequests),
