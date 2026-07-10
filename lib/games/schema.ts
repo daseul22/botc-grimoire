@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS game_night_requests (
   id TEXT PRIMARY KEY,
   game_id TEXT NOT NULL,
   seat INTEGER NOT NULL,
+  idx INTEGER NOT NULL DEFAULT 0,           -- 소속 페이즈 스냅샷(current_idx). 페이즈별 요청 격리 — 지난 밤 요청이 다음 밤 행에 새지 않도록.
   kind TEXT NOT NULL,                       -- 'info' | 'pick-players' | 'pick-character'
   prompt TEXT NOT NULL DEFAULT '',
   max_targets INTEGER NOT NULL DEFAULT 1,
@@ -184,6 +185,8 @@ for (const sql of [
   "ALTER TABLE game_phases ADD COLUMN timers TEXT NOT NULL DEFAULT '{}'",
   // 낮 지목 받기 활성화(ST가 열어야 플레이어가 지목 가능). 페이즈 스냅샷별 → 매 낮 자동 리셋(off).
   "ALTER TABLE game_phases ADD COLUMN nominations_open INTEGER NOT NULL DEFAULT 0",
+  // 밤 요청을 소속 페이즈 스냅샷(current_idx)으로 격리 — 지난 밤의 delivered 요청이 다음 밤 행에 뱃지로 새던 버그 방지.
+  "ALTER TABLE game_night_requests ADD COLUMN idx INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE games ADD COLUMN label TEXT NOT NULL DEFAULT ''",
   // 인증 도입: 게임을 시작한 이야기꾼(소유자). 레거시 게임은 null(진행 중이면 관리자만 열람).
   "ALTER TABLE games ADD COLUMN owner_id INTEGER",

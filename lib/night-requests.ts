@@ -9,7 +9,7 @@
 // 보안: info_payload는 자기완결 보여주기 데이터(lib/showcase의 ShowcasePayload)다. 능력이 정당하게
 // 드러내는 것만 담긴다(이름만 슬롯=닉네임, 정체 슬롯만 charId). 플레이어에겐 *자기 좌석 요청만*
 // 내려가므로 전체 게임이 새지 않는다.
-import { db, now } from "./games/schema";
+import { currentIdx, db, now } from "./games/schema";
 import type { ShowcasePayload } from "./showcase";
 
 export type NightRequestKind = "info" | "pick-players" | "pick-character" | "pick-player-character";
@@ -35,6 +35,7 @@ type Row = {
   id: string;
   game_id: string;
   seat: number;
+  idx: number;
   kind: NightRequestKind;
   prompt: string;
   max_targets: number;
@@ -65,7 +66,7 @@ function toReq(r: Row): NightRequest {
   };
 }
 
-/** 요청 생성 — 같은 좌석의 진행 중 요청은 먼저 취소(좌석당 활성 1개 유지). info면 즉시 delivered. */
+/** 요청 생성 — 같은 좌석·같은 페이즈의 진행 중 요청은 먼저 취소(좌석당 활성 1개 유지). info면 즉시 delivered. */
 export function createRequest(input: {
   gameId: string;
   seat: number;
@@ -76,20 +77,22 @@ export function createRequest(input: {
 }): string {
   const id = "nr-" + crypto.randomUUID().slice(0, 8);
   const t = now();
+  const idx = currentIdx(input.gameId);
   const isInfo = input.kind === "info";
   const status: NightRequestStatus = isInfo ? "delivered" : "awaiting";
   db.transaction(() => {
     db.prepare(
-      `UPDATE game_night_requests SET status='cancelled', updated_at=? WHERE game_id=? AND seat=? AND status IN ${ACTIVE}`,
-    ).run(t, input.gameId, input.seat);
+      `UPDATE game_night_requests SET status='cancelled', updated_at=? WHERE game_id=? AND seat=? AND idx=? AND status IN ${ACTIVE}`,
+    ).run(t, input.gameId, input.seat, idx);
     db.prepare(
       `INSERT INTO game_night_requests
-        (id,game_id,seat,kind,prompt,max_targets,status,player_targets,player_choice,info_payload,created_at,updated_at)
-       VALUES (?,?,?,?,?,?,?,'[]','',?,?,?)`,
+        (id,game_id,seat,idx,kind,prompt,max_targets,status,player_targets,player_choice,info_payload,created_at,updated_at)
+       VALUES (?,?,?,?,?,?,?,?,'[]','',?,?,?)`,
     ).run(
       id,
       input.gameId,
       input.seat,
+      idx,
       input.kind,
       input.prompt ?? "",
       input.maxTargets ?? 1,
@@ -107,23 +110,23 @@ export function getRequest(id: string): NightRequest | undefined {
   return r ? toReq(r) : undefined;
 }
 
-/** 한 좌석의 활성 요청(플레이어가 행동/확인할 것). 없으면 undefined. */
+/** 한 좌석의 활성 요청(플레이어가 행동/확인할 것) — 현재 페이즈 스냅샷만. 없으면 undefined. */
 export function getActiveForSeat(gameId: string, seat: number): NightRequest | undefined {
   const r = db
     .prepare(
-      `SELECT * FROM game_night_requests WHERE game_id=? AND seat=? AND status IN ${ACTIVE} ORDER BY created_at DESC LIMIT 1`,
+      `SELECT * FROM game_night_requests WHERE game_id=? AND seat=? AND idx=? AND status IN ${ACTIVE} ORDER BY created_at DESC LIMIT 1`,
     )
-    .get(gameId, seat) as Row | undefined;
+    .get(gameId, seat, currentIdx(gameId)) as Row | undefined;
   return r ? toReq(r) : undefined;
 }
 
-/** 게임의 모든 활성 요청(이야기꾼 콘솔용). */
+/** 게임의 활성 요청(이야기꾼 콘솔용) — 현재 페이즈 스냅샷만. 지난 밤 요청이 다음 밤 행에 새지 않도록. */
 export function listActive(gameId: string): NightRequest[] {
   const rows = db
     .prepare(
-      `SELECT * FROM game_night_requests WHERE game_id=? AND status IN ${ACTIVE} ORDER BY seat`,
+      `SELECT * FROM game_night_requests WHERE game_id=? AND idx=? AND status IN ${ACTIVE} ORDER BY seat`,
     )
-    .all(gameId) as Row[];
+    .all(gameId, currentIdx(gameId)) as Row[];
   return rows.map(toReq);
 }
 

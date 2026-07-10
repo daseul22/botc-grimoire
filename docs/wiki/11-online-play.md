@@ -199,7 +199,12 @@ stateDiagram-v2
 
 전송 인프라 — 기존 [lib/night-requests.ts](../../lib/night-requests.ts) 재사용:
 - `game_night_requests(...)`의 `info_payload`가 이제 `ShowcasePayload`를 담는다(**스키마 무변경**, JSON 재활용).
-  좌석당 활성 1개(새 요청이 기존을 cancelled로 슈퍼시드).
+  좌석당(같은 페이즈 안) 활성 1개(새 요청이 기존을 cancelled로 슈퍼시드).
+- **페이즈 스냅샷 격리(`idx` 컬럼)**: 요청은 생성 시점의 `current_idx`(소속 밤/낮)를 함께 저장하고,
+  `createRequest`(같은 좌석·같은 idx만 슈퍼시드)·`getActiveForSeat`·`listActive`가 모두 **현재 idx로 스코프**한다.
+  → 지난 밤의 `delivered` 요청(예: 1일차 밤 악마 정보)이 다음 밤 같은 좌석 행에 뱃지로 새지 않는다(다른 페이즈별
+  데이터 actions/votes/timers/nominations_open과 동형). 마이그레이션은 멱등 `ALTER … ADD COLUMN idx DEFAULT 0`
+  (기존 요청은 1일차 밤=idx 0으로 귀속).
 - 액션([app/rooms/actions.ts](../../app/rooms/actions.ts)): `pushShowcaseAction(roomId, seat, characterId, {variant,mode,toSeat})`
   (resolve→`createRequest`로 delivered 즉시 생성) · `requestPlayerPickAction`(spec→`pick-character`/`pick-player-character`)
   · 기존 `respond`/`acknowledge`/`cancel` 재사용. 전부 `emitGameUpdate`.
