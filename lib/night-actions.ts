@@ -70,9 +70,10 @@ export type ShowcaseSpec = {
    * - lunatic-bluffs : 미치광이용 *가짜* 블러핑(game.lunaticBluffs).
    * - lunatic-minions: 미치광이용 *가짜* 하수인 좌석(game.lunaticMinions).
    * - lunatic-choice : 미치광이의 가짜 공격 지목을 *진짜 데몬*에게 보여주기.
+   * - grimoire       : 마도서 전체(모든 좌석 실제 직업·진영·마커·생사) — 첩자·과부 등.
    * show 페이지가 ?mode=...으로 분기 렌더한다.
    */
-  mode?: "bluffs" | "minions" | "lunatic-bluffs" | "lunatic-minions" | "lunatic-choice";
+  mode?: "bluffs" | "minions" | "lunatic-bluffs" | "lunatic-minions" | "lunatic-choice" | "grimoire";
 };
 
 export type ActionSpec = {
@@ -165,7 +166,8 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   empath: { targets: 0, result: "number", hint: "이웃 2명 중 악 수 (0~2)", showcase: { heading: "양 옆 이웃 중 {count}명이 악입니다" } },
   fortuneteller: { targets: 2, result: "yesno", hint: "둘 중 악마 있는가", showcase: { heading: "이 두 명 중 데몬이 있는가: {yn}", tokens: ["name", "name2"] } },
   butler: { targets: 1, result: "none" },
-  spy: { targets: 0, result: "none" },
+  // 첩자: 매일 밤 마도서(그리모어) 전체를 본다 → 보여주기로 플레이어 폰에 전체 보드를 push.
+  spy: { targets: 0, result: "none", showcase: { mode: "grimoire" } },
   ravenkeeper: { targets: 1, result: "role", oncePerGame: true, deathTriggered: true, hint: "지목한 플레이어 직업", showcase: { heading: "이 사람의 직업입니다", tokens: ["result", "name"], stack: true } },
   undertaker: { targets: 0, result: "role", hint: "처형된 플레이어 직업", showcase: { heading: "오늘 처형된 사람의 직업은 {role}입니다", tokens: ["result"] } },
 

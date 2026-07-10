@@ -7,6 +7,8 @@
 import type { ActionSpec } from "@/lib/night-actions";
 import type { ShowcasePayload } from "@/lib/showcase";
 import type { Character } from "@/lib/types";
+import { MARKER_MAP, parseMarker } from "@/lib/markers";
+import { CharacterIcon } from "./CharacterIcon";
 import { NameOnlyBig, RoleTokenBig, ShowcaseView } from "./ShowcaseView";
 
 export function ShowcasePayloadView({
@@ -73,6 +75,64 @@ export function ShowcasePayloadView({
           ))
         )}
       </>
+    );
+  }
+
+  if (payload.kind === "grimoire") {
+    // 마도서 전체 — 좌석 순서대로 실제 직업/닉네임/진영/생사/마커. 좌석 많으면 스크롤.
+    return (
+      <div className="w-full">
+        <p className="mb-3 text-center text-base text-muted">{payload.forNickname} 님 — 마도서(그리모어)</p>
+        {payload.seats.length === 0 ? (
+          <p className="text-center text-base text-muted">{payload.emptyText}</p>
+        ) : (
+          <div className="grid max-h-[62vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+            {payload.seats.map((s) => {
+              const ch = getChar(s.characterId);
+              const evil = s.alignment === "evil";
+              const marks = s.markers
+                .map((m) => MARKER_MAP[parseMarker(m).base])
+                .filter((mk): mk is NonNullable<typeof mk> => !!mk);
+              return (
+                <div
+                  key={s.seat}
+                  className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left ${
+                    evil ? "border-red-500/50 bg-red-500/5" : "border-border bg-bg"
+                  } ${s.alive ? "" : "opacity-50"}`}
+                >
+                  {ch ? (
+                    <CharacterIcon character={ch} size={30} />
+                  ) : (
+                    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-border text-xs text-muted">?</span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {ch?.name.ko ?? s.characterId}
+                      {evil && <span className="ml-1 text-xs text-red-400">악</span>}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {s.seat + 1}. {s.nickname}
+                      {s.alive ? "" : " · 사망"}
+                    </p>
+                    {marks.length > 0 && (
+                      <div className="mt-0.5 flex flex-wrap gap-1">
+                        {marks.map((mk, i) => (
+                          <span
+                            key={i}
+                            title={mk.label}
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ background: mk.color }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   }
 

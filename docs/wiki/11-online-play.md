@@ -196,6 +196,9 @@ stateDiagram-v2
   showcase가 뜨고 → **확인했습니다** → 행이 "✓ 플레이어 확인함".
 - **직접 선택 직업**(`playerPicks` — 철학자·도박꾼·세레노버스): **📲 직업 고르게 하기** → 폰에 직업/좌석 picker →
   제출 → 행에 선택 인라인 표시 → "이 선택으로 기록" → 보여주기.
+- **마도서 열람 직업**(첩자 — `showcase.mode: "grimoire"`): **📲 보여주기** → 그 좌석 폰에 **전체 그리모어**(모든 좌석의
+  실제 직업·닉네임·진영(악 표시)·생사·마커)를 grid로 push → **확인했습니다**. 기록 불필요(현재 보드 스냅샷을 그대로).
+  payload(`kind:"grimoire"`)에 전 좌석 정체가 담기지만 **받는 좌석에만** 내려가 자기완결(seat 게이팅). 기록 목록엔 요약만("마도서 확인").
 - **첫밤 정보**(하수인/악마): 정보 노드에서 수신자별 **한 화면 합본**을 push — 하수인은 "동료 하수인 + 악마",
   악마는 "하수인 + 블러핑 3개"를 한 번에 받는다(1회 기상 = 화면 1개). 노드마다 수신자당 버튼 하나("정보 보내기")라
   과거의 블러핑/하수인/악마 정보 개별 버튼 혼동이 없다. `resolveShowcase`의 `minion-info`/`demon-info` 모드 → `firstNightInfo` payload.
@@ -203,7 +206,7 @@ stateDiagram-v2
 핵심 — **단일 출처**:
 - [lib/showcase.ts](../../lib/showcase.ts) `resolveShowcase(game, seat, {as,variant,mode}, getTeam)` → `ShowcasePayload`
   (discriminated: `standard`/`roleTokens`/`nameTokens`/`firstNightInfo`). **LAN show 페이지와 온라인 push가 같은 함수**로
-  "무엇을 드러낼지"를 계산해 두 경로가 갈라지지 않는다. show 페이지의 특수 모드(demon/bluffs/minions/lunatic-*)도 여기로 옮겼다.
+  "무엇을 드러낼지"를 계산해 두 경로가 갈라지지 않는다. show 페이지의 특수 모드(demon/bluffs/minions/lunatic-*/**grimoire**)도 여기로 옮겼다.
 - [components/ShowcasePayloadView.tsx](../../components/ShowcasePayloadView.tsx)가 payload를 그린다 — **LAN show
   페이지·온라인 `NightRequestPanel`·능력 미리보기가 같은 렌더러**(표준은 기존 `ShowcaseView` 재사용). 알 수 없는/
   레거시(구 InfoPayload) payload는 뷰·요약(`showcaseSummary`)이 방어적으로 폴백(막힌 화면 방지).

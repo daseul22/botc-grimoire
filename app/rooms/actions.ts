@@ -391,7 +391,10 @@ export async function pushShowcaseAction(
   // 표준 화면이 기록을 요구하는데 없으면(빈 모달 방지) 막는다.
   if (payload.kind === "standard" && !payload.hasRecord && !payload.emptyAllowed)
     return { error: "먼저 행동을 기록한 뒤 보여주세요." };
-  const toSeat = opts.toSeat ?? (payload.kind === "standard" ? payload.recipientSeat : null);
+  // 받는 좌석 라우팅: standard·grimoire는 payload가 recipientSeat를 계산해 담는다(그 외 특수 모드는 toSeat 명시).
+  const routedSeat =
+    payload.kind === "standard" || payload.kind === "grimoire" ? payload.recipientSeat : null;
+  const toSeat = opts.toSeat ?? routedSeat;
   if (toSeat == null) return { error: "받는 좌석을 지정하세요." };
   if (!game.players.some((p) => p.seat === toSeat)) return { error: "받는 좌석이 올바르지 않습니다." };
   const id = createRequest({ gameId: room.gameId, seat: toSeat, kind: "info", info: payload });

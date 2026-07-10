@@ -58,6 +58,22 @@ export type ShowcasePayload =
       forNickname: string;
       sections: { label: string; kind: "names" | "roles"; items: string[] }[];
       emptyText: string;
+    }
+  | {
+      // 마도서(그리모어) 전체 — 첩자·과부 등이 모든 좌석의 실제 직업/진영/마커/생사를 본다.
+      // recipientSeat=받을 좌석(라우팅용). seats에 전체 좌석의 정체가 담기므로 *받는 좌석만* 내려가야 한다(seat 게이팅).
+      kind: "grimoire";
+      forNickname: string;
+      recipientSeat: number | null;
+      seats: {
+        seat: number;
+        nickname: string;
+        characterId: string;
+        alignment: string;
+        alive: boolean;
+        markers: string[];
+      }[];
+      emptyText: string;
     };
 
 export type ResolveShowcaseOpts = {
@@ -86,6 +102,27 @@ export function resolveShowcase(
   if (!actor) return null;
   const { as, variant = 0, mode } = opts;
   const effId = as || game.disguises?.[seat] || actor.characterId;
+
+  // ─── 특수 모드: 마도서(그리모어) 전체 — 첩자·과부. 받는 좌석(actor)만 내려간다. ───
+  if (mode === "grimoire") {
+    return {
+      kind: "grimoire",
+      forNickname: actor.nickname,
+      recipientSeat: seat,
+      seats: game.players
+        .slice()
+        .sort((a, b) => a.seat - b.seat)
+        .map((p) => ({
+          seat: p.seat,
+          nickname: p.nickname,
+          characterId: p.characterId,
+          alignment: p.alignment,
+          alive: p.status !== "dead",
+          markers: p.markers,
+        })),
+      emptyText: "표시할 좌석이 없습니다.",
+    };
+  }
 
   // ─── 특수 모드: 미치광이 가짜 공격 지목을 진짜 데몬에게 ───
   if (mode === "lunatic-choice") {
@@ -218,6 +255,8 @@ export function showcaseSummary(
       roleTokens: p.sections.filter((s) => s.kind === "roles").flatMap((s) => s.items),
       nameTokens: p.sections.filter((s) => s.kind === "names").flatMap((s) => s.items),
     };
+  if (p.kind === "grimoire")
+    return { heading: "마도서(그리모어) 확인", subheading: `${p.seats.length}개 좌석`, roleTokens: [], nameTokens: [] };
 
   // 레거시 페이로드(구 InfoPayload {heading, roleTokens, nameTokens}, kind 없음) 방어.
   const legacy = p as unknown as {
