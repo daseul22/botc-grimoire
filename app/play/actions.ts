@@ -20,7 +20,7 @@ import {
   getGameConfig,
   clearVote,
   prevPhase,
-  recordAction,
+  commitActionRecord,
   recordVote,
   redrawRoles,
   releaseSeat,
@@ -256,54 +256,9 @@ export async function recordActionAction(
 ): Promise<Game> {
   await requireGameManager(gameId);
   captureUndo(gameId, "행동 기록");
-  recordAction(gameId, { actorSeat, characterId, targets, result, bluff });
-  // 직업별 자동 사이드 이펙트.
-  if (!bluff) applyAutoSideEffects(gameId, characterId, actorSeat, result);
-  // 일회성 능력은 사용 즉시 '능력 없음' 영구 마커 부여 → 캔버스 토큰 + 다음 페이즈에도 '능력 사용함' 유지.
-  // 어떤 직업 능력이 소진됐는지 roleParam(noability:직업)으로 달아 직업별로 정확히 판정(철학자 능력획득 등
-  // 한 좌석에 여러 일회성 능력이 있어도 서로 간섭 안 함).
-  if (!bluff && isOncePerGame(characterId)) {
-    const g = getGame(gameId);
-    const actor = g?.players.find((p) => p.seat === actorSeat);
-    if (actor && !actor.markers.includes(`noability:${characterId}`)) {
-      toggleMarker(gameId, actorSeat, `noability:${characterId}`);
-    }
-  }
-  // 행동을 기록한 좌석은 그 페이즈의 처리완료(✓)로 자동 표시. 이미 표시돼 있으면 그대로.
-  if (!bluff) {
-    const g = getGame(gameId);
-    if (g && !g.doneSeats.includes(actorSeat)) toggleDone(gameId, actorSeat);
-  }
+  // 기록 + 부수효과(철학자 gained/drunk · 일회성 noability · 처리완료 ✓)는 온라인과 단일 출처.
+  commitActionRecord(gameId, { actorSeat, characterId, targets, result, bluff });
   return touch(gameId);
-}
-
-/**
- * 능력이 룰상 마커를 즉시 결정짓는 케이스를 자동 처리.
- * - 철학자(philosopher): 결과로 고른 직업의 'gained' 마커를 본인에게 부여하고,
- *   그 직업이 이미 인플레이라면 해당 좌석을 영구 drunk 처리(룰: 원본은 능력을 잃음).
- */
-function applyAutoSideEffects(
-  gameId: string,
-  characterId: string,
-  actorSeat: number,
-  result: string,
-): void {
-  if (characterId !== "philosopher" || !result) return;
-  const game = getGame(gameId);
-  if (!game) return;
-
-  const actor = game.players.find((p) => p.seat === actorSeat);
-  const gainedMarker = `gained:${result}`;
-  if (actor && !actor.markers.includes(gainedMarker)) {
-    toggleMarker(gameId, actorSeat, gainedMarker);
-  }
-
-  for (const p of game.players) {
-    if (p.seat === actorSeat) continue;
-    if (p.characterId !== result) continue;
-    if (p.markers.includes("drunk")) continue;
-    toggleMarker(gameId, p.seat, "drunk");
-  }
 }
 
 export async function clearActionAction(

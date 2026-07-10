@@ -38,6 +38,7 @@ import {
 } from "@/app/play/actions";
 import {
   cancelNightRequestAction,
+  commitPickResponseAction,
   getActiveNominationAction,
   listNightRequestsAction,
   pushShowcaseAction,
@@ -245,6 +246,13 @@ export function PlayCanvas({
           runRoom(() => pushShowcaseAction(roomId, seat, characterId, opts), loadRequests),
         requestPick: (seat, characterId) =>
           runRoom(() => requestPlayerPickAction(roomId, seat, characterId), loadRequests),
+        // 기록+마커+완료는 Game을 반환 → run으로 setGame(마커 즉시 반영) + 요청 목록 갱신(플레이어 대기 해제).
+        commitPick: (requestId, characterId) =>
+          run(async () => {
+            const r = await commitPickResponseAction(roomId, requestId, characterId);
+            loadRequests();
+            return r;
+          }),
         cancelRequest: (id) => runRoom(() => cancelNightRequestAction(roomId, id), loadRequests),
       }
     : undefined;

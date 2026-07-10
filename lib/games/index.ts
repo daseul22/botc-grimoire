@@ -5,7 +5,9 @@
 //   meta.ts       — 게임 전역 메타(블러핑/claim/글로벌 마커/미치광이/disguise)
 //   seats.ts      — 좌석 단위 조작(위치/직업/생사/마커/닉네임/유령표)
 //   lifecycle.ts  — 생성/조회/재추첨/페이즈 전환/종료/복기/목록/삭제
+//   record.ts     — 행동 기록 + 부수효과(철학자·일회성·완료) 단일 출처
 //   undo.ts       — 실행 취소(조작 전 전체 스냅샷 스택)
+export { commitActionRecord } from "./record";
 export {
   clearAction,
   clearTimer,

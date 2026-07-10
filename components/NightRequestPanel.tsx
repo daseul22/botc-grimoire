@@ -143,7 +143,7 @@ export function NightRequestPanel({
   if (request.status === "responded") {
     return (
       <Shell>
-        <p className="py-6 text-center text-sm text-muted">응답을 보냈습니다. 이야기꾼의 정보를 기다리는 중…</p>
+        <p className="py-6 text-center text-sm text-muted">응답을 보냈습니다. 이야기꾼이 확인하는 중…</p>
       </Shell>
     );
   }

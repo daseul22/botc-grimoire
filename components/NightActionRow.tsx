@@ -20,6 +20,8 @@ export type OnlineNightCtx = {
   busy: boolean;
   pushShowcase: (seat: number, characterId: string, opts?: { variant?: number; mode?: string; toSeat?: number }) => void;
   requestPick: (seat: number, characterId: string) => void;
+  /** 플레이어 응답을 밤 행동으로 확정(기록+마커 적용+완료). characterId=행이 다루는 직업. */
+  commitPick: (requestId: string, characterId: string) => void;
   cancelRequest: (id: string) => void;
 };
 
@@ -215,8 +217,9 @@ export function NightActionRow({
           <span className="font-medium">{[nm, role].filter(Boolean).join(" / ") || "(빈 응답)"}</span>
           <button
             type="button"
-            disabled={busy}
-            onClick={() => onRecord(req.playerTargets, req.playerChoice)}
+            disabled={online.busy}
+            onClick={() => online.commitPick(req.id, characterId)}
+            title="이 선택을 밤 행동으로 기록하고 상태(보호·독·집착 등)를 바로 적용"
             className="rounded bg-gold/15 px-1.5 py-0.5 text-gold hover:bg-gold/25 disabled:opacity-50"
           >
             이 선택으로 기록

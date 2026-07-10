@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth";
 import {
   captureUndo,
+  commitActionRecord,
   createGame,
   getGame,
   recordVote,
@@ -20,6 +21,7 @@ import {
   setTimerDuration,
   startTimer,
   stopTimer,
+  toggleMarker,
   type TimerKind,
 } from "@/lib/games";
 import {
@@ -42,6 +44,7 @@ import {
 import {
   acknowledge,
   cancelRequest,
+  complete,
   createRequest,
   getActiveForSeat,
   getRequest,
@@ -54,7 +57,8 @@ import {
 } from "@/lib/night-requests";
 import { resolveShowcase } from "@/lib/showcase";
 import { characterMapForGame } from "@/lib/game-characters";
-import { specForPhase } from "@/lib/night-actions";
+import { markerForAction, showcaseVariants, specForPhase } from "@/lib/night-actions";
+import type { Game } from "@/lib/types";
 import { assignRoles, resolveSheet } from "@/lib/role-assign";
 import { circlePositions } from "@/lib/seat-layout";
 import { ratioTotal, type Ratio } from "@/lib/ratio";
@@ -432,6 +436,48 @@ export async function requestPlayerPickAction(
   });
   emitGameUpdate(room.gameId);
   return { id };
+}
+
+/**
+ * ST '이 선택으로 기록' — 플레이어가 응답한 선택(좌석/직업)을 밤 행동으로 확정한다. 한 번에:
+ *   1) 행동 기록(+철학자·일회성·완료 부수효과, LAN과 단일 출처 commitActionRecord)
+ *   2) 상태 마커 즉시 적용(수도사 보호·독·집착 등 — game_phases.state는 단일 JSON이라 서버에서 원자적으로)
+ *   3) 보여줄 정보가 없는 능력이면 요청 완료(플레이어 '대기 중' 해제). 정보 직업은 ST가 '보여주기'로 마무리.
+ * characterId는 행이 다루는 직업(가짜/획득 포함) — 요청엔 저장 안 하므로 클라가 넘긴다.
+ */
+export async function commitPickResponseAction(
+  roomId: string,
+  requestId: string,
+  characterId: string,
+): Promise<Game | { error: string }> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const req = getRequest(requestId);
+  if (!req || req.gameId !== room.gameId) return { error: "요청을 찾을 수 없습니다." };
+  if (req.status !== "responded") return { error: "응답 대기 중인 요청이 아닙니다." };
+  const game = getGame(room.gameId);
+  if (!game) return { error: "게임을 찾을 수 없습니다." };
+  const spec = specForPhase(characterId, game.phase ?? "night", game.day);
+  captureUndo(room.gameId, "밤 응답 기록");
+  // 1) 행동 기록(+부수효과).
+  commitActionRecord(room.gameId, {
+    actorSeat: req.seat,
+    characterId,
+    targets: req.playerTargets,
+    result: req.playerChoice,
+  });
+  // 2) 상태 마커 즉시 적용(add-only — 이미 있으면 skip). 대상 좌석에.
+  if (spec.marker && req.playerTargets.length > 0) {
+    const markerStr = markerForAction(spec.marker, req.playerChoice);
+    for (const s of req.playerTargets) {
+      const cur = getGame(room.gameId)?.players.find((p) => p.seat === s);
+      if (cur && !cur.markers.includes(markerStr)) toggleMarker(room.gameId, s, markerStr);
+    }
+  }
+  // 3) 보여줄 정보(showcase)가 없으면 요청 완료 → 플레이어 대기 해제. 있으면 이어서 '보여주기'.
+  if (showcaseVariants(spec).length === 0) complete(requestId);
+  emitGameUpdate(room.gameId);
+  return getGame(room.gameId) ?? { error: "게임을 찾을 수 없습니다." };
 }
 
 /** 플레이어 응답 — 본인 좌석의 요청에만. */

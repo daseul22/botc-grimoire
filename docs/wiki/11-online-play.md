@@ -175,16 +175,23 @@ stateDiagram-v2
   [*] --> delivered: ST 📲보여주기 (정보 push)
   [*] --> awaiting: ST 📲대상/직업 고르게 하기
   awaiting --> responded: 플레이어 선택 제출
-  responded --> delivered: ST '이 선택으로 기록' 후 보여주기
+  responded --> done: ST '이 선택으로 기록' (정보 없는 선택 — 마커 즉시 적용 + 완료)
+  responded --> delivered: ST '이 선택으로 기록' 후 보여주기 (정보 직업)
   delivered --> done: 플레이어 '확인했습니다'
 ```
 
 행 유형별로 ST가 누를 **전송** 버튼이 다르다(단일 출처 `nightActionSpec` + `playerChoosesTargets`):
 - **대상 선택 능력**(`targets≥1` — 수도사·임프·독살자·집사·점쟁이·까마귀지기 등): **📲 대상 고르게 하기** →
-  폰에 좌석 그리드(`pick-players`, `maxTargets=targets`) → 제출 → 행에 응답 인라인 → "이 선택으로 기록"
-  → (정보 직업이면 결과 입력 후) 보여주기. **플레이어가 자기 킬/보호/정보 대상을 직접 고른다.**
+  폰에 좌석 그리드(`pick-players`, `maxTargets=targets`) → 제출 → 행에 응답 인라인 → **"이 선택으로 기록"**.
+  **플레이어가 자기 킬/보호/정보 대상을 직접 고른다.**
   단, 세탁부·조사자·사서·할머니·기구조종사·귀족·기사 등 **ST가 가리킬 좌석을 정하는 정보 직업**(`ST_CHOOSES_TARGETS`)은
   이 버튼을 띄우지 않는다 — ST가 "+ 행동 기록"으로 직접 좌석을 골라 기록한 뒤 보여준다.
+- **"이 선택으로 기록"의 원자적 처리**([commitPickResponseAction](../../app/rooms/actions.ts)): 응답을 한 번에
+  ① 밤 행동으로 기록(`commitActionRecord` — 철학자 gained/drunk·일회성 noability·처리완료 ✓, **LAN `recordActionAction`과 단일 출처**),
+  ② **상태 마커 즉시 적용**(수도사 `protected`·독 `poisoned`·킬 `dying`·집착 `mad` 등 `spec.marker` — `game_phases.state`는
+  페이즈당 단일 JSON이라 lost-update를 피하려 **서버에서 원자적으로**), ③ 보여줄 정보가 없으면 요청 완료(`complete`, `responded→done`
+  → 플레이어 '대기 중' 패널이 닫힘). 정보 직업(showcase 있음)은 완료 대신 이어서 **보여주기**로 마무리한다. Game을 반환해
+  ST 보드가 `run`으로 즉시 마커를 반영(캔버스 토큰). *직업 자체를 바꾸는 능력(마귀할멈·카잘리 등)의 토큰 교체는 LAN처럼 ST 수동 — 마커 시스템 밖.*
 - **정보 직업**(공감자·요리사 등 `targets=0`): 행에서 자동추천 결과 → 저장 → **📲 보여주기** → 그 좌석 폰에
   showcase가 뜨고 → **확인했습니다** → 행이 "✓ 플레이어 확인함".
 - **직접 선택 직업**(`playerPicks` — 철학자·도박꾼·세레노버스): **📲 직업 고르게 하기** → 폰에 직업/좌석 picker →

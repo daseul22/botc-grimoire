@@ -171,6 +171,16 @@ export function acknowledge(id: string): void {
   ).run(now(), id);
 }
 
+/**
+ * ST가 응답을 기록해 요청을 완료 처리 — 보여줄 정보가 없는 선택 능력(수도사·임프·독살자 등)용.
+ * responded일 때만. 플레이어의 '대기 중' 패널이 닫힌다(정보 직업은 deliver→acknowledge로 마무리).
+ */
+export function complete(id: string): void {
+  db.prepare(
+    "UPDATE game_night_requests SET status='done', updated_at=? WHERE id=? AND status='responded'",
+  ).run(now(), id);
+}
+
 export function cancelRequest(id: string): void {
   db.prepare("UPDATE game_night_requests SET status='cancelled', updated_at=? WHERE id=?").run(now(), id);
 }
