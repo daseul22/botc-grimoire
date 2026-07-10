@@ -222,14 +222,15 @@ export function DayVotePanel({
     const prog = `${Math.min(nomination.pointer + 1, nomination.order.length)}/${nomination.order.length}`;
     msg = `${nick(curSeat as number)} 투표 중 (${prog}) · 찬성 ${upCount}표`;
   }
-  // 가운데 알약 — 좌하단 기록·우하단 채팅 FAB를 안 가리게 코너를 비운다(max-w로 양옆 여백, z는 FAB 아래).
+  // 상단 가운데 눈에 띄는 배너 — 헤더 바로 아래(하단 FAB 회피 불필요). 펄스 점 + 골드 강조로 주목도↑.
   return (
     <div
       title={msg}
-      className="fixed bottom-4 left-1/2 z-30 flex max-w-[calc(100%-12rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-surface/95 px-4 py-2 text-xs shadow-lg backdrop-blur"
+      className="fixed left-1/2 top-16 z-30 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-gold/60 bg-surface px-4 py-2.5 text-sm shadow-xl"
     >
-      <span className="shrink-0 font-semibold text-gold">지목</span>
-      <span className="min-w-0 truncate text-text">{msg}</span>
+      <span className="flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-gold" aria-hidden />
+      <span className="shrink-0 font-bold text-gold">지목</span>
+      <span className="min-w-0 truncate font-medium text-text">{msg}</span>
       {upNames.length > 0 && (
         <span className="hidden shrink-0 truncate text-muted sm:inline" title={upNames.join(", ")}>
           찬성: {upNames.join(", ")}
