@@ -8,7 +8,9 @@ let _db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
   if (!_db) {
-    const file = path.join(process.cwd(), "db", "grimoire.db");
+    // 기본은 프로젝트의 실제 DB. BOTC_DB_FILE(테스트/시뮬 하네스용)이 있으면 그 파일을 연다 —
+    // 실 DB를 절대 건드리지 않고 사본에 대고 통합 시뮬을 돌리기 위한 격리 훅(운영엔 영향 없음).
+    const file = process.env.BOTC_DB_FILE ?? path.join(process.cwd(), "db", "grimoire.db");
     // fileMustExist: 시드 전이면 명확히 실패 → `npm run db:seed`
     _db = new Database(file, { fileMustExist: true });
     _db.pragma("journal_mode = WAL");

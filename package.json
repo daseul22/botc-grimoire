@@ -12,6 +12,7 @@
     "start:server": "next start -H 0.0.0.0",
     "party": "node scripts/party.mjs",
     "lint": "eslint",
+    "sim": "npx --yes tsx scripts/sim-online.ts",
     "db:seed": "node scripts/seed-db.mjs",
     "data:scrape": "node scripts/scrape-vnamu.mjs && node scripts/seed-db.mjs"
   },

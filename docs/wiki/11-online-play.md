@@ -403,6 +403,20 @@ stateDiagram-v2
 (h3=상황별 좌측 sticky 목차, 스타일은 `globals.css`의 `.guide-prose`). 스크린샷은 `public/guide/online/*`(헤드리스 브라우저로 생성).
 헤더 네비 '규칙' 오른쪽 '온라인 가이드' 링크([SiteNav](../../components/SiteNav.tsx)).
 
+## 회귀 테스트 — 시뮬레이션 하네스 (`scripts/sim-online.ts`)
+
+`npm run sim`(내부 `npx tsx`). test 계정으로 3개 공식 스크립트의 온라인 게임을 **풀 루프로 자동 플레이**하며
+서버 로직을 단언 검증하는 회귀 하네스. **실 DB는 절대 건드리지 않는다** — 시작 시 `db/grimoire.db`를 백업 사본으로
+떠서(`Database.backup`) `BOTC_DB_FILE`([lib/db.ts](../../lib/db.ts)의 격리 훅)로 그 사본에만 대고 돌리고 종료 시 삭제.
+
+- **Phase A(순수 불변식)**: `computeOrder`(시계바늘 순서·유령표 스킵·추방 전원), `computeTally`(처형·추방 커트라인·동률 차단),
+  마커 duration(phase/dusk/permanent — `execsafe` 포함), `redactGameForSeat`(좌석 비밀 무누수), **공식 87직업 전수**
+  스펙·`resolveShowcase` 무예외 + 스펙 마커의 MARKER_MAP 실존·`oncePerGame` 일치.
+- **Phase B(풀게임 통합)**: TB·BMR·S&V 각각 계정 바인딩→밤 행동 핸드셰이크→데몬 킬→밤/낮 전환(자동사망·마커만료)→
+  지목→순차 스윕 투표(CAS 멱등)→처형·유령표 소모→2차 사이클→복기 무결성→종료.
+- **경계(미커버)**: 액션 레이어 가드(`requireUser`·phase게이팅·**푸주한 `nominatorLimit` 하루한도**는 `app/rooms/actions.ts`),
+  SSE 전달, UI 렌더는 lib 직접호출이라 닿지 않는다 → 브라우저 e2e/사람 베타의 영역. 즉 **기능 게이트**용이지 플레이테스트 대체가 아니다.
+
 ## 남은 다듬을 거리
 
 - 밤 행동 push 후속: `recipient:none` 좌석 지정을 seat picker 대신 자동 추론(마술사·꼭두각시 등 소수 케이스).
