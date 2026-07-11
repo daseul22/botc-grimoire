@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { TEAMS } from "@/lib/constants";
 import { FREE_CHAT, type ChatPolicy } from "@/lib/chat-policy";
-import type { Character, Game } from "@/lib/types";
+import type { Character, Game, RulesSection } from "@/lib/types";
 import { CharacterIcon } from "./CharacterIcon";
 import { AbilityModal } from "./AbilityModal";
 import { NominationArrow } from "./NominationArrow";
@@ -35,6 +35,7 @@ type SeatGuess = { guess: string; note: string };
 export function PlayerGame({
   game,
   sheetChars,
+  rules,
   boundSeat,
   gameId,
   roomId,
@@ -52,6 +53,8 @@ export function PlayerGame({
 }: {
   game: Game;
   sheetChars: Character[];
+  /** 기본 규칙(취함·중독 등) — 게임 중 우측 드로어로 바로 참고. /rules와 동일 출처. */
+  rules: RulesSection[];
   boundSeat: number;
   gameId: string;
   roomId: string;
@@ -93,6 +96,7 @@ export function PlayerGame({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<NightRequestView[]>([]);
   const [scriptOpen, setScriptOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [modalChar, setModalChar] = useState<Character | null>(null);
   const [, startTransition] = useTransition();
 
@@ -183,6 +187,17 @@ export function PlayerGame({
     return () => window.removeEventListener("keydown", onKey);
   }, [scriptOpen, modalChar]);
 
+  // 규칙 드로어 — 직업 목록과 동일한 우측 드로어 닫기 처리(뒤로가기·Escape).
+  useBackClose(rulesOpen, () => setRulesOpen(false));
+  useEffect(() => {
+    if (!rulesOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setRulesOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [rulesOpen]);
+
   // 토큰 크기는 인원 수에 맞춰 줄여 겹침을 줄인다. 좌표는 안쪽으로 모아 가장자리 라벨 클리핑 방지.
   const tokenPx = game.players.length > 11 ? 38 : game.players.length > 8 ? 44 : 52;
   const INSET = 0.1;
@@ -211,13 +226,22 @@ export function PlayerGame({
         <p className="text-xs text-muted">
           좌석을 눌러 직업을 추측하고 메모하세요. 기록은 나만 볼 수 있습니다.
         </p>
-        <button
-          type="button"
-          onClick={() => setScriptOpen(true)}
-          className="shrink-0 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:border-gold/60 hover:text-text"
-        >
-          직업 목록
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:border-gold/60 hover:text-text"
+          >
+            규칙
+          </button>
+          <button
+            type="button"
+            onClick={() => setScriptOpen(true)}
+            className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:border-gold/60 hover:text-text"
+          >
+            직업 목록
+          </button>
+        </div>
       </div>
 
       {/* 데스크탑: 보드(좌) + 메모 사이드바(우). 모바일: 세로 스택. */}
@@ -460,6 +484,39 @@ export function PlayerGame({
                     ))}
                   </div>
                 </div>
+              ))}
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* 규칙 — 직업 목록과 같은 우측 드로어. /rules와 동일한 기본 규칙(취함·중독·투표 등)을
+          게임 중에도 화면을 떠나지 않고 바로 참고할 수 있게. */}
+      {rulesOpen && (
+        <>
+          <div data-modal className="fixed inset-0 z-40 bg-black/50" onClick={() => setRulesOpen(false)} />
+          <aside
+            data-modal
+            className="fixed inset-y-0 right-0 z-40 flex w-full max-w-sm flex-col border-l border-border bg-surface shadow-xl"
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">규칙</h2>
+              <button type="button" onClick={() => setRulesOpen(false)} className="rounded p-1 text-muted hover:text-text">✕</button>
+            </div>
+            <div className="flex-1 space-y-5 overflow-y-auto p-4">
+              {rules.map((s) => (
+                <section key={s.id}>
+                  <h3 className="mb-1.5 text-sm font-semibold text-gold">
+                    {s.order}. {s.title.ko}
+                  </h3>
+                  {s.body.ko.split("\n").map((para, i) =>
+                    para.trim() ? (
+                      <p key={i} className="mb-2 text-xs leading-relaxed text-text/90">
+                        {para}
+                      </p>
+                    ) : null,
+                  )}
+                </section>
               ))}
             </div>
           </aside>

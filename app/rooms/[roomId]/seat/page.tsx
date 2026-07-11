@@ -9,6 +9,7 @@ import { colorHex } from "@/lib/player-colors";
 import { chatGate, openTimerRunning, type ChatPolicy } from "@/lib/chat-policy";
 import { redactGameForSeat } from "@/lib/redact";
 import { characterMapForGame } from "@/lib/game-characters";
+import { rules } from "@/lib/data";
 import { PlayerGame } from "@/components/PlayerGame";
 import { SpectatorGame } from "@/components/SpectatorGame";
 
@@ -104,6 +105,7 @@ export default async function RoomSeatPage({
     <PlayerGame
       game={redacted}
       sheetChars={sheetChars}
+      rules={rules}
       boundSeat={boundSeat}
       gameId={room.gameId}
       roomId={roomId}

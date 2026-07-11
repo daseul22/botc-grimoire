@@ -95,6 +95,11 @@ LAN `/play/[gameId]/seat`은 의도된 신뢰 기반(같은 WiFi)이라 기존 �
   침범하지 않게 별도로 열고 닫는다(백드롭·✕·Escape·모바일 뒤로가기로 닫힘 — 상세 모달이 열려 있으면 모달이 먼저
   소비). 팀별 그룹, 항목 클릭 → `AbilityModal` 상세(ST 보드와 동일 능력·상세·운영·징크스). **전체 공개 스크립트**를
   보여주되 인플레이 여부는 표시하지 않는다(어떤 직업이 실제로 들어갔는지는 비밀 — 좌석↔직업 매핑을 안 주는 것과 같은 이유).
+- **규칙 드로어**: "직업 목록" 왼쪽 "규칙" 버튼으로 여는 **같은 패턴의 우측 드로어**(`rulesOpen`, 백드롭·✕·Escape·뒤로가기).
+  `/rules` 페이지와 동일한 기본 규칙(취함·중독·지명·투표 등)을 게임 화면을 떠나지 않고 바로 참고하게 한다. 데이터는
+  서버 컴포넌트(seat 페이지)가 `lib/data`의 `rules`(SQLite `rules` 테이블, `data/rules.json` 시드)를 prop으로 내려주고,
+  `/rules`와 같은 `body.ko.split("\n")` 문단 렌더를 재사용한다. 취함/중독 규칙은 **'능력 없음'을 기본 전제**로 —
+  정보형은 참/거짓 정보 모두 가능, 물리·행동형은 무조건 미발동 — 원문에 맞춰 보강(`drunk-poisoned`).
 
 - 데이터: `game_player_guesses(game_id, user_id, target_seat, guess_character_id, note)` —
   `target_seat=-1`은 자유 메모. `lib/player-board.ts`가 upsert/조회. `setGuessAction`·`setSeatNoteAction`·
