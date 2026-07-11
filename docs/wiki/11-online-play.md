@@ -208,10 +208,16 @@ stateDiagram-v2
   과거의 블러핑/하수인/악마 정보 개별 버튼 혼동이 없다. `resolveShowcase`의 `minion-info`/`demon-info` 모드 → `firstNightInfo` payload.
   `minion-info`는 `seatsShownAsMinions(..., {excludeSeat: seat})`로 **받는 본인을 '동료 하수인'에서 제외**한다(하수인이 유일할 때 자기 이름이 뜨던 버그 수정).
 
+- **자유 텍스트 정보**(사반트·어부·기억상실자 — `result:text`이며 구조화 showcase가 없는 낮 능력): ST가 직접 쓴 텍스트를
+  `ShowcasePayload`의 `text` 변형(heading+body)으로 좌석 폰에 push. `pushTextInfoAction`이 만들고(resolveShowcase 경로 아님),
+  `NightActionRow`의 기록행에서 `result:text && !showcase`일 때 **"정보 보내기"** 버튼(기록한 텍스트를 그대로 전송·`OnlineNightCtx.pushText`).
+  공개 발언(가십·저글러)은 폰 조작 없이 말로, 예/아니오(아티스트)·비밀문구(야가바블)는 기존 structured showcase로 커버.
+
 핵심 — **단일 출처**:
 - [lib/showcase.ts](../../lib/showcase.ts) `resolveShowcase(game, seat, {as,variant,mode}, getTeam)` → `ShowcasePayload`
-  (discriminated: `standard`/`roleTokens`/`nameTokens`/`firstNightInfo`). **LAN show 페이지와 온라인 push가 같은 함수**로
-  "무엇을 드러낼지"를 계산해 두 경로가 갈라지지 않는다. show 페이지의 특수 모드(demon/bluffs/minions/lunatic-*/**grimoire**)도 여기로 옮겼다.
+  (discriminated: `standard`/`roleTokens`/`nameTokens`/`firstNightInfo`/`grimoire`/`text`). **LAN show 페이지와 온라인 push가 같은 함수**로
+  "무엇을 드러낼지"를 계산해 두 경로가 갈라지지 않는다(단, `text`는 ST 자유 입력이라 resolveShowcase가 아니라 `pushTextInfoAction`이 구성).
+  show 페이지의 특수 모드(demon/bluffs/minions/lunatic-*/**grimoire**)도 여기로 옮겼다.
 - [components/ShowcasePayloadView.tsx](../../components/ShowcasePayloadView.tsx)가 payload를 그린다 — **LAN show
   페이지·온라인 `NightRequestPanel`·능력 미리보기가 같은 렌더러**(표준은 기존 `ShowcaseView` 재사용). 알 수 없는/
   레거시(구 InfoPayload) payload는 뷰·요약(`showcaseSummary`)이 방어적으로 폴백(막힌 화면 방지).
