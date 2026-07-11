@@ -44,6 +44,7 @@ import {
   getPresenceAction,
   listNightRequestsAction,
   pushShowcaseAction,
+  pushTextInfoAction,
   requestPlayerPickAction,
 } from "@/app/rooms/actions";
 import { useGameStream } from "./useGameStream";
@@ -319,6 +320,8 @@ export function PlayCanvas({
         busy,
         pushShowcase: (seat, characterId, opts) =>
           runRoom(() => pushShowcaseAction(roomId, seat, characterId, opts), loadRequests),
+        pushText: (seat, heading, body) =>
+          runRoom(() => pushTextInfoAction(roomId, seat, heading, body), loadRequests),
         requestPick: (seat, characterId) =>
           runRoom(() => requestPlayerPickAction(roomId, seat, characterId), loadRequests),
         // 기록+마커+완료는 Game을 반환 → run으로 setGame(마커 즉시 반영) + 요청 목록 갱신(플레이어 대기 해제).

@@ -21,6 +21,8 @@ export type OnlineNightCtx = {
   presence?: Record<number, boolean>;
   busy: boolean;
   pushShowcase: (seat: number, characterId: string, opts?: { variant?: number; mode?: string; toSeat?: number }) => void;
+  /** 자유 텍스트 정보를 좌석 폰에 push(사반트·어부 등 구조화 안 되는 사적 정보). */
+  pushText: (seat: number, heading: string, body: string) => void;
   requestPick: (seat: number, characterId: string) => void;
   /** 플레이어 응답을 밤 행동으로 확정(기록+마커 적용+완료). characterId=행이 다루는 직업. */
   commitPick: (requestId: string, characterId: string) => void;
@@ -300,6 +302,18 @@ export function NightActionRow({
             {/* result 없는 직업도 명시적 showcase가 있으면 노출(미치광이 가짜 공격 → 데몬에게). */}
             {showcaseArr.length <= 1 && (spec.result !== "none" || hasShowcase) && showcaseAction(0, "보여주기")}
             {showcaseArr.length > 1 && showcaseArr.map((_, i) => showcaseAction(i, showcaseLabels[i] ?? `#${i + 1}`))}
+            {/* 텍스트 정보(사반트·어부 등) — 구조화된 showcase가 없어 자유 텍스트를 폰에 직접 보낸다. */}
+            {online && spec.result === "text" && !hasShowcase && record.result.trim() && (
+              <button
+                type="button"
+                disabled={online.busy}
+                onClick={() => online.pushText(actor.seat, "이야기꾼 정보", record.result)}
+                title="이 텍스트를 플레이어 폰에 정보로 보냅니다"
+                className="inline-flex items-center gap-1 rounded bg-gold/15 px-2 py-1 text-gold hover:bg-gold/25 disabled:opacity-50"
+              >
+                {req ? "다시 보내기" : "정보 보내기"}
+              </button>
+            )}
             {canApplyMarker && (
               <button
                 type="button"

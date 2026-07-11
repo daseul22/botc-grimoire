@@ -57,7 +57,7 @@ import {
   type NightRequest,
   type NightRequestKind,
 } from "@/lib/night-requests";
-import { resolveShowcase } from "@/lib/showcase";
+import { resolveShowcase, type ShowcasePayload } from "@/lib/showcase";
 import { characterMapForGame } from "@/lib/game-characters";
 import { markerForAction, showcaseVariants, specForPhase } from "@/lib/night-actions";
 import type { Game } from "@/lib/types";
@@ -439,6 +439,36 @@ export async function pushShowcaseAction(
   if (toSeat == null) return { error: "받는 좌석을 지정하세요." };
   if (!game.players.some((p) => p.seat === toSeat)) return { error: "받는 좌석이 올바르지 않습니다." };
   const id = createRequest({ gameId: room.gameId, seat: toSeat, kind: "info", info: payload });
+  emitGameUpdate(room.gameId);
+  return { id };
+}
+
+/**
+ * 자유 텍스트 정보 push — 사반트·어부처럼 구조화되지 않은 사적 정보를 이야기꾼이 직접 써서 특정 좌석 폰에 보낸다.
+ * showcase(구조화된 화면)로 표현 못 하는 텍스트 정보의 구멍을 메운다. delivered 즉시 생성, 좌석 게이팅.
+ */
+export async function pushTextInfoAction(
+  roomId: string,
+  toSeat: number,
+  heading: string,
+  body: string,
+): Promise<{ error: string } | { id: string }> {
+  const { room } = await requireRoomOwner(roomId);
+  if (!room.gameId) return { error: "게임이 시작되지 않았습니다." };
+  const game = getGame(room.gameId);
+  if (!game) return { error: "게임을 찾을 수 없습니다." };
+  const target = game.players.find((p) => p.seat === toSeat);
+  if (!target) return { error: "받는 좌석이 올바르지 않습니다." };
+  const text = body.trim().slice(0, 500);
+  if (!text) return { error: "보낼 내용을 입력하세요." };
+  const info: ShowcasePayload = {
+    kind: "text",
+    forNickname: target.nickname,
+    recipientSeat: toSeat,
+    heading: heading.trim().slice(0, 80) || "이야기꾼 정보",
+    body: text,
+  };
+  const id = createRequest({ gameId: room.gameId, seat: toSeat, kind: "info", info });
   emitGameUpdate(room.gameId);
   return { id };
 }

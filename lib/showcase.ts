@@ -78,6 +78,15 @@ export type ShowcasePayload =
         deathCause: string;
       }[];
       emptyText: string;
+    }
+  | {
+      // 자유 텍스트 정보 — 이야기꾼이 사반트·어부처럼 구조화되지 않은 사적 정보를 특정 좌석 폰에 직접 보낸다.
+      // resolveShowcase가 만들지 않고(구조 없음) ST가 pushTextInfoAction으로 직접 구성. recipientSeat=받을 좌석.
+      kind: "text";
+      forNickname: string;
+      recipientSeat: number | null;
+      heading: string;
+      body: string;
     };
 
 export type ResolveShowcaseOpts = {
@@ -265,6 +274,8 @@ export function showcaseSummary(
     };
   if (p.kind === "grimoire")
     return { heading: "마도서(그리모어) 확인", subheading: `${p.seats.length}개 좌석`, roleTokens: [], nameTokens: [] };
+  if (p.kind === "text")
+    return { heading: p.heading || "이야기꾼 정보", subheading: p.body, roleTokens: [], nameTokens: [] };
 
   // 레거시 페이로드(구 InfoPayload {heading, roleTokens, nameTokens}, kind 없음) 방어.
   const legacy = p as unknown as {

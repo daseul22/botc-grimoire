@@ -157,6 +157,19 @@ export function ShowcasePayloadView({
     );
   }
 
+  if (payload.kind === "text") {
+    // 자유 텍스트 정보 — 이야기꾼이 직접 쓴 사적 정보(사반트·어부 등).
+    return (
+      <>
+        {payload.forNickname && <p className="text-center text-base text-muted">{payload.forNickname} 님께</p>}
+        <h1 className="break-keep text-center text-2xl font-bold leading-snug text-text">{payload.heading}</h1>
+        {payload.body && (
+          <p className="whitespace-pre-line break-words text-center text-lg leading-relaxed text-text/90">{payload.body}</p>
+        )}
+      </>
+    );
+  }
+
   if (payload.kind === "standard") {
     // 표준 — 기존 ShowcaseView 재사용(능력 미리보기·LAN show와 동일 마크업).
     return (
