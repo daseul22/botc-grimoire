@@ -60,7 +60,9 @@ flowchart TD
 [redact.ts](../../lib/redact.ts)(순수, 좌석별 비밀 제거)로 구성된다.
 
 [db.ts](../../lib/db.ts)는 `process.cwd()/db/grimoire.db`를 `fileMustExist`로 연다(시드 안 됐으면
-명확히 실패 → `npm run db:seed`). WAL 모드.
+명확히 실패 → `npm run db:seed`). WAL 모드. 환경변수 `BOTC_DB_FILE`이 있으면 그 파일을 대신 연다 —
+시뮬 하네스(`npm run sim`, [11](11-online-play.md#회귀-테스트--시뮬레이션-하네스-scriptssim-onlinets))가
+실 DB 사본에만 대고 돌기 위한 격리 훅(운영엔 영향 없음).
 
 ## 라우트 맵
 
