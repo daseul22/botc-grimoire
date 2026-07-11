@@ -58,7 +58,8 @@
 - **온라인 베타 실행: `npm run start`** ([scripts/start-online.mjs](../../scripts/start-online.mjs)) — production
   서버(`next start`, 필수)와 ngrok 고정 도메인 터널(보조)을 한 프로세스로 오케스트레이션한다(외부 의존성 0).
   서버가 죽으면 터널까지 종료, 터널만 끊기면 서버는 유지, `Ctrl+C` 한 번에 둘 다 정리. 환경변수로 조정:
-  `NGROK_DOMAIN`(기본 `botc.ngrok.app`)·`PORT`(기본 3000)·`NO_TUNNEL=1`(터널 없이 서버만). 빌드 선행 필요(`npm run build`).
+  `NGROK_DOMAIN`(기본 `botc.ngrok.app`)·`PORT`(기본 3000)·`NO_TUNNEL=1`(터널 없이 서버만).
+  `prestart`가 `next build`를 자동 선행하므로(→ `prebuild`가 시딩까지) 코드 최신 상태로 바로 뜬다.
   터널만 빼고 순수 서버는 `npm run start:server`.
 
 ---

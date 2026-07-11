@@ -7,6 +7,7 @@
     "dev": "next dev -H 0.0.0.0",
     "prebuild": "node scripts/seed-db.mjs",
     "build": "next build",
+    "prestart": "next build",
     "start": "node scripts/start-online.mjs",
     "start:server": "next start -H 0.0.0.0",
     "party": "node scripts/party.mjs",
