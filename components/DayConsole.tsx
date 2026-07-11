@@ -417,10 +417,10 @@ function NewNomination({
           ariaLabel="지목 대상"
           className="w-full"
           options={game.players
-            .filter((p) => p.seat !== nominator)
+            // 자기 자신 지목도 공식 규칙상 허용 — 지명자를 대상 목록에서 빼지 않는다.
             .map((p) => ({
               value: p.seat,
-              label: p.nickname,
+              label: p.nickname + (p.seat === nominator ? " (자기 지목)" : ""),
               sublabel: usedNominees.has(p.seat) ? "이미 지목받음" : p.status === "dead" ? "사망" : undefined,
               disabled: usedNominees.has(p.seat),
             }))}

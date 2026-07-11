@@ -464,12 +464,15 @@ export function showsWithoutRecord(characterId: string): boolean {
 /**
  * 대상을 *플레이어가 아니라 이야기꾼이* 고르는 정보 직업 — 세탁부·조사자류("이 두 명 중 하나가 X").
  * 이들은 ST가 가리킬 좌석을 정하고 직접 기록하므로 '대상 고르게 하기'(플레이어 선택 요청)를 띄우지 않는다.
+ * 낮의 슬레이어·처녀도 여기 둔다: 능력 발동을 *공개적으로 선언*하므로(폰으로 몰래 고르는 게 아니라)
+ * ST가 선언된 대상을 직접 기록한다.
  */
 export const ST_CHOOSES_TARGETS: ReadonlySet<string> = new Set<string>([
   "washerwoman", "librarian", "investigator", // 트러블 브루잉 — "이 두 명 중 한 명이 X"
   "grandmother", "balloonist", // 특정 플레이어의 직업을 알려주는 정보
   "steward", "bountyhunter", "noble", "knight", "highpriestess", "choirboy", "sage", // 플레이어에 대한 정보
   "virgin", // 낮 — 대상은 지목자(플레이어가 고르지 않음, ST가 기록)
+  "slayer", // 낮 — 공개 선언(임프 저격). 플레이어 폰 선택 없이 ST가 선언된 대상을 직접 기록.
 ]);
 
 /**

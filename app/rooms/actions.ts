@@ -649,7 +649,7 @@ function doOpenNomination(
   if (!game) return { error: "게임을 찾을 수 없습니다." };
   if (game.status === "finished") return { error: "종료된 게임입니다." };
   if (game.phase !== "day") return { error: "낮에만 지목할 수 있습니다." };
-  if (nominator === nominee) return { error: "자기 자신은 지목할 수 없습니다." };
+  // 자기 자신 지목은 공식 규칙상 허용된다(지명자=피지명자). 하루 한도(각 1회)만 적용.
   const by = game.players.find((p) => p.seat === nominator);
   const target = game.players.find((p) => p.seat === nominee);
   if (!by || !target) return { error: "좌석을 찾을 수 없습니다." };

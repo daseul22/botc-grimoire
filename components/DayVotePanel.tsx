@@ -139,7 +139,7 @@ export function DayVotePanel({
         {pickerOpen && (
           <NomineePicker
             players={players}
-            excluded={[boundSeat, ...nominatedSeats]}
+            excluded={nominatedSeats}
             onPick={nominate}
             onClose={() => setPickerOpen(false)}
             pending={busy}
@@ -285,7 +285,7 @@ function remaining(startedAt: string, seconds: number): number {
   return Math.max(0, Math.ceil(seconds - (Date.now() - Date.parse(startedAt)) / 1000));
 }
 
-/** 지목 대상 선택 — 자기 자신·이미 지목된 좌석 제외. */
+/** 지목 대상 선택 — 이미 지목된 좌석만 제외(자기 자신 지목은 공식 규칙상 허용). */
 function NomineePicker({
   players,
   excluded,
