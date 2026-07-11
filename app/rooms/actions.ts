@@ -656,7 +656,11 @@ function doOpenNomination(
   if (by.status !== "alive") return { error: "죽은 플레이어는 지목할 수 없습니다." };
   if (getActiveNomination(gameId, game.day)) return { error: "이미 진행 중인 지목이 있습니다." };
   const today = listForDay(gameId, game.day);
-  if (today.some((n) => n.nominator === nominator)) return { error: "이미 지목했습니다(하루 1회)." };
+  // 하루 지목 한도: 기본 1회. 푸주한(butcher, 여행자)은 "첫 처형 후 한 번 더" 지목 가능 → 하루 2회까지 허용.
+  // (진행 순서는 ST가 통제하므로 '처형 후' 시점은 ST가 지킨다. nominee-once는 그대로 — 같은 대상 재지목 불가.)
+  const nominatorLimit = by.characterId === "butcher" ? 2 : 1;
+  if (today.filter((n) => n.nominator === nominator).length >= nominatorLimit)
+    return { error: "이미 지목했습니다(하루 1회)." };
   if (today.some((n) => n.nominee === nominee)) return { error: "이미 지목된 대상입니다(하루 1회)." };
   cancelStale(gameId, game.day); // 지난 낮의 미커밋 지목 정리
   // 피지명자가 여행자면 '추방'(처형과 다른 규칙: 전원 투표·유령표 무소모·추방선 과반 초과).

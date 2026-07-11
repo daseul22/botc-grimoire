@@ -42,6 +42,9 @@ export const MARKERS: Marker[] = [
   { id: "drunk", label: "취함", icon: "/icons/drunk.webp", color: "#9b6dd0", duration: "permanent", taints: true },
   { id: "mad", label: "집착", icon: "/icons/cerenovus.webp", color: "#ec6cae", duration: "dusk", needsTarget: true, roleParam: true },
   { id: "protected", label: "보호", icon: "/icons/monk.webp", color: "#4a90d9", duration: "phase" },
+  // 처형 생존(악마의 변호사) — 밤에 걸어 '다음 낮 처형'까지 유지돼야 하므로 dusk(밤→낮 유지, 낮→밤 소멸).
+  // protected(phase)는 밤→낮 전환에 사라져 정작 그 낮 처형 시점엔 없으므로 별도 마커로 분리.
+  { id: "execsafe", label: "처형 생존", icon: "/icons/devilsadvocate.webp", color: "#4a90d9", duration: "dusk" },
   { id: "dying", label: "사망예정", icon: "/icons/imp.webp", color: "#e08a3c", duration: "phase" },
   { id: "herring", label: "레드헤링", icon: "/icons/fortuneteller.webp", color: "#d23b3b", duration: "permanent" },
   { id: "became", label: "직업 변경", icon: "", color: "#c0653a", duration: "permanent", needsTarget: true, roleParam: true, letter: "↺" },

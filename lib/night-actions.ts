@@ -98,6 +98,12 @@ export type ActionSpec = {
    * 정보로 직업을 *알게만* 되는 능력(세탁부·까마귀지기 등)은 ST가 보여주므로 목록이 필요 없다.
    */
   playerPicks?: boolean;
+  /**
+   * result가 INFO_KINDS(number/yesno/role/team)는 아니지만 실질은 '정보 능력'이라
+   * 취함/중독/Vortox 시 거짓 정보 경고(TaintWarning) 대상인 직업(꿈꾸는 자 등 result:text 정보).
+   * "text"를 통째로 INFO_KINDS에 넣으면 메제펠리스·야가바블 등 비정보 text 직업에 오탐이 뜨므로 개별 플래그.
+   */
+  info?: boolean;
 };
 
 export const RESULT_KIND_LABEL: Record<ResultKind, string> = {
@@ -190,7 +196,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   courtier: { targets: 1, result: "none", marker: "drunk", hint: "3일 밤낮 취함" },
   exorcist: { targets: 1, result: "none", showcase: { recipient: "none", heading: "구마사제가 당신을 선택했습니다", subheading: "당신(악마)은 오늘 밤 깨지 않습니다", tokens: ["actor", "actorName"], stack: true } },
   godfather: { targets: 0, result: "none", hint: "게임에 있는 외지인 토큰을 보여줌" },
-  devilsadvocate: { targets: 1, result: "none", marker: "protected", hint: "처형 생존" },
+  devilsadvocate: { targets: 1, result: "none", marker: "execsafe", hint: "처형 생존" },
   zombuul: { targets: 1, result: "none", marker: "dying" },
   shabaloth: { targets: 2, result: "none", marker: "dying" },
   po: { targets: 3, result: "none", marker: "dying", hint: "1명 또는 3명" },
@@ -206,7 +212,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   // ── 종파의 제비꽃 ──
   harlot: { targets: 1, result: "role", hint: "지목한 플레이어 직업", showcase: { heading: "이 사람은 {role}입니다", tokens: ["result", "name"], stack: true } },
   barista: { targets: 1, result: "none" },
-  bonecollector: { targets: 1, result: "none", hint: "능력 되찾을 사망자" },
+  bonecollector: { targets: 1, result: "none", oncePerGame: true, hint: "능력 되찾을 사망자" },
   philosopher: { targets: 0, result: "role", oncePerGame: true, playerPicks: true, hint: "얻은 선한 직업", showcase: { heading: "당신은 {role}의 능력을 얻었습니다", subheading: "기존 능력 대신 이 직업처럼 행동합니다", tokens: ["result"] } },
   pithag: { targets: 1, result: "role", playerPicks: true, hint: "바꿀 직업", showcase: { recipient: "target", heading: "당신은 이제 {role}입니다", subheading: "마귀할멈에 의해 이 캐릭터로 바뀌었습니다", tokens: ["result"] } },
   snakecharmer: { targets: 1, result: "none" },
@@ -218,7 +224,7 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
   vortox: { targets: 1, result: "none", marker: "dying" },
   vigormortis: { targets: 1, result: "none", marker: "dying" },
   clockmaker: { targets: 0, result: "number", hint: "악마-하수인 거리", showcase: { heading: "악마와 가장 가까운 하수인 사이의 거리: {count}", subheading: "시계/반시계 중 짧은 쪽 걸음 수" } },
-  dreamer: { targets: 1, result: "text", hint: "선 직업 / 악 직업", showcase: { heading: "이 사람은 둘 중 하나입니다", subheading: "선한 직업 또는 악한 직업", tokens: ["name"] } },
+  dreamer: { targets: 1, result: "text", info: true, hint: "선 직업 / 악 직업", showcase: { heading: "이 사람은 둘 중 하나입니다", subheading: "선한 직업 또는 악한 직업", tokens: ["name"] } },
   barber: { targets: 0, result: "none" },
   seamstress: { targets: 2, result: "yesno", oncePerGame: true, hint: "둘이 같은 소속인가", showcase: { heading: "두 사람이 같은 진영인가: {yn}", tokens: ["name", "name2"] } },
   sweetheart: { targets: 1, result: "none", marker: "drunk" },

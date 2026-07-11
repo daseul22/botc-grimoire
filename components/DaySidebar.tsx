@@ -90,7 +90,7 @@ export function DaySidebar({
                   done={done}
                   onToggleDone={() => run(() => toggleDoneAction(game.id, p.seat))}
                   tags={headerTags}
-                  taint={<TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={spec.result} />}
+                  taint={<TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={spec.result} info={spec.info} />}
                 />
                 <p className="mt-1 break-words pl-0.5 text-xs text-muted">{ch.ability.ko}</p>
                 <NightActionRow

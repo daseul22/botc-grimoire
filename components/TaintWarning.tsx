@@ -10,12 +10,15 @@ export function TaintWarning({
   markers,
   globalMarkers,
   resultKind,
+  info,
 }: {
   markers: string[];
   globalMarkers: string[];
   resultKind: ResultKind;
+  /** result가 INFO_KINDS 밖(text)이어도 실질 정보 능력이면 경고 대상(꿈꾸는 자 등). */
+  info?: boolean;
 }) {
-  if (!isTainted(markers, globalMarkers) || !INFO_KINDS.has(resultKind)) return null;
+  if (!isTainted(markers, globalMarkers) || !(INFO_KINDS.has(resultKind) || info)) return null;
   return (
     <span
       className="rounded bg-amber-500/20 px-1 text-[10px] font-medium text-amber-400"

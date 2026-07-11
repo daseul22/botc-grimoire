@@ -282,6 +282,8 @@ stateDiagram-v2
   시계방향이다([seat-layout.ts](../../lib/seat-layout.ts) `circlePositions`). 투표 불가 좌석(죽었고 유령표 없음)은 스킵.
 - **지목 주체**: 플레이어가 자기 화면에서 직접(`nominateAction`) **또는** ST 대행(`openNominationOnBehalfAction`).
   하루 1회·생존자만·활성 지목 1개 제한은 **서버에서 강제**(LAN VotesSidebar는 클라만 검사 — 온라인은 신뢰 불가라 필수).
+  단 **푸주한(butcher, 여행자)** 은 "첫 처형 후 한 번 더" 지목 가능이라 지명자 한도만 예외로 2회(`doOpenNomination`의 `nominatorLimit`).
+  대상 1회 한도(`nominee-once`)와 생존·활성 제한은 그대로.
 - **지목 받기 활성화(ST)**: 플레이어 직접 지목은 ST가 **'지목 받기'를 연 뒤에만**(`game_phases.nominations_open`,
   `setNominationsOpenAction`). 열면 순차로 여러 번(각자 1회·각 대상 1회, 활성 지목 없을 때만). **페이즈 스냅샷별
   플래그라 매 낮 자동 닫힘.** 플레이어 `canNominate`에 반영, 닫혀 있으면 DayVotePanel이 하단에 "지목 시간 대기" 안내.

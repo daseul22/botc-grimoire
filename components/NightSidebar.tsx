@@ -290,7 +290,7 @@ export function NightSidebar({
                   done={done}
                   onToggleDone={() => run(() => toggleDoneAction(game.id, p.seat))}
                   tags={headerTags}
-                  taint={<TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={rowSpec.result} />}
+                  taint={<TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={rowSpec.result} info={rowSpec.info} />}
                 />
                 {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
                 {ACTION_CRITERIA[effId] && (

@@ -48,6 +48,7 @@ type ActionSpec = {
   oncePerGame?: boolean;      // 게임당 1회 → 사용 후 noability:<직업> 마커 + "능력 사용함"
   deathTriggered?: boolean;   // 사망 시 발동(까마귀지기) → 죽어도 흐리지 않음
   playerPicks?: boolean;      // 플레이어가 폰에서 직접 직업 선택 → "직업 목록" 버튼 노출
+  info?: boolean;             // result가 INFO_KINDS 밖(text)이지만 실질 정보 능력 → TaintWarning 대상(꿈꾸는 자)
 };
 ```
 
