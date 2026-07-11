@@ -35,7 +35,8 @@
 
 ```jsonc
 "dev":   "next dev -H 0.0.0.0",
-"start": "next start -H 0.0.0.0",
+"start":        "node scripts/start-online.mjs", // 서버 + ngrok 터널 동시 실행(온라인 베타)
+"start:server": "next start -H 0.0.0.0",         // 순수 서버(터널 없음)
 "party": "node scripts/party.mjs",          // 모임용 production 실행
 "db:seed":   "node scripts/seed-db.mjs",   // data/*.json → db/grimoire.db
 "predev":    "node scripts/seed-db.mjs",    // dev/build 전 자동 시드
@@ -49,8 +50,16 @@
   기존 빌드 재사용(코드 고쳤으면 `npm run party -- --rebuild`), 시작 시 폰용 LAN 주소 출력.
 - 폰(같은 WiFi): `http://<노트북IP>:3000` — 사설대역(192.168 > 10 > 172.16-31) 우선 감지.
 - **외부 공유(ngrok 등)**: 터널로 열 땐 cross-origin이라 서버액션/리소스가 막힌다 →
-  [next.config.ts](../../next.config.ts)가 `*.ngrok-free.app` 등을 `allowedDevOrigins` +
+  [next.config.ts](../../next.config.ts)가 `*.ngrok-free.app`·`*.ngrok.app` 등을 `allowedDevOrigins` +
   `serverActions.allowedOrigins`에 등록해 허용.
+- **공유 링크는 접속 origin을 따라간다**([lanUrlAction](../../app/play/actions.ts)): 터널·LAN IP로 접속했으면
+  요청 호스트(`x-forwarded-host`/`host` + `x-forwarded-proto`)를 그대로 써서 ngrok 도메인에서 복사해도
+  `:3000` 같은 엉뚱한 포트로 새지 않는다. `localhost` 접속일 때만 폰용으로 LAN IP:포트로 변환(기존 동작).
+- **온라인 베타 실행: `npm run start`** ([scripts/start-online.mjs](../../scripts/start-online.mjs)) — production
+  서버(`next start`, 필수)와 ngrok 고정 도메인 터널(보조)을 한 프로세스로 오케스트레이션한다(외부 의존성 0).
+  서버가 죽으면 터널까지 종료, 터널만 끊기면 서버는 유지, `Ctrl+C` 한 번에 둘 다 정리. 환경변수로 조정:
+  `NGROK_DOMAIN`(기본 `botc.ngrok.app`)·`PORT`(기본 3000)·`NO_TUNNEL=1`(터널 없이 서버만). 빌드 선행 필요(`npm run build`).
+  터널만 빼고 순수 서버는 `npm run start:server`.
 
 ---
 [← 홈](README.md) · 다음: [데이터 파이프라인 →](02-data-pipeline.md)

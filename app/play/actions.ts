@@ -3,7 +3,7 @@
 import os from "node:os";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getCharacter } from "@/lib/data";
 import {
   advancePhase,
@@ -522,13 +522,35 @@ export async function releaseSeatAction(gameId: string, seat: number): Promise<G
 }
 
 // 폰 공유용 LAN 주소를 만든다. 서버의 LAN IPv4를 골라 :3000 + path로 조립.
-// 같은 WiFi 폰에서 열 수 있도록 사설 대역(192.168 > 10 > 172.16-31)을 우선한다.
+// 공유 링크 생성 — 접속 환경에 맞는 origin을 자동으로 고른다.
+// - 터널(ngrok 등)·LAN IP로 접속했으면 그 요청 origin을 그대로 써서(프록시 헤더 반영)
+//   ngrok 도메인에서 복사해도 :3000 같은 엉뚱한 포트로 새지 않는다.
+// - localhost로 접속했을 때만 폰이 못 여니 같은 WiFi LAN IP:포트로 변환(기존 동작 유지,
+//   사설 대역 192.168 > 10 > 172.16-31 우선).
 export async function lanUrlAction(
   path: string,
 ): Promise<{ url: string } | { error: string }> {
-  // 폰 공유 링크 생성은 이야기꾼·관리자 도구.
+  // 공유 링크 생성은 이야기꾼·관리자 도구.
   const user = await getCurrentUser();
   if (!user || !isStoryteller(user)) return { error: "권한이 없습니다." };
+
+  const h = await headers();
+  // 프록시(ngrok) 뒤면 x-forwarded-*가 실제 외부 호스트/프로토콜을 담는다.
+  const rawHost = (h.get("x-forwarded-host") || h.get("host") || "").split(",")[0].trim();
+  const hostname = rawHost.split(":")[0];
+  const isLocal =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+
+  // 외부에서 접근 가능한 호스트로 접속했으면 그 origin을 그대로 쓴다.
+  if (rawHost && !isLocal) {
+    const proto =
+      (h.get("x-forwarded-proto") || "").split(",")[0].trim() ||
+      (/\.ngrok(-free)?\.(app|io)$/.test(hostname) ? "https" : "http");
+    return { url: `${proto}://${rawHost}${path}` };
+  }
+
+  // localhost 접속 — 폰용으로 LAN IP:포트를 찾아 변환한다.
+  const port = rawHost.includes(":") ? rawHost.split(":")[1] : "3000";
   const addrs: string[] = [];
   for (const list of Object.values(os.networkInterfaces())) {
     for (const ni of list ?? []) {
@@ -543,7 +565,7 @@ export async function lanUrlAction(
     : 3;
   const host = addrs.sort((a, b) => rank(a) - rank(b))[0];
   if (!host) return { error: "LAN IP를 찾지 못했습니다. 같은 WiFi에 연결됐는지 확인하세요." };
-  return { url: `http://${host}:3000${path}` };
+  return { url: `http://${host}:${port}${path}` };
 }
 
 // 직업 배포 링크에서 플레이어가 자기 좌석을 점유. form action(무JS 동작).
