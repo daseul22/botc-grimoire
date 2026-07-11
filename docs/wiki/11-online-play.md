@@ -416,6 +416,10 @@ stateDiagram-v2
   지목→순차 스윕 투표(CAS 멱등)→처형·유령표 소모→2차 사이클→복기 무결성→종료.
 - **경계(미커버)**: 액션 레이어 가드(`requireUser`·phase게이팅·**푸주한 `nominatorLimit` 하루한도**는 `app/rooms/actions.ts`),
   SSE 전달, UI 렌더는 lib 직접호출이라 닿지 않는다 → 브라우저 e2e/사람 베타의 영역. 즉 **기능 게이트**용이지 플레이테스트 대체가 아니다.
+- **브라우저 스모크 실측(1회, 실서버)**: 위 경계 층을 임시 계정+방+게임 fixture로 실서버 확인 후 타깃 정리(실 DB 원복). 확정 —
+  ①wire redaction(플레이어 페이로드에 본인 좌석 직업만, 타 좌석 `characterId:""`) ②UI 렌더(플레이어 좌석+ST 보드) ③SSE 채널
+  라이브(`/api/rooms|games/.../stream` 200) ④`advancePhaseAction`(밤→낮 DB 반영)·DayConsole `computeTally`. **라이브 순차스윕
+  지목(플레이어 발신)의 2-클라이언트 실시간 관찰만 미검증** — 동시 2신원이 필요해 사람 베타(폰 2대)의 몫.
 
 ## 남은 다듬을 거리
 
