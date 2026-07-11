@@ -192,6 +192,8 @@ stateDiagram-v2
   **플레이어가 자기 킬/보호/정보 대상을 직접 고른다.**
   단, 세탁부·조사자·사서·할머니·기구조종사·귀족·기사 등 **ST가 가리킬 좌석을 정하는 정보 직업**(`ST_CHOOSES_TARGETS`)은
   이 버튼을 띄우지 않는다 — ST가 "+ 행동 기록"으로 직접 좌석을 골라 기록한 뒤 보여준다.
+  낮의 **처단자·성결자**(slayer/virgin)도 `ST_CHOOSES_TARGETS`에 든다: 능력을 *공개적으로 선언*하므로(폰으로 몰래 고르는
+  게 아니라) ST가 선언된 대상을 직접 기록한다 — 플레이어 폰에 pick 요청을 push하지 않는다.
 - **"이 선택으로 기록"의 원자적 처리**([commitPickResponseAction](../../app/rooms/actions.ts)): 응답을 한 번에
   ① 밤 행동으로 기록(`commitActionRecord` — 철학자 gained/drunk·일회성 noability·처리완료 ✓, **LAN `recordActionAction`과 단일 출처**),
   ② **상태 마커 즉시 적용**(수도사 `protected`·독 `poisoned`·킬 `dying`·집착 `mad` 등 `spec.marker` — `game_phases.state`는
@@ -213,10 +215,11 @@ stateDiagram-v2
   과거의 블러핑/하수인/악마 정보 개별 버튼 혼동이 없다. `resolveShowcase`의 `minion-info`/`demon-info` 모드 → `firstNightInfo` payload.
   `minion-info`는 `seatsShownAsMinions(..., {excludeSeat: seat})`로 **받는 본인을 '동료 하수인'에서 제외**한다(하수인이 유일할 때 자기 이름이 뜨던 버그 수정).
 
-- **자유 텍스트 정보**(사반트·어부·기억상실자 — `result:text`이며 구조화 showcase가 없는 낮 능력): ST가 직접 쓴 텍스트를
-  `ShowcasePayload`의 `text` 변형(heading+body)으로 좌석 폰에 push. `pushTextInfoAction`이 만들고(resolveShowcase 경로 아님),
+- **자유 텍스트 정보**(백치천재·낚시꾼·기억상실자 — `result:text`이며 구조화 showcase가 없는 낮 능력): 플레이어가 낮에
+  ST에게 찾아오면 ST가 직접 쓴 텍스트를 `ShowcasePayload`의 `text` 변형(heading+body)으로 좌석 폰에 push(ST가 먼저 찾아가는 게
+  아니라 on-demand). `pushTextInfoAction`이 만들고(resolveShowcase 경로 아님),
   `NightActionRow`의 기록행에서 `result:text && !showcase`일 때 **"정보 보내기"** 버튼(기록한 텍스트를 그대로 전송·`OnlineNightCtx.pushText`).
-  공개 발언(가십·저글러)은 폰 조작 없이 말로, 예/아니오(아티스트)·비밀문구(야가바블)는 기존 structured showcase로 커버.
+  공개 발언(험담꾼·곡예사)은 폰 조작 없이 말로, 예/아니오(화가)·비밀문구(야가바블)는 기존 structured showcase로 커버.
 
 핵심 — **단일 출처**:
 - [lib/showcase.ts](../../lib/showcase.ts) `resolveShowcase(game, seat, {as,variant,mode}, getTeam)` → `ShowcasePayload`
@@ -284,6 +287,9 @@ stateDiagram-v2
   하루 1회·생존자만·활성 지목 1개 제한은 **서버에서 강제**(LAN VotesSidebar는 클라만 검사 — 온라인은 신뢰 불가라 필수).
   단 **푸주한(butcher, 여행자)** 은 "첫 처형 후 한 번 더" 지목 가능이라 지명자 한도만 예외로 2회(`doOpenNomination`의 `nominatorLimit`).
   대상 1회 한도(`nominee-once`)와 생존·활성 제한은 그대로.
+- **자기 자신 지목 허용**(공식 규칙): 지명자=피지명자가 가능하다. `doOpenNomination`에 `nominator===nominee` 차단이 없고,
+  플레이어(`DayVotePanel` NomineePicker)·ST(`DayConsole` NewNomination) picker 모두 자기 좌석을 빼지 않는다.
+  하루 한도상 자기 지목 1건이 그 좌석의 지명자·피지명자 몫을 모두 소진한다(`computeOrder`는 지명자와 무관하게 정상).
 - **지목 받기 활성화(ST)**: 플레이어 직접 지목은 ST가 **'지목 받기'를 연 뒤에만**(`game_phases.nominations_open`,
   `setNominationsOpenAction`). 열면 순차로 여러 번(각자 1회·각 대상 1회, 활성 지목 없을 때만). **페이즈 스냅샷별
   플래그라 매 낮 자동 닫힘.** 플레이어 `canNominate`에 반영, 닫혀 있으면 DayVotePanel이 하단에 "지목 시간 대기" 안내.
