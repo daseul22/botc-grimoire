@@ -12,7 +12,7 @@
 //  - 좌석 이웃은 x/y(시각 배치)가 아니라 **좌석 번호 링**(0..N-1, 시계방향)으로만 계산한다.
 
 import { isTainted } from "./markers";
-import { MISREGISTER_ROLES } from "./night-actions";
+import { misregisterOf } from "./night-actions";
 import type { Character, GamePlayer, VoteRecord } from "./types";
 
 export type MisregisterKind = "good-as-evil" | "evil-as-good";
@@ -83,7 +83,7 @@ export function livingNeighbors(
 }
 
 function neighborInfo(p: GamePlayer, side: "left" | "right"): NeighborInfo {
-  return { player: p, side, align: p.alignment, misregister: MISREGISTER_ROLES[p.characterId] };
+  return { player: p, side, align: p.alignment, misregister: misregisterOf(p.characterId) };
 }
 
 const MISREGISTER_NOTE = "은둔자·첩자 등록에 따라 달라질 수 있음";
@@ -102,8 +102,8 @@ function ringDistance(players: GamePlayer[], seatA: number, seatB: number): numb
 /** 한 집합에서 악 수 + 은둔자(선→악)·첩자(악→선) 등록에 따른 가능 범위. */
 function evilCountRange(group: GamePlayer[]): { evil: number; low: number; high: number } {
   const evil = group.filter((p) => p.alignment === "evil").length;
-  const recluse = group.filter((p) => MISREGISTER_ROLES[p.characterId] === "good-as-evil").length;
-  const spy = group.filter((p) => MISREGISTER_ROLES[p.characterId] === "evil-as-good").length;
+  const recluse = group.filter((p) => misregisterOf(p.characterId) === "good-as-evil").length;
+  const spy = group.filter((p) => misregisterOf(p.characterId) === "evil-as-good").length;
   return { evil, low: Math.max(0, evil - spy), high: Math.min(group.length, evil + recluse) };
 }
 
@@ -132,7 +132,7 @@ function suggestChef(ctx: SuggestContext): ActionSuggestion {
     if (ordered[i].alignment === "evil" && ordered[(i + 1) % n].alignment === "evil") pairs++;
   }
   // 인접 쌍은 위치 의존이라 정확한 범위 계산 대신, 은둔자·첩자가 있으면 약한 주의만 단다.
-  const hasMis = ctx.players.some((p) => MISREGISTER_ROLES[p.characterId]);
+  const hasMis = ctx.players.some((p) => misregisterOf(p.characterId));
   return {
     result: String(pairs),
     reason: `인접한 악 쌍 ${pairs}개`,
@@ -195,7 +195,7 @@ function suggestFortuneteller(ctx: SuggestContext): ActionSuggestion | null {
   if (ctx.targets.length < 2) return null;
   const picks = pickedPlayers(ctx);
   const hit = picks.some((p) => ctx.charMap[p.characterId]?.team === "demon" || p.markers.includes("herring"));
-  const hasRecluse = picks.some((p) => MISREGISTER_ROLES[p.characterId] === "good-as-evil");
+  const hasRecluse = picks.some((p) => misregisterOf(p.characterId) === "good-as-evil");
   return {
     result: hit ? "yes" : "no",
     reason: hit ? "지목 중 데몬/레드헤링 있음" : "지목 중 데몬 없음",
@@ -210,7 +210,7 @@ function suggestSeamstress(ctx: SuggestContext): ActionSuggestion | null {
   const [a, b] = pickedPlayers(ctx);
   if (!a || !b) return null;
   const same = a.alignment === b.alignment;
-  const hasMis = [a, b].some((p) => MISREGISTER_ROLES[p.characterId]);
+  const hasMis = [a, b].some((p) => misregisterOf(p.characterId));
   return {
     result: same ? "yes" : "no",
     reason: same ? "두 명 같은 진영" : "두 명 다른 진영",
@@ -227,7 +227,7 @@ function suggestVillageIdiot(ctx: SuggestContext): ActionSuggestion | null {
   return {
     result: t.alignment,
     reason: `대상 진영: ${t.alignment === "evil" ? "악" : "선"}`,
-    note: MISREGISTER_ROLES[t.characterId] ? MISREGISTER_NOTE : undefined,
+    note: misregisterOf(t.characterId) ? MISREGISTER_NOTE : undefined,
     tainted: isTainted(ctx.actor.markers, ctx.globalMarkers),
   };
 }
@@ -259,7 +259,7 @@ function suggestTargetRole(ctx: SuggestContext): ActionSuggestion | null {
   return {
     result: t.characterId,
     reason: "대상의 직업",
-    note: MISREGISTER_ROLES[t.characterId] ? "은둔자·첩자는 다른 직업으로 보일 수 있음" : undefined,
+    note: misregisterOf(t.characterId) ? "은둔자·첩자는 다른 직업으로 보일 수 있음" : undefined,
     tainted: isTainted(ctx.actor.markers, ctx.globalMarkers),
   };
 }
@@ -272,7 +272,7 @@ function suggestTypedTargetRole(ctx: SuggestContext, team: string): ActionSugges
   return {
     result: match.characterId,
     reason: `지목 중 ${TEAM_KO[team] ?? team}의 직업`,
-    note: MISREGISTER_ROLES[match.characterId] ? "은둔자·첩자는 다른 직업으로 보일 수 있음" : undefined,
+    note: misregisterOf(match.characterId) ? "은둔자·첩자는 다른 직업으로 보일 수 있음" : undefined,
     tainted: isTainted(ctx.actor.markers, ctx.globalMarkers),
   };
 }
@@ -285,7 +285,7 @@ function suggestUndertaker(ctx: SuggestContext): ActionSuggestion | null {
   return {
     result: ex.characterId,
     reason: `어제 처형: ${t?.nickname ?? `좌석 ${ex.seat}`}`,
-    note: t && MISREGISTER_ROLES[t.characterId] ? "은둔자·첩자는 다른 직업으로 보일 수 있음" : undefined,
+    note: t && misregisterOf(t.characterId) ? "은둔자·첩자는 다른 직업으로 보일 수 있음" : undefined,
     tainted: isTainted(ctx.actor.markers, ctx.globalMarkers),
   };
 }

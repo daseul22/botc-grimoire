@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Character, Game } from "@/lib/types";
 import { RoleCard } from "./RoleCard";
 import { useGameStream } from "./useGameStream";
+import { useCharacterBehaviors } from "./useBehaviors";
 
 // SSE가 끊겼을 때를 대비한 보조 폴링 주기(평소엔 SSE로 즉시 갱신되므로 길게).
 const POLL_MS = 30000;
@@ -23,6 +24,7 @@ export function SeatView({
   sheetChars: Character[];
   boundSeat?: number | null;
 }) {
+  useCharacterBehaviors(sheetChars);
   const router = useRouter();
   const [seat, setSeat] = useState<number | null>(null);
   const bound = boundSeat != null;

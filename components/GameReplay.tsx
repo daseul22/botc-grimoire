@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TEAM_MAP } from "@/lib/constants";
 import { markerInfo, markerLabel } from "@/lib/markers";
 import { formatResult, specForPhase } from "@/lib/night-actions";
+import { useCharacterBehaviors } from "./useBehaviors";
 import { MarkerToken } from "./MarkerToken";
 import type { HistoryEntry } from "@/lib/games";
 import type { Character, Game } from "@/lib/types";
@@ -20,6 +21,8 @@ export function GameReplay({
   history: HistoryEntry[];
   sheetChars: Character[];
 }) {
+  // 복기도 기록 해석에 스펙이 필요하다(결과 종류·보여주기) — 커스텀 동작을 먼저 주입.
+  useCharacterBehaviors(sheetChars);
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<
     string,
     Character

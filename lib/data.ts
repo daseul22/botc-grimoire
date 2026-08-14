@@ -1,4 +1,9 @@
 import { getDb } from "./db";
+import {
+  getBehaviorOverride,
+  getCustomCharacter,
+  listCustomCharacters,
+} from "./custom-characters";
 import type {
   Character,
   EditionId,
@@ -129,8 +134,33 @@ export const rules: RulesSection[] = (
   body: { ko: r.body_ko, en: r.body_en },
 }));
 
+/**
+ * 동작이 수정된 공식 직업이면 override를 얹어 돌려준다.
+ * 수정분만 `behavior`가 채워지므로, 클라이언트로 나가는 payload에는 바뀐 직업만 실린다
+ * (공식 기본값은 data/behaviors.json으로 이미 클라 번들에 있음).
+ */
+function withOverride(c: Character): Character {
+  const o = getBehaviorOverride(c.id);
+  return o ? { ...c, behavior: o } : c;
+}
+
+/**
+ * 직업 조회 — 공식 183종 우선, 없으면 커스텀 직업.
+ * 이 한 곳이 커스텀을 알기 때문에 charactersForSheet·characterMapForGame 등
+ * 기존 소비자가 수정 없이 커스텀 직업을 그린다.
+ */
 export function getCharacter(id: string): Character | undefined {
-  return charById.get(id);
+  const official = charById.get(id);
+  if (official) return withOverride(official);
+  return getCustomCharacter(id);
+}
+
+/**
+ * 공식 + 커스텀 전체 목록(동적 페이지 전용).
+ * 모듈 최상단의 `characters`는 SSG 입력이라 정적으로 두고, 가변인 커스텀은 이 함수로만 합친다.
+ */
+export function allCharacters(): Character[] {
+  return [...characters.map(withOverride), ...listCustomCharacters()];
 }
 
 export function getSheet(id: string): Sheet | undefined {

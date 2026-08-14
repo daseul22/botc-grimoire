@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { TEAMS } from "@/lib/constants";
 import { FREE_CHAT, type ChatPolicy } from "@/lib/chat-policy";
+import { useCharacterBehaviors } from "./useBehaviors";
 import type { Character, Game, RulesSection } from "@/lib/types";
 import { CharacterIcon } from "./CharacterIcon";
 import { AbilityModal } from "./AbilityModal";
@@ -74,6 +75,7 @@ export function PlayerGame({
   /** 채팅 잠금 정책(밤/지목 차단, 귓말=공개토론 중 양옆). 페이지에서 계산해 전달. */
   chatPolicy?: ChatPolicy;
 }) {
+  useCharacterBehaviors(sheetChars);
   const router = useRouter();
   const charMap = Object.fromEntries(sheetChars.map((c) => [c.id, c])) as Record<string, Character>;
 

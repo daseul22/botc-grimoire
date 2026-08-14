@@ -1,3 +1,5 @@
+import type { CharacterBehavior } from "./behaviors";
+
 export type Lang = "ko" | "en";
 
 export type Localized = { ko: string; en: string };
@@ -43,6 +45,17 @@ export interface Character {
   howTo?: { ko: string[]; en: string[] };
   /** 로컬 호스팅 아이콘 경로 (수집 전엔 비어 있을 수 있음) */
   image?: string;
+  /** 사용자가 만든 커스텀 직업인가 (공식 183종이 아님) */
+  custom?: boolean;
+  /** 커스텀 직업 생성자 user id. 권한 게이팅용. 공식 직업은 null/undefined. */
+  ownerId?: number | null;
+  /**
+   * 그리모어 동작 정의 — 지목 수·결과 종류·마커·보여주기 등.
+   * 공식 직업은 data/behaviors.json(클라 번들에 정적 포함)에 있어 비워 두고,
+   * **커스텀 직업과 동작이 수정된 공식 직업만** 여기에 실어 클라이언트로 나른다
+   * (기존 sheetChars 전달 경로를 그대로 사용 → 별도 파이프 불필요).
+   */
+  behavior?: CharacterBehavior;
 }
 
 export interface Sheet {

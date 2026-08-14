@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { characters } from "@/lib/data";
+import { allCharacters } from "@/lib/data";
 import { getCustomSheet } from "@/lib/custom-sheets";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { SheetBuilder } from "@/components/SheetBuilder";
@@ -25,7 +25,7 @@ export default async function EditSheetPage({
 
   return (
     <SheetBuilder
-      characters={characters}
+      characters={allCharacters()}
       existing={{
         id: sheet.id,
         name: sheet.name.ko,

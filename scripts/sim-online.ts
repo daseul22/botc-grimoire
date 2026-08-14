@@ -14,6 +14,8 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 import Database from "better-sqlite3";
+// 타입 전용 import — 컴파일 시 지워지므로 BOTC_DB_FILE 설정 전 동적 import 순서에 영향이 없다.
+import type { Alignment, GamePlayer } from "@/lib/types";
 
 // ── 임시 DB 사본 준비(실 DB → 일관 백업) ──
 const REAL_DB = path.join(process.cwd(), "db", "grimoire.db");
@@ -100,7 +102,11 @@ async function main() {
   // A2. computeTally — 커트라인 수학 + 동률 차단
   section("A2. computeTally (처형 커트라인·동률)");
   {
-    const mk = (seat: number, characterId: string, status: "alive" | "dead" = "alive") => ({
+    const mk = (
+      seat: number,
+      characterId: string,
+      status: "alive" | "dead" = "alive",
+    ): GamePlayer => ({
       seat,
       nickname: `${seat}`,
       characterId,
@@ -111,7 +117,7 @@ async function main() {
       status,
       markers: [] as string[],
       memo: "",
-      deathCause: "",
+      deathCause: "" as const,
       ghostVoteUsed: false,
     });
     // 7 생존(주민들)
@@ -270,6 +276,114 @@ async function main() {
     check("resolveShowcase throw 없음", showcaseThrow === 0, `${showcaseThrow}`);
   }
 
+  // A6. 커스텀 직업 라운드트립 — 저장 → 조회 → 스펙 반영 → 시트/게임 편입 → showcase → 삭제.
+  // 직업 동작이 코드가 아니라 데이터가 됐으므로, "만든 직업이 실제 진행 경로를 그대로 탄다"를
+  // 사람 눈이 아니라 하네스가 확인한다.
+  section("A6. 커스텀 직업 라운드트립");
+  {
+    const cc = await import("@/lib/custom-characters");
+    const cs = await import("@/lib/custom-sheets");
+    const gc = await import("@/lib/game-characters");
+
+    // 1) 생성 — 공식에 없는 조합(지목 2 + 예/아니오 + 보호 마커 + 대상에게 보여주기)
+    const cid = cc.createCustomCharacter({
+      nameKo: "검증용 직업",
+      team: "townsfolk",
+      abilityKo: "매일 밤 두 명을 고른다. 둘이 같은 진영인지 알게 된다.",
+      firstOrder: 41,
+      otherOrder: 41,
+      firstReminderKo: "두 명을 가리키게 한 뒤 같은 진영이면 끄덕인다.",
+      behavior: {
+        night: {
+          targets: 2,
+          result: "yesno",
+          marker: "protected",
+          hint: "둘이 같은 진영인가",
+          oncePerGame: true,
+          showcase: {
+            heading: "두 사람이 같은 진영인가: {yn}",
+            tokens: ["name", "name2"],
+            recipient: "actor",
+          },
+        },
+        criteria: "고른 2명의 진영이 같으면 예.",
+        stChoosesTargets: true,
+      },
+    });
+    check("커스텀 직업 id는 x- 접두", cid.startsWith("x-"), cid);
+
+    // 2) 조회 — getCharacter가 공식 miss 시 커스텀을 찾아야 기존 소비자가 전부 따라온다
+    const got = data.getCharacter(cid);
+    check("getCharacter로 커스텀 직업 조회", !!got && got.name.ko === "검증용 직업");
+    check("커스텀 플래그·밤순서 보존", !!got?.custom && got?.firstNight?.order === 41);
+
+    // 3) 스펙 반영 — 레지스트리에 install돼 조회 함수가 커스텀 값을 돌려주는가
+    const spec = na.specForPhase(cid, "night", 1);
+    check("커스텀 스펙 targets=2", spec.targets === 2, `${spec.targets}`);
+    check("커스텀 스펙 result=yesno", spec.result === "yesno", spec.result);
+    check("커스텀 스펙 marker=protected", spec.marker === "protected", `${spec.marker}`);
+    check("커스텀 oncePerGame 인식", na.isOncePerGame(cid));
+    check("커스텀 criteria 노출", na.actionCriteria(cid) === "고른 2명의 진영이 같으면 예.");
+    check("stChoosesTargets → 플레이어 지목 아님", !na.playerChoosesTargets(cid, spec));
+    // otherNight 미정의 → 첫밤 스펙으로 폴백해야 한다(밤마다 스펙이 사라지면 순서표가 깨진다)
+    check("otherNight 미정의 시 첫밤 폴백", na.specForPhase(cid, "night", 3).targets === 2);
+
+    // 4) 시트 편입 — 커스텀 직업이 든 시트가 정상 조립되는가
+    const sheetId = cs.createCustomSheet({
+      name: "검증용 시트",
+      characterIds: ["washerwoman", "imp", "poisoner", cid],
+    });
+    const built = data.charactersForSheet(cs.getCustomSheet(sheetId)!);
+    check("커스텀 직업이 시트에 포함", built.some((c) => c.id === cid), `${built.length}개`);
+
+    // 5) 게임 직업맵 — 진행 화면이 클라이언트로 나르는 payload에 behavior가 실리는가
+    const map = gc.characterMapForGame({
+      sheetId,
+      players: [{ characterId: cid }, { characterId: "imp" }],
+    });
+    const carried = map.get(cid);
+    check("characterMapForGame이 커스텀 직업 포함", !!carried);
+    check("payload에 behavior 동봉(클라 주입용)", carried?.behavior?.night?.targets === 2);
+    check("공식 직업엔 behavior 미동봉", map.get("imp")?.behavior === undefined);
+
+    // 6) 보여주기 — 커스텀 showcase 문구/슬롯이 실제 payload로 풀리는가
+    {
+      const syn = makeSyntheticGame(cid);
+      syn.actions = [{ actorSeat: 0, characterId: cid, targets: [1, 2], result: "yes" }];
+      const p = showcase.resolveShowcase(syn, 0, {}, teamOf);
+      check("커스텀 showcase kind=standard", p?.kind === "standard");
+      if (p?.kind === "standard") {
+        check("heading 커스텀 문구 사용", p.showcase?.heading === "두 사람이 같은 진영인가: {yn}");
+        check("결과 전달", p.resultStr === "yes");
+        // name/name2는 정체 비노출 슬롯 → characterId가 새면 안 된다
+        check("닉네임 슬롯에서 정체 비노출", p.targets.every((t) => t.characterId === null));
+      }
+    }
+
+    // 7) 공식 직업 override — 덮어쓰기 후 조회 반영, 되돌리면 기본값 복귀
+    {
+      const before = na.actionSpec("chef");
+      cc.setBehaviorOverride("chef", { night: { targets: 3, result: "text" } });
+      check("override 적용", na.actionSpec("chef").targets === 3, `${na.actionSpec("chef").targets}`);
+      check("override가 payload에 실림", data.getCharacter("chef")?.behavior?.night?.targets === 3);
+      cc.clearBehaviorOverride("chef");
+      const after = na.actionSpec("chef");
+      check("override 해제 시 기본값 복귀", after.targets === before.targets && after.result === before.result,
+        `${after.targets}/${after.result}`);
+      check("해제 후 payload에서 behavior 제거", data.getCharacter("chef")?.behavior === undefined);
+    }
+
+    // 8) 삭제 — 직업이 사라지고, 그 직업이 든 시트에서도 함께 빠진다
+    cc.deleteCustomCharacter(cid);
+    check("삭제 후 조회 불가", !data.getCharacter(cid));
+    check(
+      "삭제 시 시트에서도 제거",
+      !cs.getCustomSheet(sheetId)!.characterIds.includes(cid),
+      cs.getCustomSheet(sheetId)!.characterIds.join(","),
+    );
+    cs.deleteCustomSheet(sheetId);
+  }
+
   // 합성 게임 — resolveShowcase 커버리지용(대상 직업이 seat 0)
   function makeSyntheticGame(charId: string): Game {
     return {
@@ -366,7 +480,7 @@ async function main() {
         seat: r.seat,
         nickname: `테스트${i + 1}`,
         characterId: r.characterId,
-        alignment: r.alignment,
+        alignment: r.alignment as Alignment,
         x: Math.cos((i / N) * 2 * Math.PI),
         y: Math.sin((i / N) * 2 * Math.PI),
         userId: playerIds[i],

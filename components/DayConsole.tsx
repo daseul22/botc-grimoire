@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Character, Game } from "@/lib/types";
 import { useGameStream } from "./useGameStream";
+import { useCharacterBehaviors } from "./useBehaviors";
 import { useAutoAdvance } from "./useAutoAdvance";
 import { useDelayedFlag } from "./useDelayedFlag";
 import { Select } from "./Select";
@@ -47,6 +48,7 @@ export function DayConsole({
   sheetChars: Character[];
   roomId: string;
 }) {
+  useCharacterBehaviors(sheetChars);
   const [open, setOpen] = useState(false);
   const [nom, setNom] = useState<NominationView | null>(null);
 

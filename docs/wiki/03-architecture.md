@@ -49,7 +49,9 @@ flowchart TD
 그래서 클라에서 쓰는 로직은 전부 **순수 모듈**로 분리:
 [constants](../../lib/constants.ts)(팀·에디션) · [grouping](../../lib/grouping.ts)(팀 그룹핑) ·
 [markers](../../lib/markers.ts)(상태이상·직업토큰 마커) · [ratio](../../lib/ratio.ts)(인원 비율) ·
-[night-actions](../../lib/night-actions.ts)(직업별 야간/낮 행동 스펙·정보 능력 오인 경고) ·
+[behaviors](../../lib/behaviors.ts)(직업 동작 타입·레지스트리 — `data/behaviors.json` 정적 기본값 +
+커스텀 런타임 오버레이) · [ability-catalog](../../lib/ability-catalog.ts)(조합 선택지 카탈로그, 빌더 UI용) ·
+[night-actions](../../lib/night-actions.ts)(레지스트리 조회 계층·정보 능력 오인 경고) ·
 [seat-layout](../../lib/seat-layout.ts)(사각 좌석 자동 배분·둘레 좌표) · [types](../../lib/types.ts).
 
 [realtime.ts](../../lib/realtime.ts)는 서버 전용이되 **DB 의존이 없다**(`node:events`만 사용).
@@ -69,7 +71,9 @@ flowchart TD
 | 경로 | 종류 | 설명 |
 |---|---|---|
 | `/` | 정적 | 직업 목록 + 필터/검색 |
-| `/characters/[id]` | SSG (183) | 직업 상세 + 한/영 토글 |
+| `/characters/[id]` | SSG (183) | 직업 상세 + 한/영 토글 (커스텀 직업 id는 동적 렌더) |
+| `/characters/custom` | 동적 | 내가 만든 커스텀 직업 목록(관리자는 전체) ([12](12-custom-characters.md)) |
+| `/characters/custom/new`, `/characters/custom/[id]/edit` | 동적 | 커스텀 직업 빌더 — 기능 조합 + 라이브 미리보기 |
 | `/sheets` | 동적 | 공식 + 커스텀 시트 목록 |
 | `/sheets/[id]` | SSG+동적 | 시트 상세 + 야간순서표 + `시작하기` + `PNG 내보내기` |
 | `/sheets/[id]/export` | SSG+동적 | 직업 설명 + 밤 순서·징크스 A4 PNG 내보내기 ([09](09-storyteller-tools.md)) |
@@ -102,6 +106,13 @@ flowchart TD
 
 `custom_sheets` + `custom_sheet_characters` 테이블에 저장. 콘텐츠 테이블과 분리돼 있어
 **재시드해도 보존**된다. CRUD는 [app/sheets/actions.ts](../../app/sheets/actions.ts) 서버 액션.
+
+## 커스텀 직업 — [lib/custom-characters.ts](../../lib/custom-characters.ts)
+
+`custom_characters`(사용자가 만든 직업) + `character_overrides`(공식 직업 동작 수정분). 같은 이유로
+콘텐츠 테이블과 분리 → 재시드해도 보존. [getCharacter](../../lib/data.ts)가 공식 miss 시 여기를 찾고
+override를 얹으므로 `charactersForSheet`·`characterMapForGame` 등 **기존 소비자가 수정 없이** 커스텀을
+그린다. 동작 정의는 로드·쓰기 시 [behaviors 레지스트리](../../lib/behaviors.ts)에 install된다. → [12](12-custom-characters.md)
 
 ---
 [← 데이터 파이프라인](02-data-pipeline.md) · [홈](README.md) · 다음: [그리모어 엔진 →](04-grimoire-engine.md)

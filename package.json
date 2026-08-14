@@ -13,6 +13,7 @@
     "party": "node scripts/party.mjs",
     "lint": "eslint",
     "sim": "npx --yes tsx scripts/sim-online.ts",
+    "verify:behaviors": "npx --yes tsx scripts/verify-behaviors.ts",
     "db:seed": "node scripts/seed-db.mjs",
     "data:scrape": "node scripts/scrape-vnamu.mjs && node scripts/seed-db.mjs"
   },

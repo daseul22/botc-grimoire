@@ -51,5 +51,6 @@ flowchart LR
 | 09 | [이야기꾼 운영 도구](09-storyteller-tools.md) | 행동·보여주기·disguise·직업배포(claim)·타이머·undo·마커·투표·폰 뷰 |
 | 10 | [인증·인가·권한](10-auth.md) | 로그인·세션·역할(관리자/이야기꾼/플레이어)·소유권·접근제어·통계 닉네임 동기화 |
 | 11 | [온라인 플레이](11-online-play.md) | 룸·로비·초대·실시간(SSE)·진행/내역 분리·좌석 redaction 보안 |
+| 12 | [커스텀 직업·동작 레지스트리](12-custom-characters.md) | 직업 동작의 데이터화(BASE/OVERLAY), 커스텀 직업 빌더, override, 이관 회귀 방어 |
 
 > 코드 링크는 이 폴더(`docs/wiki/`) 기준 상대경로(`../../lib/...`)다.

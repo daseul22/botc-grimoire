@@ -10,7 +10,12 @@
 | [CharacterIcon](../../components/CharacterIcon.tsx) | server | 아이콘(없으면 글자 폴백) |
 | [Badge](../../components/Badge.tsx) | server | 색상 배지 |
 | [NightOrderTable](../../components/NightOrderTable.tsx) | server | 시트 야간 순서표(첫날밤/그외밤) |
-| [SheetBuilder](../../components/SheetBuilder.tsx) | client | 커스텀 시트 생성/수정(직업 선택·능력 미리보기) |
+| [SheetBuilder](../../components/SheetBuilder.tsx) | client | 커스텀 시트 생성/수정(직업 선택·능력 미리보기). 공식 + 커스텀 직업을 함께 고른다 |
+| [CharacterBuilder](../../components/CharacterBuilder.tsx) | client | **커스텀 직업 빌더** — 기본정보·밤 순서(이웃 안내)·페이즈별 동작·운영 규칙 + draft를 레지스트리에 주입한 라이브 미리보기 ([12](12-custom-characters.md)) |
+| [AbilitySpecEditor](../../components/AbilitySpecEditor.tsx) | client | 한 페이즈의 행동 스펙 편집(지목→결과→마커→플래그→보여주기). 첫밤/그외밤/낮이 공유해 조합 규칙이 한 곳에만 존재 |
+| [IconPicker](../../components/IconPicker.tsx) | client | 토큰 이미지 — 공식 183종 재사용 + 업로드(canvas 256px 정사각 크롭 → dataURL) |
+| [CustomCharacterList](../../components/CustomCharacterList.tsx) | client | 커스텀 직업 목록 카드 — 동작을 요약 칩(밤순서·지목·결과·마커·1회·보여주기)으로 압축 표시 |
+| [useCharacterBehaviors](../../components/useBehaviors.ts) | hook | `sheetChars`의 커스텀 동작을 레지스트리에 주입. useEffect가 아니라 **useMemo**(렌더 중 주입 → 첫 프레임부터 올바른 스펙) |
 | [ScriptExporter](../../components/ScriptExporter.tsx) | client | 스크립트 직업 설명·밤 순서(징크스 포함) A4 1장 PNG 내보내기 — 여행자 제외 옵션·자동 축소·첫밤 하수인/악마 정보 단계 삽입 |
 | [DeleteSheetButton](../../components/DeleteSheetButton.tsx) | client | 커스텀 시트 삭제 |
 | [SetupStep](../../components/SetupStep.tsx) | client | 준비 스텝(비율·제외·닉네임 + 저장된 닉네임 datalist 자동완성) |

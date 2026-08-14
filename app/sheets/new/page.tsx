@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { characters } from "@/lib/data";
+import { allCharacters } from "@/lib/data";
 import { getCurrentUser } from "@/lib/auth";
 import { SheetBuilder } from "@/components/SheetBuilder";
 
@@ -9,5 +9,6 @@ export const metadata = { title: "새 시트 만들기" };
 
 export default async function NewSheetPage() {
   if (!(await getCurrentUser())) redirect("/login");
-  return <SheetBuilder characters={characters} />;
+  // 공식 + 커스텀 직업을 함께 고를 수 있게 한다.
+  return <SheetBuilder characters={allCharacters()} />;
 }

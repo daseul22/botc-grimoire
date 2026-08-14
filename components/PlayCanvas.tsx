@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ALIGN_COLOR, TEAM_MAP } from "@/lib/constants";
 import { dayActionSpec } from "@/lib/night-actions";
+import { useCharacterBehaviors } from "./useBehaviors";
 import { autoRectSides, circlePositions, rectPositions, sidesTotal, type RectSides } from "@/lib/seat-layout";
 import type { Character, Game, GameActionRun } from "@/lib/types";
 import { AbilityModal } from "./AbilityModal";
@@ -85,6 +86,8 @@ export function PlayCanvas({
   /** 온라인(룸) 게임이면 roomId. 있으면 밤 행동 사이드바의 보여주기/직업선택이 플레이어 폰으로 push된다. */
   online?: { roomId: string };
 }) {
+  // 커스텀 직업·수정된 공식 직업의 동작 정의를 렌더 전에 주입(첫 프레임부터 올바른 스펙).
+  useCharacterBehaviors(sheetChars);
   const [game, setGame] = useState(initial);
   // 부모(play 페이지)가 router.refresh 등으로 새 game prop을 넘기면 서버 진실을 채택(로컬 좌표는 보존).
   // effect가 아니라 렌더 중 이전 prop과 비교해 동기화 — React 권장(prop→state 파생은 렌더에서, set-state-in-effect 회피).

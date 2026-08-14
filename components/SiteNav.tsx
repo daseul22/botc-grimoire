@@ -44,9 +44,15 @@ export function SiteNav() {
   const logout = () => startTransition(() => logoutAction());
   const close = () => setOpen(false);
 
-  // 온라인 플레이('/rooms')는 로그인 유저에게만 노출(미로그인 클릭 시 로그인으로 보내짐).
+  // 온라인 플레이('/rooms')·커스텀 직업은 로그인 유저에게만 노출(미로그인 클릭 시 로그인으로 보내짐).
   const navItems = user
-    ? [...NAV.slice(0, 3), { href: "/rooms", label: "온라인" }, ...NAV.slice(3)]
+    ? [
+        NAV[0],
+        { href: "/characters/custom", label: "커스텀" },
+        ...NAV.slice(1, 3),
+        { href: "/rooms", label: "온라인" },
+        ...NAV.slice(3),
+      ]
     : NAV;
 
   // ── 계정 영역 조각(데스크탑 인라인 / 모바일 드롭다운 공용) ──

@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { TEAM_MAP } from "@/lib/constants";
 import { effectiveCharacterId, parseMarker } from "@/lib/markers";
-import { ACTION_CRITERIA, actionSpec, isAbilityUsedUp, nightActionSpec } from "@/lib/night-actions";
+import { actionCriteria, actionSpec, isAbilityUsedUp, nightActionSpec } from "@/lib/night-actions";
 import { nightInfoNode } from "@/lib/night-info";
 import { TaintWarning } from "./TaintWarning";
 import { ActionCardHeader, type HeaderTag } from "./ActionCardHeader";
@@ -293,10 +293,10 @@ export function NightSidebar({
                   taint={<TaintWarning markers={p.markers} globalMarkers={game.globalMarkers} resultKind={rowSpec.result} info={rowSpec.info} />}
                 />
                 {na.reminder?.ko && <p className="mt-1 whitespace-pre-line break-words pl-6 text-xs text-muted">{na.reminder.ko}</p>}
-                {ACTION_CRITERIA[effId] && (
+                {actionCriteria(effId) && (
                   <p className="mt-1 ml-6 break-words rounded border-l-2 border-sky-500/40 bg-sky-500/5 px-2 py-1 text-[11px] leading-relaxed text-sky-200/85">
                     <span className="font-semibold text-sky-300">기준 </span>
-                    {ACTION_CRITERIA[effId]}
+                    {actionCriteria(effId)}
                   </p>
                 )}
                 {effId === "lunatic" ? (

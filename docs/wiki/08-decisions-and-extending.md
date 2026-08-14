@@ -26,11 +26,14 @@
   게임 전체 효과(Vortox·일식), `taints:true`는 정보 직업에 거짓 정보 경고를 띄움.
   한 좌석에 여러 인스턴스가 공존해야 하면(능력획득·능력없음) `multi:true`(SelectionPanel이 칩별
   개별 제거 + 추가 UI로 처리).
-- **직업별 행동 조정**: [lib/night-actions.ts](../../lib/night-actions.ts)의 `ACTION_SPECS`(밤)/
-  `DAY_ACTION_SPECS`(낮)/`OTHER_NIGHT_SPECS`(그 외 밤)에서 `{targets,result,marker,showcase}` 수정.
-  플래그: `oncePerGame`(사용 후 `능력 사용함`)·`deathTriggered`(사망 발동, 까마귀지기)·
-  `playerPicks`(폰에서 직접 직업 선택 → `직업 목록` 버튼). 결과 종류를 늘리려면 `ResultKind` +
-  [ActionFields](../../components/ActionFields.tsx) 위젯 추가. (→ [09](09-storyteller-tools.md))
+- **직업별 행동 조정**: 동작은 코드가 아니라 **데이터**다 → [data/behaviors.json](../../data/behaviors.json)
+  (공식 기본값)에서 `{targets,result,marker,showcase}` 수정. 플래그: `oncePerGame`(사용 후 `능력 사용함`)·
+  `deathTriggered`(사망 발동, 까마귀지기)·`playerPicks`(폰에서 직접 직업 선택 → `직업 목록` 버튼).
+  타입 정의는 [lib/behaviors.ts](../../lib/behaviors.ts), 조회는 [night-actions.ts](../../lib/night-actions.ts).
+  고친 뒤 `npm run verify:behaviors`로 의도치 않은 변화가 없는지 확인한다. (→ [12](12-custom-characters.md))
+- **새 직업 추가**: 코드를 고칠 필요 없다 — `/characters/custom`의 빌더에서 기능을 조합해 만든다.
+  기능(결과 종류·마커·보여주기 슬롯) 자체를 늘리려면 `ResultKind`/`MARKERS`/`ShowcaseToken`에 추가하고
+  [lib/ability-catalog.ts](../../lib/ability-catalog.ts)에 설명을 넣으면 빌더 UI가 따라온다. → [12](12-custom-characters.md)
 - **새 게임 동작**: [lib/games/](../../lib/games/)의 알맞은 모듈에 함수(`index.ts` 재수출) →
   [app/play/actions.ts](../../app/play/actions.ts)에 액션(반환 `Game`) → PlayCanvas에서 `run(...)`.
   모듈 분담: `lifecycle.ts`(생성·복제·재추첨·페이즈 전환·종료·복기·삭제), `seats.ts`(좌석 조작),

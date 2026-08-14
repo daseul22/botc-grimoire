@@ -37,6 +37,10 @@
 "직업이 누구를 지목해서 무슨 결과를 받았는가". 직업 종류가 많아 **결과를 열거하지 않고**,
 입력 위젯만 직업별로 구조화한다.
 
+> **스펙의 출처**: 아래 `ActionSpec` 값들은 이제 소스코드가 아니라 [data/behaviors.json](../../data/behaviors.json)
+> (공식 기본값) + DB 오버레이(커스텀 직업·수정분)에 있고, `night-actions.ts`는 **조회 계층**이다.
+> 함수 시그니처(`actionSpec`·`specForPhase` 등)는 그대로라 이 문서의 나머지 설명은 유효하다. → [12](12-custom-characters.md)
+
 ```ts
 type ActionSpec = {
   targets: number;            // 지목 좌석 수 상한 (본인 좌석도 지목 가능 — 임프 자결 등)

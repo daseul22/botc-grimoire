@@ -1,0 +1,1410 @@
+{
+  "acrobat": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "alchemist": {
+    "night": {
+      "targets": 0,
+      "result": "text",
+      "hint": "가진 하수인 능력"
+    }
+  },
+  "alhadikhia": {
+    "night": {
+      "targets": 3,
+      "result": "none",
+      "marker": "dying",
+      "showcase": {
+        "heading": "이 세 명이 선택되었습니다",
+        "subheading": "각자 순서대로 생존/사망을 선택합니다 (모두 생존 시 모두 사망)",
+        "tokens": [
+          "names"
+        ]
+      }
+    }
+  },
+  "alsaahir": {
+    "day": {
+      "targets": 0,
+      "result": "text",
+      "hint": "하수인·악마 추측"
+    }
+  },
+  "amnesiac": {
+    "night": {
+      "targets": 0,
+      "result": "text"
+    },
+    "day": {
+      "targets": 0,
+      "result": "text",
+      "hint": "능력 추측 정확도"
+    }
+  },
+  "angel": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "protected",
+      "hint": "천사가 보호하는 플레이어"
+    }
+  },
+  "apprentice": {
+    "night": {
+      "targets": 0,
+      "result": "role",
+      "hint": "얻은 능력",
+      "showcase": {
+        "heading": "당신은 {role}의 능력을 얻었습니다",
+        "subheading": "기존 능력 대신 이 직업처럼 행동합니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    }
+  },
+  "artist": {
+    "day": {
+      "targets": 0,
+      "result": "yesno",
+      "oncePerGame": true,
+      "hint": "예/아니오 질문 답",
+      "showcase": {
+        "heading": "당신의 질문에 대한 답: {yn}"
+      }
+    }
+  },
+  "assassin": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying",
+      "oncePerGame": true
+    }
+  },
+  "balloonist": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "hint": "알게 된 플레이어 직업",
+      "showcase": {
+        "heading": "이 사람은 {role}입니다",
+        "tokens": [
+          "result",
+          "name"
+        ],
+        "stack": true
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "banshee": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "barber": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "barista": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "boffin": {
+    "night": {
+      "targets": 0,
+      "result": "role",
+      "hint": "악마가 얻은 선한 능력",
+      "showcase": {
+        "heading": "악마가 얻은 능력: {role}",
+        "tokens": [
+          "result"
+        ]
+      }
+    }
+  },
+  "bonecollector": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "oncePerGame": true,
+      "hint": "능력 되찾을 사망자"
+    }
+  },
+  "bountyhunter": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "hint": "악한 플레이어",
+      "showcase": {
+        "heading": "이 사람은 악입니다",
+        "tokens": [
+          "name"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "buddhist": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "bureaucrat": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "butler": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "cacklejack": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신의 캐릭터가 바뀌었습니다",
+        "subheading": "낄낄이가 당신을 새 캐릭터로 바꿨습니다"
+      }
+    }
+  },
+  "cerenovus": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "marker": "mad",
+      "playerPicks": true,
+      "hint": "집착시킬 선한 직업",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신은 {role}에 집착해야 합니다",
+        "subheading": "그 직업이 아닌 척하면 이야기꾼이 처형할 수 있습니다",
+        "tokens": [
+          "actor",
+          "result"
+        ]
+      }
+    }
+  },
+  "chambermaid": {
+    "night": {
+      "targets": 2,
+      "result": "number",
+      "hint": "능력으로 깬 수 (0~2)",
+      "showcase": {
+        "heading": "이 두 명 중 {count}명이 자기 능력으로 깼습니다",
+        "tokens": [
+          "name",
+          "name2"
+        ]
+      }
+    },
+    "criteria": "고른 2명 중 오늘 밤 능력으로 깨어난 사람 수."
+  },
+  "chef": {
+    "night": {
+      "targets": 0,
+      "result": "number",
+      "hint": "이웃한 악 쌍 수",
+      "showcase": {
+        "heading": "{count}쌍이 인접해 있습니다",
+        "subheading": "악 진영끼리 이웃한 쌍의 수"
+      }
+    },
+    "criteria": "인접한 악(데몬+하수인) 쌍의 수. 원탁에서 악끼리 나란히 앉은 경우를 셈 — 악이 N명 연속이면 N−1쌍."
+  },
+  "choirboy": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "showcase": {
+        "heading": "이 사람이 악마입니다",
+        "tokens": [
+          "target"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "clockmaker": {
+    "night": {
+      "targets": 0,
+      "result": "number",
+      "hint": "악마-하수인 거리",
+      "showcase": {
+        "heading": "악마와 가장 가까운 하수인 사이의 거리: {count}",
+        "subheading": "시계/반시계 중 짧은 쪽 걸음 수"
+      }
+    },
+    "criteria": "데몬에서 가장 가까운 하수인까지의 좌석 거리(시계/반시계 중 짧은 쪽 걸음 수)."
+  },
+  "courtier": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "drunk",
+      "hint": "3일 밤낮 취함"
+    }
+  },
+  "cultleader": {
+    "night": {
+      "targets": 0,
+      "result": "team",
+      "hint": "현재 내 팀",
+      "showcase": {
+        "heading": "당신은 현재 {team} 팀입니다"
+      }
+    }
+  },
+  "damsel": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "devilsadvocate": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "execsafe",
+      "hint": "처형 생존"
+    }
+  },
+  "dreamer": {
+    "night": {
+      "targets": 1,
+      "result": "text",
+      "info": true,
+      "hint": "선 직업 / 악 직업",
+      "showcase": {
+        "heading": "이 사람은 둘 중 하나입니다",
+        "subheading": "선한 직업 또는 악한 직업",
+        "tokens": [
+          "name"
+        ]
+      }
+    }
+  },
+  "duchess": {
+    "night": {
+      "targets": 3,
+      "result": "number",
+      "hint": "방문자 중 악 수",
+      "showcase": {
+        "recipient": "none",
+        "heading": "방문자 중 악은 {count}명입니다",
+        "subheading": "세 방문자 중 한 명에게는 거짓으로 알려줍니다",
+        "tokens": [
+          "names"
+        ]
+      }
+    }
+  },
+  "empath": {
+    "night": {
+      "targets": 0,
+      "result": "number",
+      "hint": "이웃 2명 중 악 수 (0~2)",
+      "showcase": {
+        "heading": "양 옆 이웃 중 {count}명이 악입니다"
+      }
+    },
+    "criteria": "양옆에서 가장 가까운 생존 플레이어 중 악(데몬+하수인) 수(0~2). 죽은 사람은 건너뛴다."
+  },
+  "engineer": {
+    "night": {
+      "targets": 0,
+      "result": "text",
+      "oncePerGame": true,
+      "hint": "지정한 악역 구성"
+    }
+  },
+  "eviltwin": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "exorcist": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "showcase": {
+        "recipient": "none",
+        "heading": "구마사제가 당신을 선택했습니다",
+        "subheading": "당신(악마)은 오늘 밤 깨지 않습니다",
+        "tokens": [
+          "actor",
+          "actorName"
+        ],
+        "stack": true
+      }
+    }
+  },
+  "fanggu": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "farmer": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "fearmonger": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "fisherman": {
+    "day": {
+      "targets": 0,
+      "result": "text",
+      "oncePerGame": true,
+      "hint": "조언"
+    }
+  },
+  "flowergirl": {
+    "night": {
+      "targets": 0,
+      "result": "yesno",
+      "hint": "악마가 투표했는가",
+      "showcase": {
+        "heading": "오늘 낮 악마가 투표했는가: {yn}"
+      }
+    }
+  },
+  "fortuneteller": {
+    "night": {
+      "targets": 2,
+      "result": "yesno",
+      "hint": "둘 중 악마 있는가",
+      "showcase": {
+        "heading": "이 두 명 중 데몬이 있는가: {yn}",
+        "tokens": [
+          "name",
+          "name2"
+        ]
+      }
+    },
+    "criteria": "고른 2명 중 데몬 또는 레드헤링이 있으면 '예'(끄덕). 스파이는 선, 레크루스는 악으로 등록될 수 있음."
+  },
+  "gambler": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "playerPicks": true,
+      "hint": "추측한 직업"
+    }
+  },
+  "gangster": {
+    "day": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "general": {
+    "night": {
+      "targets": 0,
+      "result": "text",
+      "hint": "우세 팀(선/악/없음)",
+      "showcase": {
+        "heading": "오늘 우세한 진영: {result}"
+      }
+    },
+    "criteria": "우세 진영 판단 — 선(엄지 위)/악(엄지 아래)/막상막하(엄지 옆)."
+  },
+  "godfather": {
+    "night": {
+      "targets": 0,
+      "result": "none",
+      "hint": "게임에 있는 외지인 토큰을 보여줌"
+    },
+    "otherNight": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying",
+      "hint": "낮에 외지인이 죽었으면 1명 살해"
+    }
+  },
+  "golem": {
+    "day": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying",
+      "oncePerGame": true,
+      "hint": "악마 아니면 사망"
+    }
+  },
+  "gossip": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    },
+    "day": {
+      "targets": 0,
+      "result": "text",
+      "hint": "공개 발언"
+    }
+  },
+  "grandmother": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "hint": "알게 된 선한 플레이어 직업",
+      "showcase": {
+        "heading": "이 사람은 {role}입니다",
+        "subheading": "당신의 손주입니다",
+        "tokens": [
+          "result",
+          "name"
+        ],
+        "stack": true
+      }
+    },
+    "otherNight": {
+      "targets": 0,
+      "result": "none"
+    },
+    "criteria": "손주 1명을 가리키고 그 직업 토큰을 보여줌. 밤에 데몬이 손주를 죽이면 할머니도 사망.",
+    "stChoosesTargets": true
+  },
+  "gunslinger": {
+    "day": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "harlot": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "hint": "지목한 플레이어 직업",
+      "showcase": {
+        "heading": "이 사람은 {role}입니다",
+        "tokens": [
+          "result",
+          "name"
+        ],
+        "stack": true
+      }
+    }
+  },
+  "harpy": {
+    "night": {
+      "targets": 2,
+      "result": "none",
+      "marker": "mad",
+      "hint": "1번이 2번을 악으로 집착",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신은 {target2}이(가) 악이라는 사실에 집착해야 합니다",
+        "subheading": "그 직업이 아닌 척하면 이야기꾼이 처형할 수 있습니다",
+        "tokens": [
+          "name2"
+        ]
+      }
+    }
+  },
+  "hatter": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "highpriestess": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "showcase": {
+        "heading": "이 사람과 가장 많이 이야기해보세요",
+        "tokens": [
+          "name"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "huntsman": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "oncePerGame": true
+    }
+  },
+  "imp": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "innkeeper": {
+    "night": {
+      "targets": 2,
+      "result": "none",
+      "marker": "protected",
+      "hint": "둘 보호, 1명 취함"
+    }
+  },
+  "investigator": {
+    "night": {
+      "targets": 2,
+      "result": "role",
+      "hint": "둘 중 1명의 하수인 직업",
+      "showcase": {
+        "heading": "이 두 명 중 한 명은 {role}입니다",
+        "tokens": [
+          "result",
+          "names"
+        ],
+        "stack": true
+      }
+    },
+    "criteria": "인플레이 하수인 1명 + 무관한 1명을 가리키고 하수인 직업 토큰.",
+    "stChoosesTargets": true
+  },
+  "juggler": {
+    "night": {
+      "targets": 0,
+      "result": "number",
+      "hint": "맞힌 추측 수",
+      "showcase": {
+        "heading": "오늘 낮 추측 중 {count}개를 맞혔습니다"
+      }
+    },
+    "day": {
+      "targets": 0,
+      "result": "text",
+      "hint": "추측 (최대 5)"
+    },
+    "criteria": "어제 낮 곡예사가 추측한 것 중 맞힌 개수."
+  },
+  "kazali": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "playerPicks": true,
+      "hint": "새 하수인이 될 직업",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신은 이제 하수인입니다",
+        "subheading": "카잘리가 당신을 하수인으로 만들었습니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    },
+    "otherNight": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    },
+    "roleChange": true
+  },
+  "king": {
+    "night": {
+      "targets": 0,
+      "result": "role",
+      "hint": "알게 된 생존 직업",
+      "showcase": {
+        "heading": "이 직업이 아직 살아 있습니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    }
+  },
+  "klutz": {
+    "day": {
+      "targets": 1,
+      "result": "none",
+      "hint": "악이면 팀 패배"
+    }
+  },
+  "knight": {
+    "night": {
+      "targets": 2,
+      "result": "none",
+      "hint": "악마 아닌 2명",
+      "showcase": {
+        "heading": "이 두 명은 악마가 아닙니다",
+        "tokens": [
+          "names"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "legion": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "leviathan": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "librarian": {
+    "night": {
+      "targets": 2,
+      "result": "role",
+      "hint": "둘 중 1명의 외지인(없으면 비움)",
+      "showcase": {
+        "heading": "이 두 명 중 한 명은 {role}입니다",
+        "subheading": "외지인이 없다면 결과가 비어 있습니다",
+        "tokens": [
+          "result",
+          "names"
+        ],
+        "stack": true
+      }
+    },
+    "criteria": "인플레이 외지인 1명 + 무관한 1명을 가리키고 외지인 직업 토큰. 외지인이 없으면 0을 알려줌.",
+    "stChoosesTargets": true
+  },
+  "lilmonsta": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신은 악마입니다",
+        "subheading": "릴 몬스타를 돌보는 동안 당신이 데몬으로 취급됩니다",
+        "tokens": [
+          "name"
+        ]
+      }
+    }
+  },
+  "lleech": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "lordoftyphon": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "playerPicks": true,
+      "hint": "이웃이 될 하수인 직업",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신은 이제 하수인입니다",
+        "subheading": "티폰의 군주의 이웃으로 악 진영이 되었습니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    },
+    "otherNight": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    },
+    "roleChange": true
+  },
+  "lunatic": {
+    "night": {
+      "targets": 0,
+      "result": "none",
+      "showcase": [
+        {
+          "mode": "lunatic-bluffs"
+        },
+        {
+          "mode": "lunatic-minions"
+        }
+      ],
+      "showcaseLabels": [
+        "블러핑",
+        "하수인"
+      ]
+    }
+  },
+  "lycanthrope": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "magician": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    },
+    "showsWithoutRecord": true
+  },
+  "marionette": {
+    "night": {
+      "targets": 0,
+      "result": "none",
+      "showcase": [
+        {
+          "heading": "이 사람은 꼭두각시입니다",
+          "subheading": "마을사람으로 보이지만 실제로는 악입니다",
+          "tokens": [
+            "actor",
+            "actorName"
+          ],
+          "stack": true,
+          "recipient": "none"
+        },
+        {
+          "heading": "이웃 중 한 명이 꼭두각시입니다",
+          "subheading": "양 옆 두 명 중 한 명이 꼭두각시(가짜 마을사람·악)입니다",
+          "tokens": [
+            "actor"
+          ],
+          "recipient": "none"
+        }
+      ],
+      "showcaseLabels": [
+        "정확",
+        "이웃"
+      ]
+    },
+    "showsWithoutRecord": true
+  },
+  "mathematician": {
+    "night": {
+      "targets": 0,
+      "result": "number",
+      "hint": "비정상 작동 능력 수",
+      "showcase": {
+        "heading": "비정상적으로 작동한 능력: {count}개",
+        "subheading": "다른 플레이어의 능력으로 오작동한 수"
+      }
+    },
+    "criteria": "오늘 밤 능력이 오작동한(중독·취함 등으로 의도와 다르게 작동) 플레이어 수."
+  },
+  "mezepheles": {
+    "night": {
+      "targets": 0,
+      "result": "text",
+      "hint": "비밀 단어",
+      "showcase": {
+        "heading": "당신의 비밀 단어:",
+        "subheading": "이 단어를 누가 말하면 그 사람이 악으로 변절합니다"
+      }
+    },
+    "otherNight": {
+      "targets": 1,
+      "result": "none",
+      "marker": "turning",
+      "hint": "비밀 단어를 말한 변절자",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신은 메제펠레스에 의해 변절되었습니다",
+        "subheading": "지금부터 당신은 악 진영입니다",
+        "tokens": [
+          "actor"
+        ]
+      }
+    }
+  },
+  "monk": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "protected"
+    }
+  },
+  "moonchild": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "nightwatchman": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "oncePerGame": true,
+      "showcase": {
+        "recipient": "target",
+        "heading": "이 사람은 야경꾼입니다",
+        "subheading": "야경꾼이 자신의 정체를 당신에게 밝혔습니다",
+        "tokens": [
+          "actor",
+          "actorName"
+        ],
+        "stack": true
+      }
+    }
+  },
+  "noble": {
+    "night": {
+      "targets": 3,
+      "result": "none",
+      "hint": "3명 중 1명만 악",
+      "showcase": {
+        "heading": "이 세 명 중 정확히 한 명이 악입니다",
+        "tokens": [
+          "names"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "nodashii": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying",
+      "hint": "이웃 주민 2명 중독"
+    }
+  },
+  "ogre": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "ojo": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "marker": "dying",
+      "hint": "선택한 캐릭터 (없으면 ST가 사망자 선택)"
+    }
+  },
+  "oracle": {
+    "night": {
+      "targets": 0,
+      "result": "number",
+      "hint": "사망자 중 악 수",
+      "showcase": {
+        "heading": "사망자 중 {count}명이 악입니다"
+      }
+    },
+    "criteria": "사망한 플레이어 중 악(데몬+하수인) 수."
+  },
+  "organgrinder": {
+    "night": {
+      "targets": 0,
+      "result": "none",
+      "marker": "drunk-dusk"
+    }
+  },
+  "philosopher": {
+    "night": {
+      "targets": 0,
+      "result": "role",
+      "oncePerGame": true,
+      "playerPicks": true,
+      "hint": "얻은 선한 직업",
+      "showcase": {
+        "heading": "당신은 {role}의 능력을 얻었습니다",
+        "subheading": "기존 능력 대신 이 직업처럼 행동합니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    },
+    "gainResultAbility": true
+  },
+  "pithag": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "playerPicks": true,
+      "hint": "바꿀 직업",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신은 이제 {role}입니다",
+        "subheading": "마귀할멈에 의해 이 캐릭터로 바뀌었습니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    },
+    "roleChange": true
+  },
+  "pixie": {
+    "night": {
+      "targets": 0,
+      "result": "role",
+      "hint": "집착할 주민 직업",
+      "showcase": {
+        "heading": "당신은 {role}에 집착해야 합니다",
+        "subheading": "집착에 성공했을 때, 그 사람이 죽으면 그의 능력을 얻습니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    }
+  },
+  "plaguedoctor": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "po": {
+    "night": {
+      "targets": 3,
+      "result": "none",
+      "marker": "dying",
+      "hint": "1명 또는 3명"
+    }
+  },
+  "poisoner": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "poisoned"
+    }
+  },
+  "poppygrower": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "preacher": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "showcase": {
+        "recipient": "target",
+        "heading": "전도사가 당신을 선택했습니다",
+        "subheading": "당신은 능력을 잃습니다",
+        "tokens": [
+          "actor"
+        ]
+      }
+    }
+  },
+  "princess": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    },
+    "day": {
+      "targets": 1,
+      "result": "none",
+      "hint": "지목·처형"
+    }
+  },
+  "professor": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "oncePerGame": true,
+      "hint": "부활 대상"
+    }
+  },
+  "psychopath": {
+    "day": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "pukka": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "poisoned"
+    }
+  },
+  "puzzlemaster": {
+    "day": {
+      "targets": 1,
+      "result": "role",
+      "hint": "취한 자 추측→악마"
+    }
+  },
+  "ravenkeeper": {
+    "night": {
+      "targets": 1,
+      "result": "role",
+      "oncePerGame": true,
+      "deathTriggered": true,
+      "hint": "지목한 플레이어 직업",
+      "showcase": {
+        "heading": "이 사람의 직업입니다",
+        "tokens": [
+          "result",
+          "name"
+        ],
+        "stack": true
+      }
+    },
+    "criteria": "밤에 죽을 때만 깨움. 1명을 선택하면 그 직업을 알려줌."
+  },
+  "recluse": {
+    "misregister": "good-as-evil"
+  },
+  "riot": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "sage": {
+    "night": {
+      "targets": 2,
+      "result": "none",
+      "deathTriggered": true,
+      "hint": "둘 중 1명이 악마",
+      "showcase": {
+        "heading": "이 두 명 중 한 명이 악마입니다",
+        "tokens": [
+          "names"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "sailor": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "drunk-dusk"
+    }
+  },
+  "savant": {
+    "day": {
+      "targets": 0,
+      "result": "text",
+      "hint": "정보 2 (1참 1거짓)"
+    }
+  },
+  "scarletwoman": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "seamstress": {
+    "night": {
+      "targets": 2,
+      "result": "yesno",
+      "oncePerGame": true,
+      "hint": "둘이 같은 소속인가",
+      "showcase": {
+        "heading": "두 사람이 같은 진영인가: {yn}",
+        "tokens": [
+          "name",
+          "name2"
+        ]
+      }
+    }
+  },
+  "shabaloth": {
+    "night": {
+      "targets": 2,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "shugenja": {
+    "night": {
+      "targets": 0,
+      "result": "text",
+      "hint": "시계/반시계 방향",
+      "showcase": {
+        "heading": "가장 가까운 악은 {result} 방향에 있습니다"
+      }
+    }
+  },
+  "slayer": {
+    "day": {
+      "targets": 1,
+      "result": "yesno",
+      "marker": "dying",
+      "oncePerGame": true,
+      "hint": "악마 적중?",
+      "showcase": {
+        "recipient": "none",
+        "heading": "이 사람이 악마였는가: {yn}",
+        "subheading": "악마였다면 사망합니다",
+        "tokens": [
+          "name"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "snakecharmer": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "snitch": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "spy": {
+    "night": {
+      "targets": 0,
+      "result": "none",
+      "showcase": {
+        "mode": "grimoire"
+      }
+    },
+    "misregister": "evil-as-good"
+  },
+  "steward": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "hint": "선한 플레이어",
+      "showcase": {
+        "heading": "이 사람은 선합니다",
+        "tokens": [
+          "name"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "stormcatcher": {
+    "night": {
+      "targets": 0,
+      "result": "role",
+      "playerPicks": true,
+      "hint": "이름 댄 선한 직업"
+    }
+  },
+  "summoner": {
+    "night": {
+      "targets": 0,
+      "result": "none",
+      "hint": "블러핑 직업 3개를 ST가 보여줌"
+    },
+    "otherNight": {
+      "targets": 1,
+      "result": "role",
+      "playerPicks": true,
+      "hint": "악마가 될 대상·직업",
+      "showcase": {
+        "recipient": "target",
+        "heading": "당신은 이제 악마입니다",
+        "subheading": "소환사가 당신을 악마로 만들었습니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    },
+    "roleChange": true
+  },
+  "sweetheart": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "drunk"
+    }
+  },
+  "thief": {
+    "night": {
+      "targets": 1,
+      "result": "none"
+    }
+  },
+  "tinker": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "tor": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "towncrier": {
+    "night": {
+      "targets": 0,
+      "result": "yesno",
+      "hint": "하수인이 지목했는가",
+      "showcase": {
+        "heading": "오늘 낮 하수인이 지목에 나섰는가: {yn}"
+      }
+    }
+  },
+  "toymaker": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "undertaker": {
+    "night": {
+      "targets": 0,
+      "result": "role",
+      "hint": "처형된 플레이어 직업",
+      "showcase": {
+        "heading": "오늘 처형된 사람의 직업은 {role}입니다",
+        "tokens": [
+          "result"
+        ]
+      }
+    },
+    "criteria": "오늘 처형된 플레이어의 직업 토큰을 보여줌. 처형이 없었으면 깨우지 않음."
+  },
+  "vigormortis": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "villageidiot": {
+    "night": {
+      "targets": 1,
+      "result": "team",
+      "hint": "대상의 팀",
+      "showcase": {
+        "heading": "이 사람은 {team}입니다",
+        "tokens": [
+          "name"
+        ]
+      }
+    },
+    "criteria": "가리킨 플레이어의 선/악을 엄지로 신호. 백치가 여럿이면 1명은 취함(거짓 정보)."
+  },
+  "virgin": {
+    "day": {
+      "targets": 1,
+      "result": "yesno",
+      "marker": "dying",
+      "oncePerGame": true,
+      "hint": "지목자 주민→처형?",
+      "showcase": {
+        "recipient": "none",
+        "heading": "지목한 사람이 마을주민이라 처형되는가: {yn}",
+        "tokens": [
+          "name"
+        ]
+      }
+    },
+    "stChoosesTargets": true
+  },
+  "vizier": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "vortox": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  },
+  "washerwoman": {
+    "night": {
+      "targets": 2,
+      "result": "role",
+      "hint": "둘 중 1명의 주민 직업",
+      "showcase": {
+        "heading": "이 두 명 중 한 명은 {role}입니다",
+        "tokens": [
+          "result",
+          "names"
+        ],
+        "stack": true
+      }
+    },
+    "criteria": "인플레이 주민 1명 + 무관한 1명을 가리키고, 그 주민의 직업 토큰을 보여줌.",
+    "stChoosesTargets": true
+  },
+  "widow": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "poisoned"
+    }
+  },
+  "witch": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "hint": "저주: 지목하면 사망"
+    }
+  },
+  "wizard": {
+    "night": {
+      "targets": 0,
+      "result": "text",
+      "hint": "소원/결과"
+    }
+  },
+  "wraith": {
+    "night": {
+      "targets": 0,
+      "result": "none"
+    }
+  },
+  "xaan": {
+    "night": {
+      "targets": 0,
+      "result": "none",
+      "hint": "모든 주민 중독"
+    },
+    "criteria": "X일차 밤, 생존한 모든 마을주민에게 중독 마커를 일괄 적용(황혼까지)."
+  },
+  "yaggababble": {
+    "night": {
+      "targets": 0,
+      "result": "text",
+      "hint": "비밀 문구",
+      "showcase": {
+        "heading": "당신의 비밀 문구:",
+        "subheading": "오늘 이를 공개 발언한 횟수만큼 플레이어가 사망할 수 있습니다"
+      }
+    },
+    "otherNight": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying",
+      "hint": "발언 횟수만큼 사망"
+    }
+  },
+  "zombuul": {
+    "night": {
+      "targets": 1,
+      "result": "none",
+      "marker": "dying"
+    }
+  }
+}

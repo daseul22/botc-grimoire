@@ -1,6 +1,6 @@
 // 행동 기록 + 직업별 자동 부수효과 — LAN(recordActionAction)과 온라인(commitPickResponseAction)의 단일 출처.
 // 기록 자체(recordAction)에 더해, 룰상 즉시 결정되는 마커/상태를 함께 처리한다.
-import { isOncePerGame } from "../night-actions";
+import { changesTargetRole, gainsResultAbility, isOncePerGame } from "../night-actions";
 import { getCharacter } from "../data";
 import { alignmentOf } from "../ratio";
 import type { NightActionRecord } from "../types";
@@ -8,23 +8,19 @@ import { getGame } from "./lifecycle";
 import { recordAction, toggleDone } from "./phase-data";
 import { setRoles, toggleMarker } from "./seats";
 
-// 대상의 '실제 직업'을 바꾸는 능력 — result가 새 직업 id다(마귀할멈은 아무 직업, 카잘리·티폰군주=하수인, 소환사=악마).
-// 이걸 좌석에 실제로 적용하지 않으면 이후 밤 순서·정보 계산이 옛 직업 기준으로 어긋난다(집착/변절 등 마커 계열과 구분).
-const ROLE_CHANGE_ABILITIES: ReadonlySet<string> = new Set([
-  "pithag",
-  "kazali",
-  "lordoftyphon",
-  "summoner",
-]);
-
-/** 대상 좌석을 result 직업으로 실제 변경(진영은 새 직업의 팀에서 도출). */
+/**
+ * 대상 좌석을 result 직업으로 실제 변경(진영은 새 직업의 팀에서 도출).
+ * 대상이 되는 능력은 behavior의 `roleChange` 플래그가 정한다 — result가 새 직업 id인
+ * 부류(마귀할멈은 아무 직업, 카잘리·티폰군주=하수인, 소환사=악마). 좌석에 실제로 적용하지
+ * 않으면 이후 밤 순서·정보 계산이 옛 직업 기준으로 어긋난다(집착/변절 등 마커 계열과 구분).
+ */
 function applyRoleChange(
   gameId: string,
   characterId: string,
   targets: number[],
   result: string,
 ): void {
-  if (!ROLE_CHANGE_ABILITIES.has(characterId)) return;
+  if (!changesTargetRole(characterId)) return;
   if (targets.length === 0 || !result) return;
   const ch = getCharacter(result);
   if (!ch) return;
@@ -32,8 +28,9 @@ function applyRoleChange(
 }
 
 /**
- * 철학자: 결과로 고른 직업의 'gained' 마커를 본인에게 부여하고,
- * 그 직업이 이미 인플레이면 원본 좌석을 영구 drunk 처리(룰: 원본은 능력을 잃음).
+ * 결과로 고른 직업의 'gained' 마커를 본인에게 부여하고, 그 직업이 이미 인플레이면
+ * 원본 좌석을 영구 drunk 처리한다(룰: 원본은 능력을 잃음). 철학자 계열 —
+ * 대상은 behavior의 `gainResultAbility` 플래그가 정한다.
  */
 function applyAutoSideEffects(
   gameId: string,
@@ -41,7 +38,7 @@ function applyAutoSideEffects(
   actorSeat: number,
   result: string,
 ): void {
-  if (characterId !== "philosopher" || !result) return;
+  if (!gainsResultAbility(characterId) || !result) return;
   const game = getGame(gameId);
   if (!game) return;
   const actor = game.players.find((p) => p.seat === actorSeat);

@@ -34,10 +34,13 @@ flowchart TD
 > JSON을 두면 변경이 git diff로 보이고, `npm run db:seed`로 언제든 동일 복원된다.
 > 그래서 `db/grimoire.db`는 **재생성 가능 → `.gitignore`**, 진실은 커밋된 `data/*.json`.
 
-> **커스텀 시트는 시드 대상이 아니다.** 사용자가 만든 시트는 가변 데이터라
-> `custom_sheets`/`custom_sheet_characters` 별도 테이블에 보관된다
-> ([lib/custom-sheets.ts](../../lib/custom-sheets.ts)에서 `CREATE TABLE IF NOT EXISTS`).
-> seed-db가 이 테이블은 건드리지 않으므로 재시드해도 보존된다.
+> **커스텀 시트·직업은 시드 대상이 아니다.** 사용자가 만든 시트/직업은 가변 데이터라
+> `custom_sheets`/`custom_sheet_characters`, `custom_characters`/`character_overrides` 별도 테이블에 보관된다
+> ([lib/custom-sheets.ts](../../lib/custom-sheets.ts) · [lib/custom-characters.ts](../../lib/custom-characters.ts)에서
+> `CREATE TABLE IF NOT EXISTS`). seed-db가 이 테이블은 건드리지 않으므로 재시드해도 보존된다.
+
+> **`data/behaviors.json`(직업 동작)은 DB로 굽지 않는다.** 클라이언트도 같은 값을 봐야 해서
+> 순수 모듈이 정적 import한다(번들 포함). SQLite에 있는 건 커스텀·수정분뿐이다. → [12](12-custom-characters.md)
 
 ## 3) 읽기 — [lib/data.ts](../../lib/data.ts)
 
