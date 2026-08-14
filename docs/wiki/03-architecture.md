@@ -50,7 +50,7 @@ flowchart TD
 [constants](../../lib/constants.ts)(팀·에디션) · [grouping](../../lib/grouping.ts)(팀 그룹핑) ·
 [markers](../../lib/markers.ts)(상태이상·직업토큰 마커) · [ratio](../../lib/ratio.ts)(인원 비율) ·
 [behaviors](../../lib/behaviors.ts)(직업 동작 타입·레지스트리 — `data/behaviors.json` 정적 기본값 +
-커스텀 런타임 오버레이) · [ability-catalog](../../lib/ability-catalog.ts)(조합 선택지 카탈로그, 빌더 UI용) ·
+커스텀 런타임 오버레이) · [ability-catalog](../../lib/ability-catalog.ts)(조합 선택지 카탈로그 + 저장 값 검증 `validateBehavior`) ·
 [night-actions](../../lib/night-actions.ts)(레지스트리 조회 계층·정보 능력 오인 경고) ·
 [seat-layout](../../lib/seat-layout.ts)(사각 좌석 자동 배분·둘레 좌표) · [types](../../lib/types.ts).
 
