@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   clearBehaviorOverride,
+  countGamesUsing,
   createCustomCharacter,
   deleteCustomCharacter,
   getCustomCharacterOwner,
@@ -14,6 +15,7 @@ import {
   type CustomCharacterInput,
 } from "@/lib/custom-characters";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
+import { validateBehavior } from "@/lib/ability-catalog";
 import type { CharacterBehavior } from "@/lib/behaviors";
 
 /** 커스텀 직업 수정/삭제 권한: 소유자 본인 또는 관리자(커스텀 시트와 동일 정책). */
@@ -33,7 +35,8 @@ function validate(input: CustomCharacterInput): string | undefined {
   for (const o of [input.firstOrder, input.otherOrder])
     if (o != null && (!Number.isInteger(o) || o < 0 || o > 999))
       return "밤 순서는 0~999 사이 정수여야 합니다.";
-  return undefined;
+  // 동작 값은 저장 후 조용히 오작동하는 종류라(지목 칸이 안 뜨는 등) 저장 시점에 막는다.
+  return validateBehavior(input.behavior ?? {});
 }
 
 export async function createCharacterAction(
@@ -66,6 +69,15 @@ export async function updateCharacterAction(
 
 export async function deleteCharacterAction(id: string): Promise<{ error: string } | void> {
   if (!(await canEdit(id))) return { error: "이 직업을 삭제할 권한이 없습니다." };
+
+  // 좌석의 character_id는 게임 전역 정체성이라 직업을 지워도 남는다. 정의가 사라지면 그 게임과
+  // 복기에서 토큰·이름이 안 그려지고 스펙도 폴백으로 떨어진다 → 과거가 소급 손상되므로 막는다.
+  const used = countGamesUsing(id);
+  if (used > 0)
+    return {
+      error: `이 직업이 쓰인 게임이 ${used}개 있어 삭제할 수 없습니다. 지우면 그 게임의 복기가 깨집니다. 시트에서만 빼려면 시트 수정에서 선택 해제하세요.`,
+    };
+
   deleteCustomCharacter(id);
   revalidatePath("/characters/custom");
   revalidatePath("/sheets");

@@ -190,6 +190,21 @@ export function getCustomCharacter(id: string): Character | undefined {
   return loadAll().get(id);
 }
 
+/**
+ * 이 직업이 배정된 좌석을 가진 게임 수(진행 중 + 종료된 복기 모두).
+ *
+ * 삭제 가드용. 좌석의 `character_id`는 게임 전역 정체성이라 직업을 지워도 남는데,
+ * 정의가 사라지면 직업맵에서 빠져 토큰·이름이 안 그려지고 스펙도 폴백으로 떨어진다.
+ * 즉 **과거 게임과 복기가 소급 손상된다** — "정체성을 안 덮어써서 과거가 안 깨진다"는
+ * 그리모어 엔진의 전제를 지키려면 사용 중인 직업은 지울 수 없어야 한다.
+ */
+export function countGamesUsing(characterId: string): number {
+  const r = getDb()
+    .prepare("SELECT COUNT(DISTINCT game_id) c FROM game_players WHERE character_id = ?")
+    .get(characterId) as { c: number } | undefined;
+  return r?.c ?? 0;
+}
+
 /** 커스텀 직업 소유자 user id (없으면 null). 수정/삭제 권한 판정용. */
 export function getCustomCharacterOwner(id: string): number | null {
   const r = getDb()

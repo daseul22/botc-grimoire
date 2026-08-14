@@ -373,7 +373,43 @@ async function main() {
       check("해제 후 payload에서 behavior 제거", data.getCharacter("chef")?.behavior === undefined);
     }
 
-    // 8) 삭제 — 직업이 사라지고, 그 직업이 든 시트에서도 함께 빠진다
+    // 8) 삭제 가드 — 게임에 쓰인 직업은 지우면 그 게임·복기가 깨진다(좌석 character_id는 남는데
+    //    정의가 사라져 직업맵에서 빠진다). 액션이 countGamesUsing으로 막는지 값으로 확인한다.
+    {
+      const usedBefore = cc.countGamesUsing(cid);
+      check("미사용 직업은 사용 게임 0", usedBefore === 0, `${usedBefore}`);
+      const gid = games.createGame({
+        sheetId,
+        sheetName: "검증용 시트",
+        config: { excludedIds: [], counts: { townsfolk: 1, outsider: 0, minion: 1, demon: 1 } },
+        players: [
+          { seat: 0, nickname: "A", characterId: cid, alignment: "good", x: 0, y: 0 },
+          { seat: 1, nickname: "B", characterId: "imp", alignment: "evil", x: 0, y: 0 },
+        ],
+      });
+      check("게임에 쓰이면 사용 게임 1", cc.countGamesUsing(cid) === 1, `${cc.countGamesUsing(cid)}`);
+      games.deleteGame(gid);
+      check("게임 삭제 후 다시 0", cc.countGamesUsing(cid) === 0, `${cc.countGamesUsing(cid)}`);
+    }
+
+    // 9) 동작 값 검증 — 손상된 스펙은 저장 전에 걸러야 한다(throw가 아니라 조용히 오작동하는 종류).
+    {
+      const cat = await import("@/lib/ability-catalog");
+      check("정상 동작은 통과", cat.validateBehavior({ night: { targets: 2, result: "yesno" } }) === undefined);
+      check("지목 범위 밖 거부", !!cat.validateBehavior({ night: { targets: -5, result: "yesno" } }));
+      check("없는 결과 종류 거부", !!cat.validateBehavior({ night: { targets: 1, result: "bogus" as never } }));
+      check("없는 마커 거부", !!cat.validateBehavior({ night: { targets: 1, result: "none", marker: "nope" } }));
+      check(
+        "지목 0인데 대상 슬롯 거부",
+        !!cat.validateBehavior({ night: { targets: 0, result: "none", showcase: { tokens: ["name"] } } }),
+      );
+      check(
+        "지목 0인데 대상 수신자 거부",
+        !!cat.validateBehavior({ night: { targets: 0, result: "none", showcase: { recipient: "target" } } }),
+      );
+    }
+
+    // 10) 삭제 — 직업이 사라지고, 그 직업이 든 시트에서도 함께 빠진다
     cc.deleteCustomCharacter(cid);
     check("삭제 후 조회 불가", !data.getCharacter(cid));
     check(

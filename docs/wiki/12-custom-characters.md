@@ -106,6 +106,19 @@ Record 상수를 **직접 인덱싱**하던 3곳만 함수로 교체됐다:
   업로드는 브라우저 canvas로 256px 정사각 크롭 후 dataURL로 보낸다(서버에 이미지 의존성 없음).
   저장 위치 `public/icons/custom/`. 아무것도 안 고르면 팀 색 원 + 첫 글자.
 
+## 안전장치 두 가지
+
+**삭제 가드** — 좌석의 `character_id`는 [게임 전역 정체성](04-grimoire-engine.md)이라 직업을 지워도 남는다.
+정의가 사라지면 직업맵에서 빠져 토큰·이름이 안 그려지고 스펙도 폴백(`targets:1, result:text`)으로
+떨어진다 → **과거 게임과 복기가 소급 손상된다**. "정체성을 안 덮어써서 과거가 안 깨진다"는 엔진의
+전제를 지키기 위해, `countGamesUsing(id) > 0`이면
+[deleteCharacterAction](../../app/characters/custom/actions.ts)이 삭제를 거부하고 시트에서만 빼도록 안내한다.
+
+**동작 값 검증** — [validateBehavior](../../lib/ability-catalog.ts)가 저장 전에 지목 범위(0~3)·결과 종류·
+마커 실존(`MARKER_MAP`)·보여주기 슬롯/수신자를 확인하고, "지목이 없는데 대상 슬롯을 쓰는" 모순도 막는다.
+이런 값은 throw하지 않고 **조용히 오작동**(지목 칸이 안 뜨거나 화면이 비는 식)하므로 저장 시점에 거른다.
+순수 모듈이라 서버 액션과 빌더가 같은 규칙을 쓴다.
+
 ## 공식 직업 동작 수정(override)
 
 `character_overrides` 테이블. **모든 게임에 전역 적용**되므로 관리자 전용
@@ -120,7 +133,7 @@ Record 상수를 **직접 인덱싱**하던 3곳만 함수로 교체됐다:
 | 스크립트 | 무엇 |
 |---|---|
 | `npm run verify:behaviors` | 이관 전 하드코딩 스펙과 현재 조회 결과를 **직업 183종 × 조회함수 전부** 대조(3660건). 원본은 git에서 꺼내오므로([behavior-origin.ts](../../scripts/behavior-origin.ts)) 이관 후에도 재현된다 |
-| `npm run sim` A6 | 커스텀 직업 라운드트립 — 생성 → 조회 → 스펙 반영 → 시트/게임맵 편입 → showcase → override → 삭제 |
+| `npm run sim` A6 | 커스텀 직업 라운드트립 — 생성 → 조회 → 스펙 반영 → 시트/게임맵 편입 → showcase → override → **삭제 가드** → **동작 값 검증** → 삭제 |
 | `scripts/extract-behaviors.ts` | 원본에서 `data/behaviors.json`을 다시 뽑는다(이관 근거 보존) |
 
 `behavior-origin.ts`의 `REV`는 **이관 직전 커밋 해시**로 고정돼 있다. HEAD로 두면 이관을 커밋한

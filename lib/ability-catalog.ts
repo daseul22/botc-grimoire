@@ -5,8 +5,14 @@
 // 커스텀 직업 빌더 UI가 이 목록만 보고 폼을 그리므로, 기능을 새로 추가할 때
 // 여기에 항목 하나만 늘리면 UI가 따라온다.
 
-import { MARKERS } from "./markers";
-import type { ResultKind, ShowcaseSpec, ShowcaseToken } from "./behaviors";
+import { MARKER_MAP, MARKERS } from "./markers";
+import type {
+  ActionSpec,
+  CharacterBehavior,
+  ResultKind,
+  ShowcaseSpec,
+  ShowcaseToken,
+} from "./behaviors";
 
 export type Option<T extends string> = {
   id: T;
@@ -347,3 +353,51 @@ export const PLACEHOLDERS: { token: string; desc: string }[] = [
 
 /** 지목 수 선택지 — 0~3이 공식 직업 전체를 덮는다(알 하디키아 3명이 최대). */
 export const TARGET_COUNT_OPTIONS = [0, 1, 2, 3] as const;
+
+// ── 검증 ──
+//
+// 빌더 UI로만 만들면 유효한 값만 나오지만, 저장물은 JSON이라 손으로 고치거나 구버전 데이터가
+// 섞일 수 있다. 잘못된 값은 throw하지 않고 조용히 이상 동작(지목 칸이 안 뜨거나 마커가 안 그려짐)하므로
+// 저장 시점에 막는다. 순수 모듈이라 서버 액션과 빌더가 같은 규칙을 쓴다.
+
+const RESULT_KINDS = new Set(RESULT_KIND_OPTIONS.map((o) => o.id));
+const TOKEN_IDS = new Set(SHOWCASE_TOKEN_OPTIONS.map((o) => o.id));
+const RECIPIENTS = new Set(RECIPIENT_OPTIONS.map((o) => o.id));
+
+function validateSpec(spec: ActionSpec, where: string): string | undefined {
+  if (!Number.isInteger(spec.targets) || spec.targets < 0 || spec.targets > 3)
+    return `${where}: 지목 인원은 0~3이어야 합니다.`;
+  if (!RESULT_KINDS.has(spec.result)) return `${where}: 결과 종류가 올바르지 않습니다.`;
+  // 마커가 그리모어에 실존해야 좌석에 그릴 수 있다(없는 마커는 조용히 안 보인다).
+  if (spec.marker && !MARKER_MAP[spec.marker]) return `${where}: 없는 마커입니다 (${spec.marker}).`;
+
+  const showcases = Array.isArray(spec.showcase) ? spec.showcase : spec.showcase ? [spec.showcase] : [];
+  for (const s of showcases) {
+    for (const t of s.tokens ?? [])
+      if (!TOKEN_IDS.has(t)) return `${where}: 보여주기 항목이 올바르지 않습니다 (${t}).`;
+    if (s.recipient && !RECIPIENTS.has(s.recipient))
+      return `${where}: 보여주기 수신자가 올바르지 않습니다.`;
+    // 지목이 없는데 대상 기반 슬롯을 쓰면 화면이 비어 버린다 — 만들 때 잡는 편이 낫다.
+    if (spec.targets === 0 && (s.tokens ?? []).some((t) => t !== "actor" && t !== "actorName" && t !== "result"))
+      return `${where}: 지목이 없으면 대상 항목을 보여줄 수 없습니다.`;
+    if (s.recipient === "target" && spec.targets === 0)
+      return `${where}: 지목이 없으면 '지목당한 사람'에게 보여줄 수 없습니다.`;
+  }
+  return undefined;
+}
+
+/** 직업 동작 전체 검증. 문제가 있으면 사람이 읽는 메시지, 없으면 undefined. */
+export function validateBehavior(b: CharacterBehavior): string | undefined {
+  for (const [key, label] of [
+    ["night", "첫째 밤"],
+    ["otherNight", "그 외 밤"],
+    ["day", "낮"],
+  ] as const) {
+    const spec = b[key];
+    if (spec) {
+      const bad = validateSpec(spec, label);
+      if (bad) return bad;
+    }
+  }
+  return undefined;
+}
