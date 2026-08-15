@@ -80,9 +80,10 @@ UI에서 버튼을 숨기는 것만으로는 부족하다 — **액션마다 권
 
 1. **UI 게이팅(보여주기/숨기기)** — 클라이언트 [AuthProvider](../../components/AuthProvider.tsx) 컨텍스트.
    레이아웃에서 `cookies()`를 읽지 않으려고(=정적 페이지 보존) 마운트·경로변경 시
-   `meAction`으로 현재 사용자를 가져온다. [AccountMenu](../../components/AccountMenu.tsx) ·
+   `meAction`으로 현재 사용자를 가져온다. [SiteNav](../../components/SiteNav.tsx)(계정 메뉴·역할 배지) ·
    [NewSheetButton](../../components/NewSheetButton.tsx) · [SheetActions](../../components/SheetActions.tsx) ·
-   [GamesBrowser](../../components/GamesBrowser.tsx)가 역할로 분기.
+   [GamesBrowser](../../components/GamesBrowser.tsx) ·
+   [BehaviorSettings](../../components/BehaviorSettings.tsx)(관리자만 노출)가 역할로 분기.
    > 클라이언트 컴포넌트는 `lib/auth`(better-sqlite3) 대신 순수 모듈
    > [lib/auth-roles.ts](../../lib/auth-roles.ts)에서 역할 상수를 가져온다(런타임 import 금지).
 2. **보안 강제(실제 차단)** — 서버.
