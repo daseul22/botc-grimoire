@@ -34,13 +34,13 @@ export const RESULT_KIND_OPTIONS: Option<ResultKind>[] = [
   {
     id: "number",
     label: "숫자",
-    desc: "0, 1, 2… 개수를 알려준다. 손가락 신호로 전달하는 정보 능력.",
+    desc: "0, 1, 2… 개수를 알려주는 정보 능력(밤에는 손가락 신호로 전달).",
     example: "공감자 · 요리사 · 신탁",
   },
   {
     id: "yesno",
     label: "예 / 아니오",
-    desc: "끄덕임 하나로 답하는 판정. 고른 대상에 조건이 맞는지.",
+    desc: "둘 중 하나로 답하는 판정. 고른 대상이 조건에 맞는지.",
     example: "점쟁이 · 꽃팔이 · 재봉사",
   },
   {
@@ -182,7 +182,7 @@ export const FLAG_OPTIONS: Option<
   {
     id: "deathTriggered",
     label: "사망 시 발동",
-    desc: "죽어야 발동하는 능력. 죽어도 순서 행을 흐리지 않는다.",
+    desc: "죽어야 발동하는 능력. 죽어도 행이 흐려지지 않는다.",
     example: "까마귀지기 · 현자",
   },
   {
@@ -247,7 +247,7 @@ export const SHOWCASE_PRESETS: ShowcasePreset[] = [
   {
     id: "none",
     label: "보여주기 없음",
-    desc: "화면을 띄우지 않는다. 이야기꾼이 손짓으로 전달하는 능력.",
+    desc: "화면을 띄우지 않는다. 이야기꾼이 직접 알려주는 능력.",
     fits: ["none", "number", "yesno", "role", "team", "text"],
     spec: {},
   },

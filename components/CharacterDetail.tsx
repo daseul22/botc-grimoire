@@ -9,6 +9,7 @@ import { CharacterIcon } from "./CharacterIcon";
 import { Badge } from "./Badge";
 import { AbilityPreview } from "./AbilityPreview";
 import { BehaviorSettings } from "./BehaviorSettings";
+import { useAuth } from "./AuthProvider";
 
 const L = (v: Localized | undefined, lang: Lang) =>
   v ? v[lang] || v.ko || v.en || "" : "";
@@ -50,6 +51,7 @@ export function CharacterDetail({
   character: Character;
   roster: Character[];
 }) {
+  const { isAdmin } = useAuth();
   const [lang, setLang] = useState<Lang>("ko");
   const ko = lang === "ko";
   const team = TEAM_MAP[c.team];
@@ -62,7 +64,14 @@ export function CharacterDetail({
   const jinxes = pickList(c.jinxes);
 
   return (
-    <div className="max-w-5xl lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8">
+    // 관리자는 우측이 편집 패널이라 폭을 넓게 준다(조합 옵션이 2열로 펴져야 고르기 쉽다).
+    <div
+      className={`lg:grid lg:items-start lg:gap-8 ${
+        isAdmin
+          ? "max-w-[88rem] lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]"
+          : "max-w-5xl lg:grid-cols-[minmax(0,1fr)_380px]"
+      }`}
+    >
       <article className="min-w-0">
       <div className="flex items-center justify-between">
         <Link href="/" className="text-sm text-muted hover:text-text">
@@ -181,11 +190,14 @@ export function CharacterDetail({
           </ul>
         </Section>
       )}
-      {/* 관리자에게만 렌더된다(내부에서 권한 확인 후 null). 실제 강제는 서버 액션. */}
-      <BehaviorSettings character={c} roster={roster} />
       </article>
       <aside className="mt-8 lg:mt-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
-        <AbilityPreview character={c} roster={roster} />
+        {/* 관리자에게는 미리보기 자리를 동작 설정이 대신한다(패널 안에 미리보기가 들어 있다). */}
+        {isAdmin ? (
+          <BehaviorSettings character={c} roster={roster} />
+        ) : (
+          <AbilityPreview character={c} roster={roster} />
+        )}
       </aside>
     </div>
   );

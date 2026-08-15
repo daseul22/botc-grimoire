@@ -80,11 +80,15 @@ function OptionCards<T extends string>({
 export function AbilitySpecEditor({
   spec,
   onChange,
+  phase = "night",
 }: {
   spec: ActionSpec;
   onChange: (next: ActionSpec) => void;
+  /** 편집 중인 페이즈 — 안내 문구를 밤/낮에 맞춘다(같은 에디터를 세 페이즈가 공유하므로). */
+  phase?: "night" | "otherNight" | "day";
 }) {
   const set = (patch: Partial<ActionSpec>) => onChange({ ...spec, ...patch });
+  const isDay = phase === "day";
 
   // showcase는 단일/배열 둘 다 허용하지만, 빌더에서는 단일만 편집한다.
   // (변형 2개가 필요한 건 마술사·꼭두각시 같은 예외라 공식 직업에만 있다.)
@@ -111,7 +115,11 @@ export function AbilitySpecEditor({
     <div className="space-y-6">
       <Section
         title="지목 인원"
-        hint="이 능력이 밤에 고르는 좌석 수. 0이면 아무도 안 고르고 결과만 받는다."
+        hint={
+          isDay
+            ? "이 능력이 낮에 대상으로 삼는 인원 수. 0이면 대상 없이 결과만 기록한다."
+            : "이 능력이 밤에 고르는 좌석 수. 0이면 아무도 안 고르고 결과만 받는다."
+        }
       >
         <div className="flex gap-2">
           {TARGET_COUNT_OPTIONS.map((n) => (
@@ -149,7 +157,7 @@ export function AbilitySpecEditor({
 
       <Section
         title="대상에게 걸 마커"
-        hint="기록할 때 원클릭으로 제안된다. 자동 적용이 아니라 이야기꾼이 누른다."
+        hint="기록할 때 원클릭으로 제안된다. 자동 적용이 아니라 이야기꾼이 눌러야 붙는다."
       >
         <select
           value={spec.marker ?? ""}
@@ -202,7 +210,7 @@ export function AbilitySpecEditor({
 
       <Section
         title="보여주기 화면"
-        hint="결과를 플레이어 폰에 띄우는 풀스크린. 템플릿을 고르고 문구만 고치면 된다."
+        hint="결과를 플레이어 화면에 띄우는 전체화면. 템플릿을 고르고 문구만 고치면 된다."
       >
         {presetOpen ? (
           <div className="space-y-2">
@@ -314,7 +322,7 @@ export function AbilitySpecEditor({
                 (t) => SHOWCASE_TOKEN_OPTIONS.find((o) => o.id === t)?.revealsIdentity,
               ) && (
                 <p className="rounded border-l-2 border-red-400/50 bg-red-400/5 px-2 py-1 text-[11px] text-red-200/85">
-                  붉은 항목은 대상의 <b>직업이 그대로 노출</b>된다. 정체를 알면 안 되는 능력이면
+                  붉은 항목은 대상의 <b>직업이 그대로 드러납니다</b>. 정체를 알면 안 되는 능력이면
                   닉네임 항목으로 바꾸세요.
                 </p>
               )}

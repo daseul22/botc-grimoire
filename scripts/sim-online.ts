@@ -408,6 +408,39 @@ async function main() {
       check("게임 삭제 후 다시 0", cc.countGamesUsing(cid) === 0, `${cc.countGamesUsing(cid)}`);
     }
 
+    // 8-b) behaviorKey — 편집 UI의 '변경 사항 있음' 판정 근거.
+    //      예전엔 JSON.stringify(b, Object.keys(b).sort())를 썼는데 배열 2번째 인자는 정렬이 아니라
+    //      replacer(허용 키 목록)라, 중첩된 targets/result가 통째로 잘려 `{"night":{}}`로 뭉개졌다
+    //      → 스펙을 어떻게 바꿔도 '변경 없음'이 되어 저장 버튼이 죽어 있던 버그. 값으로 고정한다.
+    {
+      const bh = await import("@/lib/behaviors");
+      const k = bh.behaviorKey;
+      check(
+        "중첩 스펙 변경을 감지",
+        k({ night: { targets: 2, result: "yesno" } }) !== k({ night: { targets: 3, result: "yesno" } }),
+      );
+      check(
+        "중첩 필드 추가를 감지",
+        k({ night: { targets: 2, result: "yesno" } }) !==
+          k({ night: { targets: 2, result: "yesno", marker: "poisoned" } }),
+      );
+      check(
+        "키 순서가 달라도 같은 값은 같다",
+        k({ night: { targets: 2, result: "yesno" }, criteria: "x" }) ===
+          k({ criteria: "x", night: { result: "yesno", targets: 2 } }),
+      );
+      check(
+        "undefined 필드는 없는 것과 같다",
+        k({ night: { targets: 2, result: "none", marker: undefined } }) ===
+          k({ night: { targets: 2, result: "none" } }),
+      );
+      check(
+        "배열(showcase 변형) 차이를 감지",
+        k({ night: { targets: 0, result: "none", showcase: [{ heading: "a" }] } }) !==
+          k({ night: { targets: 0, result: "none", showcase: [{ heading: "b" }] } }),
+      );
+    }
+
     // 9) 동작 값 검증 — 손상된 스펙은 저장 전에 걸러야 한다(throw가 아니라 조용히 오작동하는 종류).
     {
       const cat = await import("@/lib/ability-catalog");

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { BEHAVIOR_FLAG_OPTIONS, validateBehavior } from "@/lib/ability-catalog";
 import {
   baseBehavior,
+  behaviorKey,
   installBehaviors,
   type ActionSpec,
   type CharacterBehavior,
@@ -40,9 +41,6 @@ const PHASE_LABEL: Record<PhaseKey, string> = {
   day: "낮",
 };
 
-/** 저장물 비교용 정규화 — 키 순서에 흔들리지 않게. */
-const norm = (b: CharacterBehavior) => JSON.stringify(b, Object.keys(b).sort());
-
 export function BehaviorSettings({
   character: c,
   roster,
@@ -52,7 +50,8 @@ export function BehaviorSettings({
 }) {
   const { isAdmin } = useAuth();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  // 우측 전용 패널이라 기본은 펼친 상태 — 관리자는 대개 조작하러 들어온다.
+  const [open, setOpen] = useState(true);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
@@ -66,7 +65,7 @@ export function BehaviorSettings({
 
   // 서버 데이터가 갱신되면(저장 후 refresh) draft를 서버 진실로 재동기화 — 렌더 중 파생 리셋.
   const [lastCurrent, setLastCurrent] = useState(current);
-  if (norm(current) !== norm(lastCurrent)) {
+  if (behaviorKey(current) !== behaviorKey(lastCurrent)) {
     setLastCurrent(current);
     setDraft(current);
   }
@@ -91,7 +90,7 @@ export function BehaviorSettings({
     });
 
   const phases: PhaseKey[] = ["night", "otherNight", "day"];
-  const dirty = norm(draft) !== norm(current);
+  const dirty = behaviorKey(draft) !== behaviorKey(current);
   const overridden = !isCustom && !!c.behavior; // 공식인데 behavior가 실려 왔다 = override 있음
   const invalid = validateBehavior(draft);
 
@@ -124,7 +123,7 @@ export function BehaviorSettings({
   }
 
   return (
-    <section className="mt-6 rounded-lg border border-sky-500/30 bg-sky-500/5">
+    <section className="rounded-lg border border-sky-500/30 bg-sky-500/5">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -195,7 +194,11 @@ export function BehaviorSettings({
                 </label>
                 {enabled && spec && (
                   <div className="mt-3 border-t border-border pt-3">
-                    <AbilitySpecEditor spec={spec} onChange={(next) => setBehavior({ [p]: next })} />
+                    <AbilitySpecEditor
+                      spec={spec}
+                      phase={p}
+                      onChange={(next) => setBehavior({ [p]: next })}
+                    />
                   </div>
                 )}
               </div>
@@ -243,7 +246,7 @@ export function BehaviorSettings({
 
           <div className="rounded-lg border border-border bg-surface-2/30 p-3">
             <h4 className="mb-2 text-sm font-semibold">
-              변경 후 미리보기
+              {dirty ? "변경 후 미리보기" : "능력 미리보기"}
               {dirty && <span className="ml-2 text-xs font-normal text-gold">저장 안 됨</span>}
             </h4>
             <AbilityPreview character={previewChar} roster={roster} />

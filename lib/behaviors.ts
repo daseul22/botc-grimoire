@@ -193,3 +193,23 @@ export function behaviorIds(): string[] {
 export function baseBehavior(characterId: string): CharacterBehavior | undefined {
   return BASE[characterId];
 }
+
+/**
+ * 동작 정의의 비교용 키 — 키 순서와 무관하게 **내용이 같으면 같은 문자열**이 나온다.
+ * 편집 UI가 "변경 사항이 있는가"를 판정하는 데 쓴다.
+ *
+ * `JSON.stringify(b, Object.keys(b).sort())`로는 안 된다. 배열 두 번째 인자는 정렬이 아니라
+ * *replacer(허용 키 목록)*라서 중첩된 스펙 필드(targets·result·marker…)가 목록에 없어 통째로
+ * 잘려 나가고, 결과가 `{"night":{}}`로 뭉개져 어떤 편집도 '변경 없음'으로 보인다(실제 발생한 버그).
+ */
+export function behaviorKey(v: unknown): string {
+  if (v === undefined) return "∅";
+  if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "∅";
+  if (Array.isArray(v)) return `[${v.map(behaviorKey).join(",")}]`;
+  const o = v as Record<string, unknown>;
+  return `{${Object.keys(o)
+    .sort()
+    .filter((k) => o[k] !== undefined)
+    .map((k) => `${JSON.stringify(k)}:${behaviorKey(o[k])}`)
+    .join(",")}}`;
+}

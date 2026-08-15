@@ -286,8 +286,8 @@ export function CharacterBuilder({
             <h2 className="text-lg font-semibold">동작</h2>
             {availablePhases.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted">
-                위에서 밤 순서나 낮 능력을 먼저 켜세요. 행동이 없는 순수 패시브 직업이면 이대로 두면
-                된다 — 능력 설명만으로 이야기꾼이 운영한다.
+                위에서 밤 순서나 낮 능력을 먼저 켜세요. 행동 없이 계속 작동하는 직업이라면 이대로
+                두면 됩니다 — 능력 설명만 보고 이야기꾼이 운영합니다.
               </p>
             ) : (
               <>
@@ -312,6 +312,7 @@ export function CharacterBuilder({
                 {activePhase && (
                   <AbilitySpecEditor
                     spec={v.behavior[activePhase] ?? EMPTY_SPEC}
+                    phase={activePhase}
                     onChange={(next) => setBehavior({ [activePhase]: next })}
                   />
                 )}
@@ -414,7 +415,11 @@ export function CharacterBuilder({
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-[88rem] items-center justify-between gap-4 px-4 py-3">
           <span className="text-sm text-muted">
-            {error ? <span className="text-red-400">{error}</span> : "저장하면 시트에 넣을 수 있다"}
+            {error ? (
+              <span className="text-red-400">{error}</span>
+            ) : (
+              "저장하면 시트에 넣을 수 있습니다"
+            )}
           </span>
           <button
             type="button"

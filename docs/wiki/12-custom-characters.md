@@ -121,8 +121,10 @@ Record 상수를 **직접 인덱싱**하던 3곳만 함수로 교체됐다:
 
 ## 직업 상세에서 동작 조작 — [BehaviorSettings](../../components/BehaviorSettings.tsx)
 
-`/characters/[id]` 하단의 접이식 "그리모어 동작 설정" 패널. 빌더까지 가지 않고 그 자리에서
-지목·결과·마커·보여주기·플래그를 고친다. 저장 위치는 직업 종류에 따라 갈린다.
+`/characters/[id]`의 **우측 패널**. 관리자에게는 능력 미리보기 자리를 이 패널이 대신한다
+(패널 안에 미리보기가 들어 있어 기능 손실은 없고, 조합 옵션이 2열로 펴지도록 관리자일 때만
+본문 폭을 넓힌다). 빌더까지 가지 않고 그 자리에서 지목·결과·마커·보여주기·플래그를 고친다.
+저장 위치는 직업 종류에 따라 갈린다.
 
 | 직업 | 저장 위치 | 영향 범위 |
 |---|---|---|
@@ -139,6 +141,12 @@ Record 상수를 **직접 인덱싱**하던 3곳만 함수로 교체됐다:
   [clearBehaviorOverride](../../lib/custom-characters.ts)를 호출해 `data/behaviors.json` 값으로 되돌린다.
 - 밤 순서(`firstNight`/`otherNight` order)는 `characters` 콘텐츠 데이터라 여기서 못 바꾼다.
   순서가 없는 직업에 밤 동작만 넣으면 순서표에 안 뜨므로 패널이 그 점을 안내한다.
+- **변경 감지는 [behaviorKey](../../lib/behaviors.ts)**(키 순서 무관 deep 직렬화)로 한다.
+  `JSON.stringify(b, Object.keys(b).sort())`를 쓰면 안 된다 — 배열 두 번째 인자는 정렬이 아니라
+  *replacer(허용 키 목록)*라서 중첩 스펙 필드가 통째로 잘려 `{"night":{}}`로 뭉개지고, 결과적으로
+  **어떤 편집도 '변경 없음'이 되어 저장 버튼이 죽는다**(실제 발생했던 버그. sim A6 8-b가 고정).
+- 안내 문구는 페이즈에 따라 달라진다 — [AbilitySpecEditor](../../components/AbilitySpecEditor.tsx)가
+  `phase` prop을 받아 낮 능력에 "밤에 고르는 좌석 수" 같은 밤 전제 설명이 뜨지 않게 한다.
 
 > **커스텀 직업의 동작만 갱신**하는 좁은 쓰기 경로가 따로 있다
 > ([updateCustomCharacterBehavior](../../lib/custom-characters.ts)) — 이름·아이콘·밤 순서를 건드리지
