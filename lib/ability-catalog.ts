@@ -261,7 +261,7 @@ export const SHOWCASE_PRESETS: ShowcasePreset[] = [
   {
     id: "yesno",
     label: "예/아니오 답",
-    desc: '"이 두 명 중 데몬이 있는가: 예" 형태. 대상 닉네임을 함께 띄운다.',
+    desc: '"이 두 명 중 악마가 있는가: 예" 형태. 대상 닉네임을 함께 띄운다.',
     fits: ["yesno"],
     spec: { heading: "결과: {yn}", tokens: ["name", "name2"] },
   },

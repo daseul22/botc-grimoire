@@ -62,7 +62,7 @@ export function NightSidebar({
   online?: OnlineNightCtx;
 }) {
   // 좌석마다 실제 운영상 어떤 직업으로 다루는지(disguise / gained / became 마커 반영).
-  // 미치광이는 데몬처럼, 식인종은 처형된 town 능력처럼, 임프 자살자는 새 직업으로 노출.
+  // 미치광이는 악마처럼, 식인종은 처형된 town 능력처럼, 임프 자살자는 새 직업으로 노출.
   const roles: RoleItem[] = game.players.flatMap((p) => {
     const effId = effectiveCharacterId(p.seat, p.characterId, p.markers, game.disguises);
     const nightOf = (id: string) =>
@@ -154,11 +154,11 @@ export function NightSidebar({
               const isMinion = item.infoKind === "minion";
               const node = nightInfoNode(item.infoKind);
               // 하수인 정보: 단체 화면 한 번 — 하수인 전원이 함께 깨어나 받으므로 링크 1개.
-              //   carrier 좌석은 라우트용일 뿐(화면은 데몬을 전역에서 계산). 아무 하수인 좌석.
+              //   carrier 좌석은 라우트용일 뿐(화면은 악마를 전역에서 계산). 아무 하수인 좌석.
               const minionInfoSeat = game.players.find(
                 (x) => charMap[x.characterId]?.team === "minion",
               )?.seat;
-              // 악마 정보: 각 데몬 폰에 블러핑 3개 + 하수인이 누구인지 보여주기.
+              // 악마 정보: 각 악마 폰에 블러핑 3개 + 하수인이 누구인지 보여주기.
               const demonSeats = game.players.filter((x) => charMap[x.characterId]?.team === "demon");
               return (
                 <li
@@ -315,7 +315,7 @@ export function NightSidebar({
                     {!isFirstNight && fakeId && fakeId !== p.characterId && (
                       // 가짜 악마 공격 흉내 기록 — 미치광이 차례에 함께 처리.
                       // marker는 제거: 미치광이의 선택은 실제로 아무도 죽이지 않는다.
-                      // showcase: 기록한 지목을 진짜 데몬에게 보여주는 lunatic-choice 모드.
+                      // showcase: 기록한 지목을 진짜 악마에게 보여주는 lunatic-choice 모드.
                       <NightActionRow
                         actor={p}
                         spec={{
@@ -358,7 +358,7 @@ export function NightSidebar({
                       isFirstNight={isFirstNight}
                       online={online}
                     />
-                    {/* 점쟁이 첫밤: 레드헤링(데몬으로 보일 선한 1명) 지정 편의 — 깜빡하지 않게 카드에서 바로. */}
+                    {/* 점쟁이 첫밤: 레드헤링(악마로 보일 선한 1명) 지정 편의 — 깜빡하지 않게 카드에서 바로. */}
                     {effId === "fortuneteller" && isFirstNight && (
                       <RedHerringPicker
                         game={game}

@@ -9,8 +9,8 @@ type SeatRole = { seat: number; characterId: string };
 type TeamOf = (characterId: string) => Team | undefined;
 
 /**
- * 데몬이 첫밤에 '하수인'으로 보는 좌석 — 진짜 하수인(꼭두각시 제외) + 마술사.
- * (마술사는 데몬에게 하수인으로 등록되는 룰.) 좌석 순서는 플레이어 순서 + 마술사 뒤.
+ * 악마가 첫밤에 '하수인'으로 보는 좌석 — 진짜 하수인(꼭두각시 제외) + 마술사.
+ * (마술사는 악마에게 하수인으로 등록되는 룰.) 좌석 순서는 플레이어 순서 + 마술사 뒤.
  * excludeSeat: 미치광이 프리셋에서 미치광이 본인 좌석 제외용.
  */
 export function seatsShownAsMinions(
@@ -28,7 +28,7 @@ export function seatsShownAsMinions(
 
 /**
  * 하수인이 첫밤에 '악마'로 보는 좌석 — 진짜 악마 + 마술사.
- * (마술사는 하수인에게 데몬으로 등록되는 룰.) show ?mode=demon이 사용.
+ * (마술사는 하수인에게 악마로 등록되는 룰.) show ?mode=demon이 사용.
  */
 export function seatsShownAsDemons(players: SeatRole[], teamOf: TeamOf): number[] {
   const magicianSeat = players.find((p) => p.characterId === "magician")?.seat;

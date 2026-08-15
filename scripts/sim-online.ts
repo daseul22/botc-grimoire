@@ -614,7 +614,7 @@ async function main() {
     }
     check(`[${sid}] 밤1 요청 다수 생성`, nightRequests >= 1, `${nightRequests}건`);
 
-    // 데몬 킬: 마을주민 1명에게 dying → advance 때 자동 사망
+    // 악마 킬: 마을주민 1명에게 dying → advance 때 자동 사망
     const victim = g.players.find(
       (p) => p.seat !== demonSeat && charMap[p.characterId]?.team === "townsfolk" && p.status !== "dead",
     );

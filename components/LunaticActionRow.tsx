@@ -11,7 +11,7 @@ import { RolePickerModal } from "./RolePickerModal";
  * - 지목 절차 X. ST가 가짜 블러핑(3 직업)·가짜 하수인(좌석 N명)을 자유 지정.
  * - 두 보여주기 버튼(블러핑/하수인) — show 페이지 ?mode=lunatic-bluffs|lunatic-minions로.
  *
- * 저장은 게임 전역(game.lunaticBluffs / lunaticMinions). 진짜 데몬 정보(game.bluffs)와 별개.
+ * 저장은 게임 전역(game.lunaticBluffs / lunaticMinions). 진짜 악마 정보(game.bluffs)와 별개.
  * readOnly: 그 외 밤 — 첫밤에 알려준 블러핑·하수인을 수정 없이 확인만(보여주기는 가능).
  */
 export function LunaticActionRow({

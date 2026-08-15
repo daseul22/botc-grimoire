@@ -171,7 +171,7 @@ export function ShowcaseView({
   if (showcase) {
     return (
       <>
-        {/* 받는 사람 안내 — recipient="none"은 능력 주인이 아닌 제3자에게 보여줄 때(꼭두각시 → 데몬). */}
+        {/* 받는 사람 안내 — recipient="none"은 능력 주인이 아닌 제3자에게 보여줄 때(꼭두각시 → 악마). */}
         {showcase.recipient !== "none" && (
           <p className="text-center text-base text-muted">{recipientNickname} 님께</p>
         )}

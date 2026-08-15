@@ -3,7 +3,7 @@
 import type { Game } from "@/lib/types";
 
 /**
- * 점쟁이 레드헤링 지정 위젯 — 점쟁이에게 데몬으로 보이는 선한 1명.
+ * 점쟁이 레드헤링 지정 위젯 — 점쟁이에게 악마로 보이는 선한 1명.
  * 좌석 버튼을 클릭하면 그 좌석으로 지정(이동), 현재 지정된 좌석을 다시 클릭하면 해제.
  * 단일 보장(다른 좌석에서 떼고 이동)은 onAssign이 호출하는 setHerringAction이 서버에서 처리한다.
  * NightSidebar(점쟁이 행)와 1일차 밤 셋업 패널에서 같은 컴포넌트를 공유한다.
@@ -28,7 +28,7 @@ export function RedHerringPicker({
       <div className="mb-1 flex flex-wrap items-center gap-1">
         <span className="font-semibold text-red-300">레드헤링</span>
         <span className="text-muted">
-          점쟁이에게 데몬으로 보이는 선한 1명
+          점쟁이에게 악마로 보이는 선한 1명
           {!readonly && " — 클릭해 지정·이동, 다시 클릭해 해제"}
         </span>
       </div>

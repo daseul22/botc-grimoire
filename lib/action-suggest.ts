@@ -48,7 +48,7 @@ export type SuggestContext = {
   characterId: string;
   actor: GamePlayer;
   players: GamePlayer[];
-  /** 직업 → 팀 판정용(시계공 데몬/하수인 등). */
+  /** 직업 → 팀 판정용(시계공 악마/하수인 등). */
   charMap: Record<string, Character>;
   globalMarkers: string[];
   votes?: VoteRecord[];
@@ -153,7 +153,7 @@ function suggestOracle(ctx: SuggestContext): ActionSuggestion {
   };
 }
 
-/** 시계공: 데몬에서 가장 가까운 하수인까지 좌석 거리(시계/반시계 짧은 쪽). 죽은 좌석 포함 전체 링. */
+/** 시계공: 악마에서 가장 가까운 하수인까지 좌석 거리(시계/반시계 짧은 쪽). 죽은 좌석 포함 전체 링. */
 function suggestClockmaker(ctx: SuggestContext): ActionSuggestion | null {
   const teamOf = (p: GamePlayer) => ctx.charMap[p.characterId]?.team;
   const demons = ctx.players.filter((p) => teamOf(p) === "demon");
@@ -169,7 +169,7 @@ function suggestClockmaker(ctx: SuggestContext): ActionSuggestion | null {
   if (best == null) return null;
   return {
     result: String(best),
-    reason: `데몬↔최근접 하수인 ${best}칸`,
+    reason: `악마↔최근접 하수인 ${best}칸`,
     tainted: isTainted(ctx.actor.markers, ctx.globalMarkers),
   };
 }
@@ -190,7 +190,7 @@ const pickedPlayers = (ctx: SuggestContext): GamePlayer[] =>
 
 // ── 타겟 의존 직업: targets를 다 고른 뒤에야 결과가 정해진다(자동채움 X, 추천 칩만). ──
 
-/** 점쟁이: 지목 2명 중 데몬 또는 레드헤링(herring)이 있으면 예. 은둔자는 데몬으로 보일 수 있음. */
+/** 점쟁이: 지목 2명 중 악마 또는 레드헤링(herring)이 있으면 예. 은둔자는 악마로 보일 수 있음. */
 function suggestFortuneteller(ctx: SuggestContext): ActionSuggestion | null {
   if (ctx.targets.length < 2) return null;
   const picks = pickedPlayers(ctx);
@@ -198,8 +198,8 @@ function suggestFortuneteller(ctx: SuggestContext): ActionSuggestion | null {
   const hasRecluse = picks.some((p) => misregisterOf(p.characterId) === "good-as-evil");
   return {
     result: hit ? "yes" : "no",
-    reason: hit ? "지목 중 데몬/레드헤링 있음" : "지목 중 데몬 없음",
-    note: hasRecluse && !hit ? "은둔자가 데몬으로 보일 수 있음" : undefined,
+    reason: hit ? "지목 중 악마/레드헤링 있음" : "지목 중 악마 없음",
+    note: hasRecluse && !hit ? "은둔자가 악마로 보일 수 있음" : undefined,
     tainted: isTainted(ctx.actor.markers, ctx.globalMarkers),
   };
 }
@@ -249,7 +249,7 @@ function suggestDuchess(ctx: SuggestContext): ActionSuggestion | null {
 // disguise(주정뱅이·꼭두각시)는 본인이 다른 직업이라 믿을 뿐 *진짜 직업*은 좌석 그대로이므로 characterId를
 // 쓴다(까마귀지기는 진짜 토큰을 알려줌). became/gained(별넘김·철학자 등 드문 정체 변경)는 ST가 칩을 덮어쓰면 됨.
 
-const TEAM_KO: Record<string, string> = { townsfolk: "주민", outsider: "외지인", minion: "하수인", demon: "데몬" };
+const TEAM_KO: Record<string, string> = { townsfolk: "주민", outsider: "외지인", minion: "하수인", demon: "악마" };
 
 /** 대상 1명의 진짜 직업을 결과로(까마귀지기·탕녀·기구조종사). */
 function suggestTargetRole(ctx: SuggestContext): ActionSuggestion | null {

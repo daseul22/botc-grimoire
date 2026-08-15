@@ -58,7 +58,7 @@ export const MARKERS: Marker[] = [
   { id: "turning", label: "변절 예정", icon: "", color: "#d23b3b", duration: "dusk", letter: "⇄" },
 
   // ── 글로벌(게임 전체) 마커 ──
-  // Vortox(SnV 데몬): 살아있는 동안 모든 정보 직업이 거짓 정보를 받는다.
+  // Vortox(SnV 악마): 살아있는 동안 모든 정보 직업이 거짓 정보를 받는다.
   { id: "vortox", label: "Vortox 영향", icon: "/icons/vortox.webp", color: "#d23bbd", duration: "permanent", scope: "global", taints: true, letter: "V" },
 ];
 

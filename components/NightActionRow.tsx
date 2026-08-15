@@ -176,7 +176,7 @@ export function NightActionRow({
 
   const nameOf = (seat: number) => players.find((p) => p.seat === seat)?.nickname ?? `${seat}`;
 
-  // 받는 좌석 picker(recipient=none showcase) — 데몬 등 제3자에게 보여줄 좌석을 고른다.
+  // 받는 좌석 picker(recipient=none showcase) — 악마 등 제3자에게 보여줄 좌석을 고른다.
   const recipientPicker = () =>
     online && recipPick != null ? (
       <div className="mt-1 flex flex-wrap items-center gap-1">
@@ -299,7 +299,7 @@ export function NightActionRow({
           <button type="button" disabled={busy} onClick={onClear} className="text-muted hover:text-red-400 disabled:opacity-50">지우기</button>
           {canPick && pickAction()}
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            {/* result 없는 직업도 명시적 showcase가 있으면 노출(미치광이 가짜 공격 → 데몬에게). */}
+            {/* result 없는 직업도 명시적 showcase가 있으면 노출(미치광이 가짜 공격 → 악마에게). */}
             {showcaseArr.length <= 1 && (spec.result !== "none" || hasShowcase) && showcaseAction(0, "보여주기")}
             {showcaseArr.length > 1 && showcaseArr.map((_, i) => showcaseAction(i, showcaseLabels[i] ?? `#${i + 1}`))}
             {/* 텍스트 정보(사반트·어부 등) — 구조화된 showcase가 없어 자유 텍스트를 폰에 직접 보낸다. */}

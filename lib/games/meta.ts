@@ -76,7 +76,7 @@ export function toggleGlobalMarker(gameId: string, marker: string): void {
   })();
 }
 
-// 미치광이용 가짜 블러핑·하수인. 진짜 데몬 정보(game.bluffs)와는 별개로 ST가 자유 지정.
+// 미치광이용 가짜 블러핑·하수인. 진짜 악마 정보(game.bluffs)와는 별개로 ST가 자유 지정.
 export function getLunaticBluffs(gameId: string): string[] {
   const row = db.prepare("SELECT lunatic_bluffs FROM games WHERE id = ?").get(gameId) as
     | { lunatic_bluffs: string }

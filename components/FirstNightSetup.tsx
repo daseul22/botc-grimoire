@@ -78,7 +78,7 @@ export function FirstNightSetup({
           {!readonly && (
             <p className="mb-1 text-xs text-muted">
               셋업 변경 직업이 있습니다 — 아래 모디파이어대로 인플레이 직업을 수동으로 추가/제거하세요.
-              위 <strong>팀 분포 카운트(마을/외부/하수/데몬)</strong>가 보정 후 시트와 일치하는지 확인하세요.
+              위 <strong>팀 분포 카운트(마을/외부/하수/악마)</strong>가 보정 후 시트와 일치하는지 확인하세요.
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -139,7 +139,7 @@ export function FirstNightSetup({
         (p) => effectiveCharacterId(p.seat, p.characterId, p.markers, game.disguises) === "fortuneteller",
       ) && (
         <p className="rounded-md border border-red-500/30 bg-red-500/5 px-2 py-1.5 text-xs text-muted">
-          <span className="font-semibold text-red-300">점쟁이</span>가 있습니다 — 점쟁이에게 데몬으로 보일{" "}
+          <span className="font-semibold text-red-300">점쟁이</span>가 있습니다 — 점쟁이에게 악마로 보일{" "}
           <span className="font-medium text-text">레드헤링(허상)</span> 선한 1명을 밤 행동(점쟁이 행)에서 지정하세요.
         </p>
       )}
@@ -147,7 +147,7 @@ export function FirstNightSetup({
       {/* 미치광이/주정뱅이 가짜 직업 — 본인이 폰에서 자기 진짜 직업 대신 볼 직업.
           하나라도 미선택이면 헤더의 직업배포·직업공유 버튼이 비활성된다. */}
       {(() => {
-        // 가짜 직업 표시가 필요한 좌석: 미치광이(데몬 토큰) / 주정뱅이(마을주민 토큰) /
+        // 가짜 직업 표시가 필요한 좌석: 미치광이(악마 토큰) / 주정뱅이(마을주민 토큰) /
         // 꼭두각시(마을주민 토큰 — 본인은 town이라 믿는다).
         const disguiseSeats = game.players.filter(
           (p) =>
@@ -159,7 +159,7 @@ export function FirstNightSetup({
         return (
           <div>
             <p className="mb-1.5 text-xs text-muted">
-              가짜 직업 <span className="opacity-70">(미치광이=데몬 / 주정뱅이·꼭두각시=마을주민 중 선택)</span>
+              가짜 직업 <span className="opacity-70">(미치광이=악마 / 주정뱅이·꼭두각시=마을주민 중 선택)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {disguiseSeats.map((p) => {

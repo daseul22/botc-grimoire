@@ -88,7 +88,7 @@ export type ActionSpec = {
   marker?: string;
   /** 결과 입력 힌트 */
   hint?: string;
-  /** 보여주기 화면 커스터마이즈. 배열이면 ?v=N으로 변형 선택(마술사 = 데몬용/하수인용). */
+  /** 보여주기 화면 커스터마이즈. 배열이면 ?v=N으로 변형 선택(마술사 = 악마용/하수인용). */
   showcase?: ShowcaseSpec | ShowcaseSpec[];
   /** 배열 showcase일 때 각 변형의 label(버튼 라벨) */
   showcaseLabels?: string[];

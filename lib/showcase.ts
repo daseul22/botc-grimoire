@@ -19,7 +19,7 @@ export type ShowcaseSpecLite = { targets: number; result: ResultKind; hint?: str
 /**
  * 플레이어 폰에 표시할 자기완결 보여주기 데이터.
  * - standard  : 표준 행동 결과(ShowcaseView로 렌더). recipientSeat=이 화면을 받을 좌석(라우팅용).
- * - roleTokens: 큰 직업 토큰 나열(데몬 블러핑).
+ * - roleTokens: 큰 직업 토큰 나열(악마 블러핑).
  * - nameTokens: 큰 닉네임 카드 나열(하수인/악마 정보·미치광이 가짜 공격 등 정체 비노출).
  */
 export type ShowcasePayload =
@@ -140,7 +140,7 @@ export function resolveShowcase(
     };
   }
 
-  // ─── 특수 모드: 미치광이 가짜 공격 지목을 진짜 데몬에게 ───
+  // ─── 특수 모드: 미치광이 가짜 공격 지목을 진짜 악마에게 ───
   if (mode === "lunatic-choice") {
     const record = game.actions.find((a) => a.actorSeat === seat && a.characterId === effId && !a.bluff);
     return {
@@ -185,7 +185,7 @@ export function resolveShowcase(
     return { kind: "firstNightInfo", forNickname: actor.nickname, sections, emptyText: "알려줄 정보가 없습니다." };
   }
 
-  // ─── 특수 모드: 데몬/미치광이 첫밤 정보(블러핑 / 하수인) ───
+  // ─── 특수 모드: 악마/미치광이 첫밤 정보(블러핑 / 하수인) ───
   const isBluffs = mode === "bluffs" || mode === "lunatic-bluffs";
   const isMinions = mode === "minions" || mode === "lunatic-minions";
   const isLunaticMode = mode === "lunatic-bluffs" || mode === "lunatic-minions";

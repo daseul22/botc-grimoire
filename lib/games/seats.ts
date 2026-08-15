@@ -129,7 +129,7 @@ export function toggleMarker(gameId: string, seat: number, markerId: string): vo
 }
 
 /**
- * 레드헤링 지정 — 점쟁이에게 데몬으로 보이는 선한 1명. 게임 전체에 정확히 한 명만
+ * 레드헤링 지정 — 점쟁이에게 악마로 보이는 선한 1명. 게임 전체에 정확히 한 명만
  * 존재해야 하므로, 기존 herring 마커를 모든 좌석에서 떼고 seat이 있으면 그 좌석에만 부여한다.
  * seat=null이면 해제만. (단순 toggleMarker는 다른 좌석의 herring을 안 떼므로 별도 함수.)
  */

@@ -159,7 +159,7 @@ Record 상수를 **직접 인덱싱**하던 3곳만 함수로 교체됐다:
 
 | 스크립트 | 무엇 |
 |---|---|
-| `npm run verify:behaviors` | 이관 전 하드코딩 스펙과 현재 조회 결과를 **직업 183종 × 조회함수 전부** 대조(3660건). 원본은 git에서 꺼내오므로([behavior-origin.ts](../../scripts/behavior-origin.ts)) 이관 후에도 재현된다 |
+| `npm run verify:behaviors` | 이관 전 하드코딩 스펙과 현재 조회 결과를 **직업 183종 × 조회함수 전부** 대조(3660건). 원본은 git에서 꺼내오므로([behavior-origin.ts](../../scripts/behavior-origin.ts)) 이관 후에도 재현된다. 의도적 용어 통일은 **원본 쪽에만** 정규화를 적용해 통과시킨다 → [02](02-data-pipeline.md#2차-정리--코드동작-데이터의-폐기어) |
 | `npm run sim` A6 | 커스텀 직업 라운드트립 — 생성 → 조회 → 스펙 반영 → 시트/게임맵 편입 → showcase → override → 동작만 갱신 → 삭제 가드 → 동작 값 검증 → 삭제 |
 | `scripts/extract-behaviors.ts` | 원본에서 `data/behaviors.json`을 다시 뽑는다(이관 근거 보존) |
 

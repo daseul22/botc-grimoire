@@ -23,7 +23,7 @@ export const NIGHT_INFO_NODES: NightInfoNode[] = [
     label: "하수인 정보",
     icon: "/icons/minion-info.png",
     reminder:
-      "하수인들에게 서로 누구인지, 데몬이 누구인지 알려줍니다. (꼭두각시·마술사 인플레이 시 변형 적용)",
+      "하수인들에게 서로 누구인지, 악마가 누구인지 알려줍니다. (꼭두각시·마술사 인플레이 시 변형 적용)",
   },
   {
     infoKind: "demon",
@@ -31,7 +31,7 @@ export const NIGHT_INFO_NODES: NightInfoNode[] = [
     label: "악마 정보",
     icon: "/icons/demon-info.png",
     reminder:
-      "데몬에게 자기 직업·블러핑 3개·하수인 좌석을 알려줍니다. (꼭두각시·마술사 인플레이 시 변형 적용)",
+      "악마에게 자기 직업·블러핑 3개·하수인 좌석을 알려줍니다. (꼭두각시·마술사 인플레이 시 변형 적용)",
   },
 ];
 

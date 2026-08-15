@@ -255,7 +255,7 @@ stateDiagram-v2
   1:1 렌더 + '확인했습니다', awaiting이면 좌석/직업 picker. **본인 좌석 요청만**(`getActiveForSeat`), respond/ack는
   `seatForUser===req.seat` 검사.
 - **recipient 라우팅**: showcase의 recipient가 `actor`→본인 좌석, `target`→첫 지목 좌석(세레노버스·마귀할멈),
-  `none`→ST가 받는 좌석을 직접 지정(마술사·꼭두각시·미치광이 가짜 공격 — 데몬에게 보여줌).
+  `none`→ST가 받는 좌석을 직접 지정(마술사·꼭두각시·미치광이 가짜 공격 — 악마에게 보여줌).
 - 기록 열람: `components/NightHistoryList.tsx`(`showcaseSummary`로 요약), 플레이어 '기록' 버튼.
   응답 대상 좌석은 `nameOf`(좌석→닉네임)로 **닉네임 표시**(닉네임은 공개라 플레이어 본인 기록도 넘김 — 좌석 번호로 새던 버그 수정).
   `showActor`는 이야기꾼 뷰에서만 항목 헤더에 행동 좌석 이름을 붙인다(플레이어 본인 기록은 항상 자신이라 생략).
@@ -418,7 +418,7 @@ stateDiagram-v2
 - **Phase A(순수 불변식)**: `computeOrder`(시계바늘 순서·유령표 스킵·추방 전원), `computeTally`(처형·추방 커트라인·동률 차단),
   마커 duration(phase/dusk/permanent — `execsafe` 포함), `redactGameForSeat`(좌석 비밀 무누수), **공식 87직업 전수**
   스펙·`resolveShowcase` 무예외 + 스펙 마커의 MARKER_MAP 실존·`oncePerGame` 일치.
-- **Phase B(풀게임 통합)**: TB·BMR·S&V 각각 계정 바인딩→밤 행동 핸드셰이크→데몬 킬→밤/낮 전환(자동사망·마커만료)→
+- **Phase B(풀게임 통합)**: TB·BMR·S&V 각각 계정 바인딩→밤 행동 핸드셰이크→악마 킬→밤/낮 전환(자동사망·마커만료)→
   지목→순차 스윕 투표(CAS 멱등)→처형·유령표 소모→2차 사이클→복기 무결성→종료.
 - **경계(미커버)**: 액션 레이어 가드(`requireUser`·phase게이팅·**푸주한 `nominatorLimit` 하루한도**는 `app/rooms/actions.ts`),
   SSE 전달, UI 렌더는 lib 직접호출이라 닿지 않는다 → 브라우저 e2e/사람 베타의 영역. 즉 **기능 게이트**용이지 플레이테스트 대체가 아니다.
