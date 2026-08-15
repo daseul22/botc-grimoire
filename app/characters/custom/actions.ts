@@ -9,9 +9,11 @@ import {
   countGamesUsing,
   createCustomCharacter,
   deleteCustomCharacter,
+  getCustomCharacter,
   getCustomCharacterOwner,
   setBehaviorOverride,
   updateCustomCharacter,
+  updateCustomCharacterBehavior,
   type CustomCharacterInput,
 } from "@/lib/custom-characters";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
@@ -121,28 +123,42 @@ export async function uploadIconAction(
   return { path: `/icons/custom/${name}` };
 }
 
-// ── 공식 직업 동작 수정(전역 적용) ──
+// ── 직업 상세에서 동작만 수정 ──
+//
+// **관리자 전용.** 공식 직업 수정은 진행 중인 게임을 포함해 모든 게임에 전역 적용되고,
+// 커스텀 직업도 남의 것을 포함해 여기서 손댈 수 있으므로 권한을 가장 좁게 가둔다.
+// (개인 변형은 /characters/custom에서 자기 직업을 만들면 된다 — 그쪽은 소유자 정책.)
+//
+// 저장 위치는 직업 종류에 따라 갈린다:
+//   공식  → character_overrides (전역 적용)
+//   커스텀 → custom_characters.behavior
 
-/**
- * 공식 직업의 동작을 덮어쓴다. **모든 게임에 전역 적용**되므로 관리자 전용.
- * 개인 변형이 필요하면 커스텀 직업으로 복제하는 쪽이 안전하다.
- */
-export async function setOverrideAction(
+export async function saveBehaviorAction(
   characterId: string,
   behavior: CharacterBehavior,
 ): Promise<{ error: string } | void> {
   const user = await getCurrentUser();
-  if (!user || !isAdmin(user)) return { error: "관리자만 공식 직업 동작을 수정할 수 있습니다." };
-  setBehaviorOverride(characterId, behavior);
+  if (!user || !isAdmin(user)) return { error: "관리자만 직업 동작을 수정할 수 있습니다." };
+
+  const bad = validateBehavior(behavior ?? {});
+  if (bad) return { error: bad };
+
+  if (getCustomCharacter(characterId)) updateCustomCharacterBehavior(characterId, behavior);
+  else setBehaviorOverride(characterId, behavior);
+
   revalidatePath(`/characters/${characterId}`);
   revalidatePath("/characters/custom");
 }
 
-export async function clearOverrideAction(
+/** 공식 직업 동작을 data/behaviors.json 기본값으로 되돌린다(커스텀 직업엔 해당 없음). */
+export async function resetBehaviorAction(
   characterId: string,
 ): Promise<{ error: string } | void> {
   const user = await getCurrentUser();
-  if (!user || !isAdmin(user)) return { error: "관리자만 되돌릴 수 있습니다." };
+  if (!user || !isAdmin(user)) return { error: "관리자만 직업 동작을 수정할 수 있습니다." };
+  if (getCustomCharacter(characterId))
+    return { error: "커스텀 직업은 되돌릴 기본값이 없습니다." };
+
   clearBehaviorOverride(characterId);
   revalidatePath(`/characters/${characterId}`);
   revalidatePath("/characters/custom");

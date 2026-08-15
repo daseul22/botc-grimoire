@@ -373,6 +373,22 @@ async function main() {
       check("해제 후 payload에서 behavior 제거", data.getCharacter("chef")?.behavior === undefined);
     }
 
+    // 7-b) 커스텀 직업의 '동작만' 갱신 — 직업 상세의 동작 설정 패널이 쓰는 좁은 쓰기 경로.
+    //      이름·아이콘은 그대로 두고 스펙만 바뀌어야 한다.
+    {
+      cc.updateCustomCharacterBehavior(cid, { night: { targets: 3, result: "number" } });
+      check("동작만 갱신 — 스펙 반영", na.specForPhase(cid, "night", 1).targets === 3);
+      check("동작만 갱신 — 이름 보존", data.getCharacter(cid)?.name.ko === "검증용 직업");
+      check("동작만 갱신 — 밤 순서 보존", data.getCharacter(cid)?.firstNight?.order === 41);
+      // 원상 복구(뒤 단계가 원래 스펙을 전제로 한다)
+      cc.updateCustomCharacterBehavior(cid, {
+        night: { targets: 2, result: "yesno", marker: "protected", oncePerGame: true },
+        criteria: "고른 2명의 진영이 같으면 예.",
+        stChoosesTargets: true,
+      });
+      check("복구 확인", na.specForPhase(cid, "night", 1).targets === 2);
+    }
+
     // 8) 삭제 가드 — 게임에 쓰인 직업은 지우면 그 게임·복기가 깨진다(좌석 character_id는 남는데
     //    정의가 사라져 직업맵에서 빠진다). 액션이 countGamesUsing으로 막는지 값으로 확인한다.
     {

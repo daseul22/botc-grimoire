@@ -8,6 +8,7 @@ import { parseJinxEntry } from "@/lib/jinx";
 import { CharacterIcon } from "./CharacterIcon";
 import { Badge } from "./Badge";
 import { AbilityPreview } from "./AbilityPreview";
+import { BehaviorSettings } from "./BehaviorSettings";
 
 const L = (v: Localized | undefined, lang: Lang) =>
   v ? v[lang] || v.ko || v.en || "" : "";
@@ -180,6 +181,8 @@ export function CharacterDetail({
           </ul>
         </Section>
       )}
+      {/* 관리자에게만 렌더된다(내부에서 권한 확인 후 null). 실제 강제는 서버 액션. */}
+      <BehaviorSettings character={c} roster={roster} />
       </article>
       <aside className="mt-8 lg:mt-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
         <AbilityPreview character={c} roster={roster} />

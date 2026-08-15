@@ -119,11 +119,30 @@ Record 상수를 **직접 인덱싱**하던 3곳만 함수로 교체됐다:
 이런 값은 throw하지 않고 **조용히 오작동**(지목 칸이 안 뜨거나 화면이 비는 식)하므로 저장 시점에 거른다.
 순수 모듈이라 서버 액션과 빌더가 같은 규칙을 쓴다.
 
-## 공식 직업 동작 수정(override)
+## 직업 상세에서 동작 조작 — [BehaviorSettings](../../components/BehaviorSettings.tsx)
 
-`character_overrides` 테이블. **모든 게임에 전역 적용**되므로 관리자 전용
-([setOverrideAction](../../app/characters/custom/actions.ts)). 개인 변형이 필요하면 커스텀 직업으로
-복제하는 쪽이 안전하다. `clearBehaviorOverride`가 `data/behaviors.json` 기본값으로 되돌린다.
+`/characters/[id]` 하단의 접이식 "그리모어 동작 설정" 패널. 빌더까지 가지 않고 그 자리에서
+지목·결과·마커·보여주기·플래그를 고친다. 저장 위치는 직업 종류에 따라 갈린다.
+
+| 직업 | 저장 위치 | 영향 범위 |
+|---|---|---|
+| 공식 | `character_overrides` | **진행 중인 게임 포함 모든 게임** |
+| 커스텀 | `custom_characters.behavior` | 그 직업만 |
+
+- **관리자 전용.** 공식 수정이 전역이고 커스텀도 남의 것을 손댈 수 있어 권한을 가장 좁게 가둔다.
+  개인 변형은 `/characters/custom`에서 자기 직업을 만들면 된다(그쪽은 소유자 정책).
+- 게이팅은 두 겹 — 클라 `useAuth().isAdmin`으로 패널을 숨기고, 서버 액션
+  ([saveBehaviorAction](../../app/characters/custom/actions.ts))이 `isAdmin`으로 실제 강제한다.
+- **미리보기 격리**: 편집 중 값은 `x-behavior-draft` id로 주입해 실제 직업의 레지스트리 항목을
+  건드리지 않는다. 저장하지 않고 페이지를 떠나도 진행 화면이 오염되지 않는다.
+- 공식 직업은 override가 있을 때 헤더에 `기본값에서 수정됨` 배지가 뜨고 `기본값으로` 버튼으로
+  [clearBehaviorOverride](../../lib/custom-characters.ts)를 호출해 `data/behaviors.json` 값으로 되돌린다.
+- 밤 순서(`firstNight`/`otherNight` order)는 `characters` 콘텐츠 데이터라 여기서 못 바꾼다.
+  순서가 없는 직업에 밤 동작만 넣으면 순서표에 안 뜨므로 패널이 그 점을 안내한다.
+
+> **커스텀 직업의 동작만 갱신**하는 좁은 쓰기 경로가 따로 있다
+> ([updateCustomCharacterBehavior](../../lib/custom-characters.ts)) — 이름·아이콘·밤 순서를 건드리지
+> 않고 스펙만 교체한다. 전체 폼을 왕복시키지 않으려는 분리이고, sim A6이 보존을 검증한다.
 
 ## 회귀 방어
 
@@ -133,7 +152,7 @@ Record 상수를 **직접 인덱싱**하던 3곳만 함수로 교체됐다:
 | 스크립트 | 무엇 |
 |---|---|
 | `npm run verify:behaviors` | 이관 전 하드코딩 스펙과 현재 조회 결과를 **직업 183종 × 조회함수 전부** 대조(3660건). 원본은 git에서 꺼내오므로([behavior-origin.ts](../../scripts/behavior-origin.ts)) 이관 후에도 재현된다 |
-| `npm run sim` A6 | 커스텀 직업 라운드트립 — 생성 → 조회 → 스펙 반영 → 시트/게임맵 편입 → showcase → override → **삭제 가드** → **동작 값 검증** → 삭제 |
+| `npm run sim` A6 | 커스텀 직업 라운드트립 — 생성 → 조회 → 스펙 반영 → 시트/게임맵 편입 → showcase → override → 동작만 갱신 → 삭제 가드 → 동작 값 검증 → 삭제 |
 | `scripts/extract-behaviors.ts` | 원본에서 `data/behaviors.json`을 다시 뽑는다(이관 근거 보존) |
 
 `behavior-origin.ts`의 `REV`는 **이관 직전 커밋 해시**로 고정돼 있다. HEAD로 두면 이관을 커밋한

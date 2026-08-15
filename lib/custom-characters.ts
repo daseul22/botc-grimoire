@@ -289,6 +289,18 @@ export function updateCustomCharacter(id: string, input: CustomCharacterInput): 
   installBehaviors({ [id]: input.behavior ?? {} });
 }
 
+/**
+ * 커스텀 직업의 **동작만** 갱신한다(이름·아이콘 등 나머지는 그대로).
+ * 직업 상세의 동작 설정 패널이 쓰는 좁은 쓰기 경로 — 전체 폼을 왕복시키지 않으려고 분리했다.
+ */
+export function updateCustomCharacterBehavior(id: string, behavior: CharacterBehavior): void {
+  getDb()
+    .prepare("UPDATE custom_characters SET behavior = ? WHERE id = ?")
+    .run(JSON.stringify(behavior ?? {}), id);
+  invalidate();
+  installBehaviors({ [id]: behavior ?? {} });
+}
+
 export function deleteCustomCharacter(id: string): void {
   const db = getDb();
   const tx = db.transaction(() => {
