@@ -71,7 +71,7 @@ flowchart TD
 | 경로 | 종류 | 설명 |
 |---|---|---|
 | `/` | 정적 | 직업 목록 + 필터/검색 |
-| `/characters/[id]` | SSG (183) | 직업 상세 + 한/영 토글 (커스텀 직업 id는 동적 렌더). 관리자에게는 동작 설정 패널 노출 ([12](12-custom-characters.md)) |
+| `/characters/[id]` | SSG (183) | 직업 상세 + 한/영 토글 (커스텀 직업 id는 동적 렌더). 우측은 능력 미리보기, **관리자에게는 그 자리가 동작 설정 패널** ([12](12-custom-characters.md)) |
 | `/characters/custom` | 동적 | 내가 만든 커스텀 직업 목록(관리자는 전체) ([12](12-custom-characters.md)) |
 | `/characters/custom/new`, `/characters/custom/[id]/edit` | 동적 | 커스텀 직업 빌더 — 기능 조합 + 라이브 미리보기 |
 | `/sheets` | 동적 | 공식 + 커스텀 시트 목록 |
