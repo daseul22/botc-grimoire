@@ -6,7 +6,8 @@
 |---|---|---|
 | [CharacterBrowser](../../components/CharacterBrowser.tsx) | client | 직업 목록 필터(에디션·팀)·검색·팀 그룹핑 |
 | [CharacterCard](../../components/CharacterCard.tsx) | server | 직업 카드(셋업·징크스 배지) |
-| [CharacterDetail](../../components/CharacterDetail.tsx) | client | 직업 상세 + 한/영 토글 |
+| [CharacterDetail](../../components/CharacterDetail.tsx) | client | 직업 상세 + 한/영 토글 + 능력 미리보기·동작 설정 패널 배치 |
+| [BehaviorSettings](../../components/BehaviorSettings.tsx) | client | **그리모어 동작 설정**(직업 상세 하단, 관리자 전용) — 페이즈별 스펙·운영 규칙을 그 자리에서 수정. 공식은 override(전역), 커스텀은 그 직업만. 편집 중 값은 `x-behavior-draft` id로 격리해 저장 전 오염 방지 ([12](12-custom-characters.md)) |
 | [CharacterIcon](../../components/CharacterIcon.tsx) | server | 아이콘(없으면 글자 폴백) |
 | [Badge](../../components/Badge.tsx) | server | 색상 배지 |
 | [NightOrderTable](../../components/NightOrderTable.tsx) | server | 시트 야간 순서표(첫날밤/그외밤) |
